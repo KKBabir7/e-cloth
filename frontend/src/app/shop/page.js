@@ -1,0 +1,489 @@
+'use client';
+
+export const dynamic = 'force-dynamic';
+
+import React, { useEffect, useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { Container, Row, Col, Card, Button, Form, Badge, Pagination, Alert } from 'react-bootstrap';
+import { IoCart, IoHeartOutline, IoHeart, IoFilterOutline, IoSearch } from 'react-icons/io5';
+import { useDispatch, useSelector } from 'react-redux';
+import { toggleWishlist } from '../../store/wishlistSlice';
+import { addToCart } from '../../store/cartSlice';
+import { useUI } from '../../context/UIContext';
+import axios from 'axios';
+import { useQuery } from '@tanstack/react-query';
+import { getBackendUrl, getProductImageUrl } from '@/utils/api';
+
+// Main component with Suspense boundary wrapping Client filters
+export default function ShopPage() {
+  return (
+    <Suspense fallback={
+      <Container className="py-5 text-center">
+        <div className="spinner-border text-danger" role="status"></div>
+        <p className="mt-3">Loading Shop catalog...</p>
+      </Container>
+    }>
+      <ShopContent />
+    </Suspense>
+  );
+}
+
+function ShopContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const dispatch = useDispatch();
+  const { showToast } = useUI();
+  const wishlistItems = useSelector((state) => state.wishlist.items);
+
+  // Parse filters from URL Search Params
+  const categoryParam = searchParams.get('category') || '';
+  const searchParam = searchParams.get('search') || '';
+  const sortParam = searchParams.get('sort') || 'newest';
+  const pageParam = searchParams.get('page') || '1';
+
+  // Filter States
+  const [selectedCategory, setSelectedCategory] = useState(categoryParam);
+  const [priceRange, setPriceRange] = useState(3000);
+  const [selectedSize, setSelectedSize] = useState('');
+  const [selectedColor, setSelectedColor] = useState('');
+  const [selectedRating, setSelectedRating] = useState('');
+  const [availability, setAvailability] = useState('');
+  const [localSearch, setLocalSearch] = useState(searchParam);
+
+  // Products and Pagination States
+  const [currentPage, setCurrentPage] = useState(parseInt(pageParam));
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Sync state with URL updates
+  useEffect(() => {
+    setSelectedCategory(categoryParam);
+    setLocalSearch(searchParam);
+    setCurrentPage(parseInt(pageParam));
+  }, [categoryParam, searchParam, pageParam]);
+
+  // ── Categories via React Query (Dynamic and Real-time synced) ───────────
+  const { data: categoriesData } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      try {
+        const res = await axios.get(`${getBackendUrl()}/api/categories`);
+        if (res.data.success) return res.data.categories;
+        return [];
+      } catch (err) {
+        return [];
+      }
+    }
+  });
+  const categoriesList = categoriesData || [];
+
+  const { data: productsData, isLoading, error } = useQuery({
+    queryKey: ['products', selectedCategory, localSearch, priceRange, selectedSize, selectedColor, selectedRating, availability, sortParam, currentPage],
+    queryFn: async () => {
+      let query = `${getBackendUrl()}/api/products?page=${currentPage}&limit=9&sort=${sortParam}`;
+      if (selectedCategory) query += `&category=${selectedCategory}`;
+      if (localSearch) query += `&search=${encodeURIComponent(localSearch)}`;
+      if (priceRange) query += `&maxPrice=${priceRange}`;
+      if (selectedSize) query += `&size=${selectedSize}`;
+      if (selectedColor) query += `&color=${encodeURIComponent(selectedColor)}`;
+      if (selectedRating) query += `&rating=${selectedRating}`;
+      if (availability) query += `&availability=${availability}`;
+
+      const res = await axios.get(query);
+      if (res.data.success) {
+        return {
+          products: res.data.products,
+          totalPages: res.data.pages,
+          totalProducts: res.data.total
+        };
+      }
+      throw new Error('Not successful');
+    }
+  });
+
+  const products = productsData?.products || [];
+  const totalPages = productsData?.totalPages || 1;
+  const totalProducts = productsData?.totalProducts || 0;
+
+  const updateUrlParam = (key, value) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value && !(key === 'page' && value === '1')) {
+      params.set(key, value);
+    } else {
+      params.delete(key);
+    }
+    // Reset to page 1 (removing 'page' parameter) if changing a non-pagination filter
+    if (key !== 'page') {
+      params.delete('page');
+      setCurrentPage(1);
+    } else {
+      setCurrentPage(Number(value));
+    }
+    const queryString = params.toString();
+    router.push(queryString ? `/shop?${queryString}` : '/shop');
+  };
+
+  const handleToggleWishlist = (product) => {
+    dispatch(toggleWishlist({
+      id: product._id,
+      name: product.name,
+      price: product.price,
+      image: product.images[0]
+    }));
+    showToast('Wishlist updated!', 'info');
+  };
+
+  const handleQuickAdd = (product) => {
+    dispatch(addToCart({
+      productId: product._id,
+      name: product.name,
+      price: product.price,
+      image: product.images[0],
+      size: 'L',
+      color: '#000000',
+      quantity: 1,
+      isCustom: false
+    }));
+    showToast(`${product.name} added to cart!`, 'success');
+  };
+
+  const clearAllFilters = () => {
+    setSelectedCategory('');
+    setPriceRange(5000);
+    setSelectedSize('');
+    setSelectedColor('');
+    setSelectedRating('');
+    setAvailability('');
+    setLocalSearch('');
+    router.push('/shop');
+  };
+
+  const isInWishlist = (id) => wishlistItems.some((item) => item.id === id);
+
+  if (!mounted) {
+    return (
+      <Container className="py-5 text-center">
+        <div className="spinner-border text-danger" role="status"></div>
+        <p className="mt-3">Loading Shop catalog...</p>
+      </Container>
+    );
+  }
+
+  return (
+    <Container className="py-5">
+      {/* Dynamic SEO-optimised Page Heading */}
+      <div className="mb-4">
+        <h1 className="fw-extrabold display-6 mb-1" style={{ color: 'var(--primary-navy)', fontFamily: "'Outfit', sans-serif" }}>
+          {selectedCategory 
+            ? `${categoriesList.find(c => c.slug === selectedCategory)?.name || selectedCategory} Collection` 
+            : 'Premium Apparel Catalog'}
+        </h1>
+        <p className="text-muted mb-0" style={{ fontSize: '14.5px' }}>
+          Explore high-quality clothing, traditional Punajbis, custom T-shirts, and premium accessories.
+        </p>
+      </div>
+
+      <Row className="gy-4">
+        
+        {/* LEFT FILTER SIDEBAR */}
+        <Col lg={3}>
+          <div className="glass-panel p-4 bg-white">
+            <div className="d-flex justify-content-between align-items-center mb-4">
+              <h5 className="fw-bold mb-0 d-flex align-items-center gap-2" style={{ color: 'var(--primary-navy)' }}>
+                <IoFilterOutline /> Filters
+              </h5>
+              <Button variant="link" size="sm" className="text-danger fw-semibold text-decoration-none p-0" onClick={clearAllFilters}>
+                Clear All
+              </Button>
+            </div>
+
+            {/* 1. Category */}
+            <Form.Group className="mb-4">
+              <Form.Label className="fw-bold mb-2">Category</Form.Label>
+              {categoriesList.map((cat) => (
+                <Form.Check
+                  key={cat._id || cat.slug}
+                  type="radio"
+                  id={`cat-${cat.slug}`}
+                  name="categoryRadio"
+                  label={cat.name}
+                  checked={selectedCategory === cat.slug}
+                  onChange={() => updateUrlParam('category', cat.slug)}
+                  className="mb-2"
+                />
+              ))}
+            </Form.Group>
+
+            {/* 2. Price Range */}
+            <Form.Group className="mb-4">
+              <Form.Label className="fw-bold mb-2 d-flex justify-content-between">
+                <span>Max Price</span>
+                <span className="text-danger fw-bold">৳{priceRange}</span>
+              </Form.Label>
+              <Form.Range
+                min={300}
+                max={5000}
+                step={50}
+                value={priceRange}
+                onChange={(e) => setPriceRange(Number(e.target.value))}
+              />
+              <div className="d-flex justify-content-between text-muted" style={{ fontSize: '11px' }}>
+                <span>৳300</span>
+                <span>৳5000</span>
+              </div>
+            </Form.Group>
+
+            {/* 3. Sizes */}
+            <Form.Group className="mb-4">
+              <Form.Label className="fw-bold mb-2">Size Selection</Form.Label>
+              <div className="d-flex flex-wrap gap-2">
+                {['S', 'M', 'L', 'XL', 'XXL'].map((size) => (
+                  <Button
+                    key={size}
+                    onClick={() => setSelectedSize(selectedSize === size ? '' : size)}
+                    variant={selectedSize === size ? 'danger' : 'outline-dark'}
+                    size="sm"
+                    className="px-3"
+                    style={{ minWidth: '40px', borderRadius: '6px' }}
+                  >
+                    {size}
+                  </Button>
+                ))}
+              </div>
+            </Form.Group>
+
+            {/* 4. Colors */}
+            <Form.Group className="mb-4">
+              <Form.Label className="fw-bold mb-2">Colors</Form.Label>
+              <div className="d-flex gap-2">
+                {[
+                  { name: 'Black', hex: '#000000' },
+                  { name: 'White', hex: '#ffffff' },
+                  { name: 'Red', hex: '#ff0000' },
+                  { name: 'Blue', hex: '#0000ff' },
+                  { name: 'Yellow', hex: '#ffff00' }
+                ].map((color) => (
+                  <button
+                    key={color.name}
+                    onClick={() => setSelectedColor(selectedColor === color.hex ? '' : color.hex)}
+                    className="rounded-circle border-0 shadow-sm"
+                    style={{
+                      backgroundColor: color.hex,
+                      width: '28px',
+                      height: '28px',
+                      border: selectedColor === color.hex ? '3px solid var(--accent-red)' : '1px solid #CBD5E1',
+                      outline: 'none'
+                    }}
+                    title={color.name}
+                  />
+                ))}
+              </div>
+            </Form.Group>
+
+            {/* 5. Rating */}
+            <Form.Group className="mb-4">
+              <Form.Label className="fw-bold mb-2">Ratings</Form.Label>
+              {[4, 3].map((rate) => (
+                <Form.Check
+                  key={rate}
+                  type="checkbox"
+                  id={`rating-${rate}`}
+                  label={`${rate} Star & Above`}
+                  checked={selectedRating === rate.toString()}
+                  onChange={() => setSelectedRating(selectedRating === rate.toString() ? '' : rate.toString())}
+                  className="mb-2"
+                />
+              ))}
+            </Form.Group>
+
+            {/* 6. Availability */}
+            <Form.Group className="mb-2">
+              <Form.Label className="fw-bold mb-2">Availability</Form.Label>
+              <Form.Check
+                type="checkbox"
+                id="stock-in"
+                label="In Stock"
+                checked={availability === 'inStock'}
+                onChange={() => setAvailability(availability === 'inStock' ? '' : 'inStock')}
+                className="mb-2"
+              />
+              <Form.Check
+                type="checkbox"
+                id="stock-out"
+                label="Out of Stock"
+                checked={availability === 'outOfStock'}
+                onChange={() => setAvailability(availability === 'outOfStock' ? '' : 'outOfStock')}
+              />
+            </Form.Group>
+
+          </div>
+        </Col>
+
+        {/* TOP SORT BAR & PRODUCT LIST GRID */}
+        <Col lg={9}>
+          <div className="d-flex flex-column gap-4">
+            
+            {/* Top Sort Header */}
+            <div className="glass-panel p-3 bg-white d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+              <div style={{ fontSize: '15px', color: 'var(--text-muted)' }}>
+                Showing <span className="fw-bold text-dark">{products.length}</span> of <span className="fw-bold text-dark">{totalProducts}</span> items
+              </div>
+              
+              <div className="d-flex align-items-center gap-2">
+                <span className="text-nowrap text-muted" style={{ fontSize: '14px' }}>Sort By:</span>
+                <Form.Select
+                  size="sm"
+                  value={sortParam}
+                  onChange={(e) => updateUrlParam('sort', e.target.value)}
+                  style={{ width: '180px', borderRadius: '8px', padding: '6px 12px' }}
+                >
+                  <option value="newest">New Arrivals</option>
+                  <option value="popular">Popularity</option>
+                  <option value="priceLowHigh">Price: Low to High</option>
+                  <option value="priceHighLow">Price: High to Low</option>
+                </Form.Select>
+              </div>
+            </div>
+
+            {/* Product Grid */}
+            {isLoading ? (
+              <Row className="g-4">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <Col key={i} md={4} sm={6}>
+                    <Card className="border-0 shadow-sm rounded-4 p-3" style={{ height: '380px' }}>
+                      <div className="skeleton rounded-4 mb-3" style={{ height: '220px' }}></div>
+                      <div className="skeleton mb-2" style={{ height: '20px', width: '80%' }}></div>
+                      <div className="skeleton mb-3" style={{ height: '15px', width: '50%' }}></div>
+                      <div className="skeleton" style={{ height: '35px' }}></div>
+                    </Card>
+                  </Col>
+                ))}
+              </Row>
+            ) : error ? (
+              <Alert variant="danger" className="text-center py-5 border-0 shadow-sm rounded-4 bg-white">
+                <h5 className="fw-bold text-danger mb-2">Database Connection Failed</h5>
+                <p className="text-muted mb-0 small">
+                  We are unable to load apparel items right now. Please ensure the backend database is connected and active.
+                </p>
+              </Alert>
+            ) : products.length === 0 ? (
+              <div className="text-center py-5 bg-white rounded-4 shadow-sm">
+                <IoSearch size={48} className="text-muted mb-3" />
+                <h5 className="fw-bold">No Products Found</h5>
+                <p className="text-muted">Try adjusting your filters or search terms.</p>
+                <Button variant="danger" size="sm" onClick={clearAllFilters}>Reset Search</Button>
+              </div>
+            ) : (
+              <>
+                <Row className="g-4">
+                  {products.map((product) => (
+                    <Col key={product._id} md={4} sm={6}>
+                      <Card className="custom-card h-100">
+                        <div className="position-relative overflow-hidden" style={{ height: '240px' }}>
+                          <Card.Img
+                            variant="top"
+                            src={getProductImageUrl(product.images[0])}
+                            alt={product.name}
+                            className="w-100 h-100 object-fit-cover scale-hover-img"
+                          />
+                          {product.stock === 0 && (
+                            <Badge bg="secondary" className="position-absolute px-3 py-2" style={{ top: '12px', left: '12px' }}>
+                              Out of Stock
+                            </Badge>
+                          )}
+                          <button
+                            onClick={() => handleToggleWishlist(product)}
+                            className="position-absolute border-0 bg-white rounded-circle shadow p-2 d-flex align-items-center justify-content-center"
+                            style={{ width: '36px', height: '36px', zIndex: 10, top: '12px', right: '12px' }}
+                          >
+                            {isInWishlist(product._id) ? (
+                              <IoHeart size={18} color="#DC2626" />
+                            ) : (
+                              <IoHeartOutline size={18} color="var(--primary-navy)" />
+                            )}
+                          </button>
+                        </div>
+
+                        <Card.Body className="d-flex flex-column p-4">
+                          <span className="text-danger fw-bold uppercase" style={{ fontSize: '11px' }}>{product.category}</span>
+                          <Link href={`/product/${product.slug || product._id}`} className="text-decoration-none">
+                            <Card.Title className="fw-bold text-dark mt-1 text-truncate" style={{ fontSize: '15px', cursor: 'pointer' }}>
+                              {product.name}
+                            </Card.Title>
+                          </Link>
+                          
+                          <div className="d-flex align-items-center gap-2 my-2">
+                            <span className="fw-extrabold text-danger fs-5">৳{product.price}</span>
+                          </div>
+
+                          <Button
+                            onClick={() => handleQuickAdd(product)}
+                            disabled={product.stock === 0}
+                            variant="dark"
+                            className="w-100 mt-auto btn-premium-primary d-flex align-items-center justify-content-center gap-2"
+                            size="sm"
+                          >
+                            <IoCart size={16} /> Add to Cart
+                          </Button>
+                        </Card.Body>
+                      </Card>
+                    </Col>
+                  ))}
+                </Row>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="d-flex justify-content-center mt-5">
+                    <Pagination>
+                      <Pagination.Prev
+                        disabled={currentPage === 1}
+                        onClick={() => {
+                          setCurrentPage(currentPage - 1);
+                          updateUrlParam('page', (currentPage - 1).toString());
+                        }}
+                      />
+                      {[...Array(totalPages)].map((_, idx) => (
+                        <Pagination.Item
+                          key={idx + 1}
+                          active={currentPage === idx + 1}
+                          onClick={() => {
+                            setCurrentPage(idx + 1);
+                            updateUrlParam('page', (idx + 1).toString());
+                          }}
+                        >
+                          {idx + 1}
+                        </Pagination.Item>
+                      ))}
+                      <Pagination.Next
+                        disabled={currentPage === totalPages}
+                        onClick={() => {
+                          setCurrentPage(currentPage + 1);
+                          updateUrlParam('page', (currentPage + 1).toString());
+                        }}
+                      />
+                    </Pagination>
+                  </div>
+                )}
+              </>
+            )}
+
+          </div>
+        </Col>
+
+      </Row>
+      
+      <style>{`
+        .scale-hover-img {
+          transition: transform 0.5s ease;
+        }
+        .scale-hover-img:hover {
+          transform: scale(1.08);
+        }
+      `}</style>
+    </Container>
+  );
+}

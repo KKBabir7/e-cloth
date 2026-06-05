@@ -1,0 +1,16 @@
+{
+  "name": "customwear-bd-monorepo",
+  "version": "1.0.0",
+  "description": "CustomWear BD Full Stack Ecommerce Platform",
+  "scripts": {
+    "install:all": "npm install --prefix backend --legacy-peer-deps && npm install --prefix worker --legacy-peer-deps && npm install --prefix frontend --legacy-peer-deps",
+    "clean:frontend": "npm --prefix frontend run clean",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:worker": "npm --prefix worker run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:worker\" \"npm run dev:frontend\""
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

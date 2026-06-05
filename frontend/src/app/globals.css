@@ -1,0 +1,346 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@import 'bootstrap/dist/css/bootstrap.min.css';
+
+/* Custom Design Tokens */
+:root {
+  --primary-navy: #0F172A;
+  --primary-slate: #1E293B;
+  --accent-red: #DC2626;
+  --accent-red-hover: #B91C1C;
+  --bg-light: #F8FAFC;
+  --card-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.08);
+  --glass-shadow: 0 8px 32px 0 rgba(15, 23, 42, 0.06);
+  --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --font-outfit: 'Outfit', sans-serif;
+  --text-dark: #0F172A;
+  --text-muted: #64748B;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-light);
+  color: var(--text-dark);
+  font-family: var(--font-outfit);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Premium Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-slate);
+}
+
+/* Premium Gradients & Backgrounds */
+.bg-navy-gradient {
+  background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+  color: #FFFFFF;
+}
+
+.bg-red-gradient {
+  background: linear-gradient(135deg, #DC2626 0%, #EF4444 100%);
+  color: #FFFFFF;
+}
+
+/* Glassmorphism Containers */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: var(--glass-shadow);
+  border-radius: 16px;
+}
+
+/* Custom Interactive Cards */
+.custom-card {
+  border: none;
+  background-color: #FFFFFF;
+  border-radius: 16px;
+  box-shadow: var(--card-shadow);
+  transition: var(--transition-smooth);
+  overflow: hidden;
+}
+
+.custom-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.15);
+}
+
+/* Sleek Buttons & Micro-Animations */
+.btn-premium-primary {
+  background-color: var(--primary-navy);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  padding: 10px 24px;
+  transition: var(--transition-smooth);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-premium-primary:hover {
+  background-color: var(--primary-slate);
+  transform: scale(1.03);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+  color: #FFFFFF;
+}
+
+.btn-premium-accent {
+  background-color: var(--accent-red);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  padding: 10px 24px;
+  transition: var(--transition-smooth);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-premium-accent:hover {
+  background-color: var(--accent-red-hover);
+  transform: scale(1.03);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+  color: #FFFFFF;
+}
+
+.btn-premium-outline {
+  background: transparent;
+  color: var(--primary-navy);
+  border: 2px solid var(--primary-navy);
+  border-radius: 8px;
+  font-weight: 500;
+  padding: 8px 22px;
+  transition: var(--transition-smooth);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-premium-outline:hover {
+  background-color: var(--primary-navy);
+  color: #FFFFFF;
+  transform: scale(1.03);
+}
+
+/* Skeleton Loading System */
+.skeleton {
+  background: linear-gradient(90deg, #E2E8F0 25%, #F1F5F9 50%, #E2E8F0 75%);
+  background-size: 200% 100%;
+  animation: loading-skeleton 1.5s infinite;
+  border-radius: 8px;
+  width: 100%;
+}
+
+@keyframes loading-skeleton {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Form Styling overrides */
+.form-control-premium {
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-family: var(--font-outfit);
+  transition: var(--transition-smooth);
+}
+
+.form-control-premium:focus {
+  border-color: var(--primary-navy);
+  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
+  outline: none;
+}
+
+/* Floating Sticky Cart Button */
+.floating-cart-trigger {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background-color: var(--accent-red);
+  color: #FFFFFF;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  box-shadow: 0 10px 25px rgba(220, 38, 38, 0.3);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  z-index: 1000;
+  transition: var(--transition-smooth);
+  border: none;
+}
+
+.floating-cart-trigger:hover {
+  transform: scale(1.1) rotate(5deg);
+  background-color: var(--accent-red-hover);
+  box-shadow: 0 12px 30px rgba(220, 38, 38, 0.4);
+}
+
+.floating-cart-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background-color: var(--primary-navy);
+  color: #FFFFFF;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 50%;
+  border: 2px solid #FFFFFF;
+}
+
+/* Hero Section */
+.hero-slider-wrap {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  box-shadow: var(--card-shadow);
+}
+
+/* Toast Container Overlay override */
+.custom-toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 12px;
+}
+
+.custom-toast {
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(8px);
+  color: #FFFFFF;
+  padding: 16px 24px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 300px;
+  animation: slide-in-toast 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  border-left: 4px solid var(--accent-red);
+}
+
+@keyframes slide-in-toast {
+  from {
+    transform: translateX(100%) scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* ─── Hero Swiper Slider ────────────────────────────────────────────────── */
+.hero-swiper-section {
+  width: 100%;
+  overflow: hidden;
+}
+
+.hero-swiper {
+  width: 100%;
+  height: auto;
+}
+
+/* Banner image — full width, auto height, no gaps */
+.hero-swiper-img {
+  width: 100%;
+  height: auto;
+  max-height: 580px;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* ── Navigation arrows ── */
+.hero-swiper .swiper-button-next,
+.hero-swiper .swiper-button-prev {
+  width: 46px;
+  height: 46px;
+  background: rgba(255, 255, 255, 0.90);
+  border-radius: 50%;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hero-swiper .swiper-button-next:hover,
+.hero-swiper .swiper-button-prev:hover {
+  background: #fff;
+  transform: scale(1.08);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.22);
+}
+
+.hero-swiper .swiper-button-next::after,
+.hero-swiper .swiper-button-prev::after {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--primary-navy);
+}
+
+/* ── Pagination dots ── */
+.hero-swiper .swiper-pagination-bullet {
+  width: 8px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.55);
+  opacity: 1;
+  transition: all 0.25s ease;
+}
+
+.hero-swiper .swiper-pagination-bullet-active {
+  background: var(--accent-red);
+  width: 24px;
+  border-radius: 4px;
+}
+
+/* ── Responsive heights ── */
+@media (max-width: 768px) {
+  .hero-swiper-img {
+    max-height: 260px;
+  }
+
+  .hero-swiper .swiper-button-next,
+  .hero-swiper .swiper-button-prev {
+    width: 34px;
+    height: 34px;
+  }
+
+  .hero-swiper .swiper-button-next::after,
+  .hero-swiper .swiper-button-prev::after {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-swiper-img {
+    max-height: 200px;
+  }
+}
