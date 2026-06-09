@@ -261,21 +261,28 @@ body {
 /* ─── Hero Swiper Slider ────────────────────────────────────────────────── */
 .hero-swiper-section {
   width: 100%;
+  height: calc(100vh - 80px); /* 100% viewport height minus top navbar */
   overflow: hidden;
 }
 
 .hero-swiper {
   width: 100%;
-  height: auto;
+  height: 100%;
 }
 
-/* Banner image — full width, auto height, no gaps */
+/* Ensure the link wrapper spans 100% of the slide to pass down height to the image */
+.hero-swiper .swiper-slide a {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Banner image — full fit inside 100% height viewport, no cropping or stretching */
 .hero-swiper-img {
   width: 100%;
-  height: auto;
-  max-height: 580px;
-  object-fit: cover;
-  object-position: center;
+  height: 100%;
+  object-fit: fill;
+  background-color: var(--bg-light); /* matches page background to blend nicely */
   display: block;
   user-select: none;
   -webkit-user-drag: none;
@@ -284,26 +291,58 @@ body {
 /* ── Navigation arrows ── */
 .hero-swiper .swiper-button-next,
 .hero-swiper .swiper-button-prev {
-  width: 46px;
-  height: 46px;
-  background: rgba(255, 255, 255, 0.90);
+  width: 48px;
+  height: 48px;
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.45);
   border-radius: 50%;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
-  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: transparent !important;
 }
 
-.hero-swiper .swiper-button-next:hover,
+.hero-swiper .swiper-button-prev {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230F172A' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='15 18 9 12 15 6'%3E%3C/polyline%3E%3C/svg%3E");
+  left: 24px;
+}
+
+.hero-swiper .swiper-button-next {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230F172A' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 18 15 12 9 6'%3E%3C/polyline%3E%3C/svg%3E");
+  right: 24px;
+}
+
+.swiper-button-next::after,
+.swiper-button-prev::after {
+  display: none !important;
+  content: "" !important;
+}
+
+.hero-swiper .swiper-button-prev:hover,
+.hero-swiper .swiper-button-next:hover {
+  background-color: var(--accent-red);
+  border-color: var(--accent-red);
+  box-shadow: 0 10px 24px rgba(220, 38, 38, 0.35);
+  transform: translateY(-50%) scale(1.1);
+}
+
 .hero-swiper .swiper-button-prev:hover {
-  background: #fff;
-  transform: scale(1.08);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.22);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23FFFFFF' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='15 18 9 12 15 6'%3E%3C/polyline%3E%3C/svg%3E");
 }
 
-.hero-swiper .swiper-button-next::after,
-.hero-swiper .swiper-button-prev::after {
-  font-size: 15px;
-  font-weight: 800;
-  color: var(--primary-navy);
+.hero-swiper .swiper-button-next:hover {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23FFFFFF' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 18 15 12 9 6'%3E%3C/polyline%3E%3C/svg%3E");
+}
+
+.hero-swiper .swiper-button-prev:active,
+.hero-swiper .swiper-button-next:active {
+  transform: translateY(-50%) scale(0.95);
 }
 
 /* ── Pagination dots ── */
@@ -320,27 +359,30 @@ body {
   width: 24px;
   border-radius: 4px;
 }
-
-/* ── Responsive heights ── */
+/* ── Mobile Button Sizes ── */
 @media (max-width: 768px) {
-  .hero-swiper-img {
-    max-height: 260px;
+  .hero-swiper-section {
+    height: calc(100vh - 70px);
   }
 
   .hero-swiper .swiper-button-next,
   .hero-swiper .swiper-button-prev {
-    width: 34px;
-    height: 34px;
+    width: 38px;
+    height: 38px;
+    background-size: 16px;
+    transform: translateY(-50%);
   }
 
-  .hero-swiper .swiper-button-next::after,
-  .hero-swiper .swiper-button-prev::after {
-    font-size: 12px;
+  .hero-swiper .swiper-button-prev {
+    left: 12px;
   }
-}
 
-@media (max-width: 480px) {
-  .hero-swiper-img {
-    max-height: 200px;
+  .hero-swiper .swiper-button-next {
+    right: 12px;
+  }
+
+  .hero-swiper .swiper-button-prev:hover,
+  .hero-swiper .swiper-button-next:hover {
+    transform: translateY(-50%) scale(1.05);
   }
 }

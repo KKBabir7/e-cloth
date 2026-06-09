@@ -113,14 +113,16 @@ export default function AppNavbar() {
         {/* Brand Logo */}
         <Link href="/" passHref legacyBehavior>
           <Navbar.Brand className="d-flex align-items-center gap-2" style={{ cursor: 'pointer' }}>
-            <span style={{
-              fontWeight: 800,
-              fontSize: '22px',
-              color: 'var(--primary-navy)',
-              letterSpacing: '-0.5px'
-            }}>
-              CUSTOMWEAR <span style={{ color: 'var(--accent-red)' }}>BD</span>
-            </span>
+            <img 
+              src="/logo/udovex.png" 
+              alt="Udovex Logo" 
+              style={{
+                height: '38px',
+                width: 'auto',
+                display: 'block',
+                objectFit: 'contain'
+              }}
+            />
           </Navbar.Brand>
         </Link>
 
