@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Container, Row, Col, Button, Badge, Tab, Tabs, Image, Form } from 'react-bootstrap';
-import { IoCart, IoHeartOutline, IoHeart, IoShirtOutline, IoCarOutline, IoShieldCheckmarkOutline } from 'react-icons/io5';
+import { IoCart, IoHeartOutline, IoHeart, IoShirtOutline, IoCarOutline, IoShieldCheckmarkOutline, IoLogoFacebook, IoLogoWhatsapp } from 'react-icons/io5';
 import { useDispatch, useSelector } from 'react-redux';
 import { toggleWishlist } from '../../../store/wishlistSlice';
 import { addToCart } from '../../../store/cartSlice';
@@ -20,8 +20,12 @@ export default function ProductDetailsPage() {
   const wishlistItems = useSelector((state) => state.wishlist.items);
 
   const [mounted, setMounted] = useState(false);
+  const [shareUrl, setShareUrl] = useState('');
   useEffect(() => {
     setMounted(true);
+    if (typeof window !== 'undefined') {
+      setShareUrl(window.location.href);
+    }
   }, []);
 
   const [selectedSize, setSelectedSize] = useState('');
@@ -414,6 +418,29 @@ export default function ProductDetailsPage() {
                 <IoShieldCheckmarkOutline size={18} className="text-danger" />
                 <span>100% Secure Payment processing (Simulated bKash/Nagad and COD support).</span>
               </div>
+            </div>
+
+            {/* Social Share Buttons */}
+            <div className="d-flex align-items-center gap-3 mt-3 pt-3 border-top">
+              <span className="fw-bold text-dark" style={{ fontSize: '13px' }}>Share:</span>
+              <a
+                href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="btn btn-outline-primary btn-sm d-flex align-items-center gap-2 px-3 py-1.5"
+                style={{ borderRadius: '6px', fontSize: '13.5px', fontWeight: '500' }}
+              >
+                <IoLogoFacebook size={16} /> Facebook
+              </a>
+              <a
+                href={`https://api.whatsapp.com/send?text=${encodeURIComponent(product.name + ' - ' + shareUrl)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="btn btn-outline-success btn-sm d-flex align-items-center gap-2 px-3 py-1.5"
+                style={{ borderRadius: '6px', fontSize: '13.5px', fontWeight: '500' }}
+              >
+                <IoLogoWhatsapp size={16} /> WhatsApp
+              </a>
             </div>
 
           </div>

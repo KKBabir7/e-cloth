@@ -344,7 +344,7 @@ export default function HomePage() {
       </section>
 
       {/* 5. BANGLADESH-STYLE TESTIMONIALS */}
-      <section className="py-5 bg-light">
+      <section className="py-5 bg-white border-top">
         <Container>
           <div className="text-center mb-5">
             <h2 className="fw-bold" style={{ color: 'var(--primary-navy)' }}>What Our Customers Say</h2>

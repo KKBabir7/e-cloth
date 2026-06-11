@@ -3,6 +3,7 @@ import Providers from "../components/Providers";
 import AppNavbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import FloatingCart from "../components/FloatingCart";
+import FloatingWhatsApp from "../components/FloatingWhatsApp";
 
 export const metadata = {
   title: "CustomWear BD | Premium Custom T-Shirts & Fashion Ecommerce",
@@ -17,7 +18,7 @@ export default function RootLayout({ children }) {
       <head>
         <link rel="icon" href="/favicon.ico" />
       </head>
-      <body className="d-flex flex-column min-vh-100 bg-light">
+      <body className="d-flex flex-column min-vh-100 bg-white">
         <Providers>
           {/* Global Sticky Navigation */}
           <AppNavbar />
@@ -29,6 +30,9 @@ export default function RootLayout({ children }) {
 
           {/* Floating Cart Button Shortcut */}
           <FloatingCart />
+
+          {/* Floating WhatsApp Support Button Widget */}
+          <FloatingWhatsApp />
 
           {/* Global Corporate Footer */}
           <Footer />

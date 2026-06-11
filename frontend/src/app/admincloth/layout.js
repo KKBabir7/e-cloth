@@ -72,7 +72,7 @@ export default function AdminLayout({ children }) {
   ];
 
   return (
-    <div className="bg-light min-vh-100 pb-5">
+    <div className="bg-white min-vh-100 pb-5">
       {/* 1. ADMIN TOP NAVBAR */}
       <Navbar bg="dark" variant="dark" expand="lg" className="shadow-sm mb-4 px-4 bg-navy-gradient border-bottom border-danger border-opacity-25 py-3">
         <Container fluid style={{ maxWidth: '1400px' }}>

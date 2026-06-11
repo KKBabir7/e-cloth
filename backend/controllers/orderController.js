@@ -4,6 +4,7 @@ const User = require('../models/User');
 const Coupon = require('../models/Coupon');
 const { getOrderQueue } = require('../config/db');
 const { calculateDeliveryCharge } = require('../../shared/utils');
+const { broadcast } = require('../utils/sseManager');
 
 /**
  * @desc    Submit checkout order (Dispatch to background queue)
@@ -113,6 +114,8 @@ const createOrder = async (req, res) => {
       }
     }
 
+    broadcast('orders');
+
     res.status(201).json({
       success: true,
       message: 'Order received and placed into processing queue!',
@@ -199,6 +202,7 @@ const updateOrderStatus = async (req, res) => {
     if (paymentStatus) order.paymentStatus = paymentStatus;
 
     await order.save();
+    broadcast('orders');
 
     res.status(200).json({
       success: true,

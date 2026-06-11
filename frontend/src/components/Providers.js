@@ -79,6 +79,9 @@ function GlobalRealtimeSync() {
             qc.invalidateQueries({ queryKey: ['trending'] });
             qc.invalidateQueries({ queryKey: ['product'] });
             break;
+          case 'orders':
+            qc.invalidateQueries({ queryKey: ['orders'] });
+            break;
           default:
             break;
         }

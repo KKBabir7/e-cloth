@@ -3,16 +3,16 @@
 
 /* Custom Design Tokens */
 :root {
-  --primary-navy: #0F172A;
-  --primary-slate: #1E293B;
-  --accent-red: #DC2626;
-  --accent-red-hover: #B91C1C;
-  --bg-light: #F8FAFC;
-  --card-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.08);
-  --glass-shadow: 0 8px 32px 0 rgba(15, 23, 42, 0.06);
+  --primary-navy: #39161a;
+  --primary-slate: #2a2c32;
+  --accent-red: #fe7e07;
+  --accent-red-hover: #e05302;
+  --bg-light: #FFFFFF;
+  --card-shadow: 0 10px 30px -10px rgba(28, 30, 35, 0.08);
+  --glass-shadow: 0 8px 32px 0 rgba(28, 30, 35, 0.06);
   --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --font-outfit: 'Outfit', sans-serif;
-  --text-dark: #0F172A;
+  --text-dark: #1c1e23;
   --text-muted: #64748B;
 }
 
@@ -28,6 +28,11 @@ body {
   font-family: var(--font-outfit);
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--primary-navy);
+  font-family: var(--font-outfit);
 }
 
 /* Premium Custom Scrollbar */
@@ -52,7 +57,7 @@ body {
 }
 
 .bg-red-gradient {
-  background: linear-gradient(135deg, #DC2626 0%, #EF4444 100%);
+  background: linear-gradient(135deg, #fe7e07 0%, #e05302 100%);
   color: #FFFFFF;
 }
 
@@ -386,3 +391,4 @@ body {
     transform: translateY(-50%) scale(1.05);
   }
 }
+
