@@ -266,7 +266,7 @@ h1, h2, h3, h4, h5, h6 {
 /* ─── Hero Swiper Slider ────────────────────────────────────────────────── */
 .hero-swiper-section {
   width: 100%;
-  height: calc(100vh - 80px); /* 100% viewport height minus top navbar */
+  /* height: calc(100vh - 68px);  */
   overflow: hidden;
 }
 
@@ -367,7 +367,7 @@ h1, h2, h3, h4, h5, h6 {
 /* ── Mobile Button Sizes ── */
 @media (max-width: 768px) {
   .hero-swiper-section {
-    height: calc(100vh - 70px);
+    /* height: calc(100vh - 70px); */
   }
 
   .hero-swiper .swiper-button-next,
@@ -390,5 +390,293 @@ h1, h2, h3, h4, h5, h6 {
   .hero-swiper .swiper-button-next:hover {
     transform: translateY(-50%) scale(1.05);
   }
+}
+
+
+/* -- Navbar Styles --------------------------------------------------- */
+.text-hover-orange {
+  transition: color 0.25s ease !important;
+}
+.text-hover-orange:hover, .text-hover-orange:focus {
+  color: var(--accent-red) !important;
+}
+.nav-action-label {
+  color: #475569;
+  transition: color 0.25s ease;
+}
+.text-hover-orange:hover .nav-action-label {
+  color: var(--accent-red) !important;
+}
+.hover-bg-light:hover {
+  background-color: #F8FAFC !important;
+}
+.navbar-logo-img:hover {
+  transform: none;
+}
+
+/* Navbar Dropdowns */
+.dropdown-menu {
+  background-color: #FFFFFF !important;
+  border: 1px solid rgba(28, 30, 35, 0.08) !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08) !important;
+  border-radius: 12px !important;
+  padding: 8px !important;
+  margin-top: 22px !important;
+}
+.dropdown-menu::before {
+  content: '';
+  position: absolute;
+  top: -24px;
+  left: 0;
+  right: 0;
+  height: 24px;
+  background: transparent;
+}
+.dropdown-menu .dropdown-item {
+  color: #475569 !important;
+  border-radius: 8px !important;
+  padding: 10px 16px !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  text-transform: capitalize !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+.dropdown-menu .dropdown-item:hover {
+  background-color: #FFF7ED !important;
+  color: #ff8525 !important;
+  padding-left: 20px !important;
+}
+.dropdown-menu .dropdown-item.text-danger {
+  color: #EF4444 !important;
+}
+.dropdown-menu .dropdown-item.text-danger:hover {
+  background-color: #FEF2F2 !important;
+  color: #DC2626 !important;
+  padding-left: 20px !important;
+}
+.dropdown-divider {
+  margin: 8px 0 !important;
+  border-color: #F1F5F9 !important;
+}
+#profile-dropdown::after {
+  display: none !important;
+}
+.dropdown-premium-hover .nav-link,
+.dropdown-premium-hover .dropdown-toggle {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+@media (min-width: 768px) {
+  .dropdown-premium-hover:hover .dropdown-menu,
+  .dropdown-profile-hover:hover .dropdown-menu {
+    display: block !important;
+    margin-top: 22px !important;
+  }
+}
+/* Category dropdown: hide Bootstrap auto-caret (we use FiChevronDown in JSX) */
+.dropdown-premium-hover .dropdown-toggle::after {
+  display: none !important;
+}
+/* Rotate the FiChevronDown icon when dropdown is open */
+.dropdown-premium-hover.show .category-caret-icon,
+.dropdown-premium-hover:hover .category-caret-icon {
+  transform: rotate(180deg) !important;
+}
+@keyframes slideDown {
+  from { transform: translateY(-100%); }
+  to   { transform: translateY(0); }
+}
+@keyframes shine-sweep {
+  0%   { background-position: 0% center; }
+  100% { background-position: -200% center; }
+}
+@keyframes gentle-bounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%       { transform: translateY(-2px) scale(1.02); }
+}
+.pulse-btn {
+  background: linear-gradient(135deg, #ff8525 0%, #ffaa66 50%, #ff8525 100%) !important;
+  background-size: 200% auto !important;
+  animation: shine-sweep 3s infinite linear, gentle-bounce 2.5s infinite ease-in-out;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 4px 15px rgba(255, 133, 37, 0.25) !important;
+  border-radius: 6px !important;
+}
+.pulse-btn:hover {
+  animation-play-state: paused !important;
+  transform: translateY(-2px) scale(1.05) !important;
+  background-position: right center !important;
+  box-shadow: 0 8px 25px rgba(255, 133, 37, 0.45), 0 0 0 2px rgba(255, 133, 37, 0.15) !important;
+}
+
+/* ── Mobile Offcanvas Sidebar ─────────────────────────────────────── */
+.offcanvas-sidebar {
+  background: #FFFFFF;
+  box-shadow: -8px 0 40px rgba(0, 0, 0, 0.12);
+}
+.offcanvas-hamburger:hover {
+  background-color: #F8FAFC !important;
+  border-radius: 8px;
+}
+.offcanvas-nav-link:hover {
+  background-color: #FFF7ED !important;
+  color: #ff8525 !important;
+}
+/* Offcanvas accordion header */
+.offcanvas-sidebar .accordion-button {
+  background: transparent !important;
+  color: #475569 !important;
+  font-weight: 500 !important;
+  font-size: 14px !important;
+  padding: 8px 12px !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+}
+.offcanvas-sidebar .accordion-button:not(.collapsed) {
+  background: #FFF7ED !important;
+  color: #ff8525 !important;
+}
+.offcanvas-sidebar .accordion-button::after {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%2394a3b8'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
+}
+.offcanvas-sidebar .accordion-button:not(.collapsed)::after {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23ff8525'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
+}
+.offcanvas-sidebar .accordion-body {
+  padding: 4px 0 !important;
+}
+.offcanvas-sidebar .accordion-item {
+  border: none !important;
+  background: transparent !important;
+}
+
+/* Responsive Logo Height */
+.navbar-logo-img {
+  height: 25px;
+}
+
+@media (max-width: 573.98px) {
+  .navbar-logo-img {
+    height: 18px;
+  }
+}
+
+@media (min-width: 992px) {
+  .navbar-logo-img {
+    height: 30px;
+  }
+}
+
+/* Responsive Desktop Navbar Gaps */
+.desktop-nav-container,
+.desktop-nav-links,
+.desktop-utility-icons {
+  gap: 35px;
+}
+
+@media (max-width: 991.98px) {
+  .desktop-nav-container,
+  .desktop-nav-links,
+  .desktop-utility-icons {
+    gap: 20px !important;
+  }
+}
+
+/* Homepage Category Text Slider Styling */
+.category-text-swiper {
+  width: 100%;
+}
+.category-text-swiper .swiper-wrapper {
+  justify-content: center;
+  padding: 0px 0;
+}
+@media (max-width: 768px) {
+  .category-text-swiper .swiper-wrapper {
+    justify-content: flex-start !important;
+  }
+}
+.category-text-item {
+  transform: skewX(-20deg);
+  padding: 25px 35px 25px 25px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s ease;
+  height: 100%;
+  border-left: 0px solid #E2E8F0;
+  border-right: 0px solid #E2E8F0;
+  background: #FFFFFF;
+}
+.category-text-swiper .swiper-slide:nth-child(even) .category-text-item {
+  background: #F8FAFC;
+}
+.category-text-item span {
+  transform: skewX(20deg);
+  display: inline-block;
+  font-weight: 600;
+  font-size: 13.5px;
+  letter-spacing: 1.5px;
+  color: #475569;
+  text-transform: uppercase;
+  transition: color 0.25s ease;
+}
+.category-text-item:hover {
+  background: #F1F5F9;
+}
+.category-text-item:hover span {
+  color: var(--accent-red) !important;
+}
+
+/* Shop Now slanted tab */
+.shop-now-tab {
+  background: #ffffff;
+  transform: skewX(-20deg);
+  padding: 25px 35px 25px 25px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.25s ease;
+  height: 100%;
+  border-left: 0px solid #E2E8F0;
+  border-right: 0px solid #E2E8F0;
+}
+.shop-now-tab span {
+  transform: skewX(20deg);
+  font-weight: 500;
+  font-size: 13.5px;
+  letter-spacing: 1.5px;
+  color: #1E293B;
+  text-transform: uppercase;
+}
+.shop-now-tab:hover {
+  background: #F8FAFC;
+}
+
+/* Category Navigation Round Buttons (Mobile Only) */
+.cat-prev,
+.cat-next {
+  width: 30px;
+  height: 30px;
+  border-radius: 50% !important;
+  background: #FFFFFF !important;
+  border: 1px solid rgba(226, 232, 240, 0.8) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05) !important;
+  transition: all 0.2s ease !important;
+  color: #64748B !important;
+  padding: 0 !important;
+  outline: none !important;
+  top: 50%;
+  transform: translateY(-50%) !important;
+}
+.cat-prev:hover,
+.cat-next:hover {
+  background: #ff8525 !important;
+  color: #FFFFFF !important;
+  border-color: #ff8525 !important;
 }
 

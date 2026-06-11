@@ -1,7 +1,5 @@
 'use client';
 
-export const dynamic = 'force-dynamic';
-
 import React, { useEffect, useState } from 'react';
 import { Card, Table, Badge, Button, Row, Col } from 'react-bootstrap';
 import { IoReceiptOutline, IoDownloadOutline, IoTimeOutline } from 'react-icons/io5';

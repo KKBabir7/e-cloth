@@ -12,6 +12,7 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import { IoShirtOutline, IoSparkles, IoCart, IoHeartOutline, IoHeart, IoCheckmarkCircle } from 'react-icons/io5';
+import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { useDispatch, useSelector } from 'react-redux';
 import { toggleWishlist } from '../store/wishlistSlice';
 import { addToCart } from '../store/cartSlice';
@@ -161,7 +162,7 @@ export default function HomePage() {
     <div>
       {/* 1. HERO SLIDER — Swiper.js: touch/drag/swipe + autoplay */}
       {!slidesLoading && slides.length > 0 && (
-        <section className="hero-swiper-section mb-5">
+        <section className="hero-swiper-section mb-0">
           <Swiper
             modules={[Navigation, Pagination, Autoplay, A11y]}
             navigation
@@ -189,34 +190,50 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* 2. CATEGORY GRID */}
+      {/* 2. CATEGORY TEXT SLIDER */}
       {!categoriesLoading && categories.length > 0 && (
-        <section className="py-5">
+        <section className="border-bottom border-top py-0 position-relative" style={{ zIndex: 10, backgroundColor: '#F8FAFC' }}>
           <Container>
-            <div className="text-center mb-5">
-              <h2 className="fw-bold" style={{ color: 'var(--primary-navy)' }}>Browse By Categories</h2>
-              <div className="bg-danger mx-auto" style={{ width: '60px', height: '4px', borderRadius: '2px' }}></div>
-            </div>
-            
-            <Row className="g-4">
-              {categories.map((cat) => (
-                <Col key={cat._id || cat.slug} lg={3} md={6}>
-                  <Link href={`/shop?category=${cat.slug}`} className="text-decoration-none">
-                    <Card className="custom-card border-0 text-white overflow-hidden text-center" style={{ height: '280px', cursor: 'pointer' }}>
-                      <Card.Img
-                        src={cat.image && (cat.image.startsWith('http') ? cat.image : `${getBackendUrl()}${cat.image}`)}
-                        alt={cat.name}
-                        className="w-100 h-100 object-fit-cover scale-hover-img"
-                      />
-                      <Card.ImgOverlay className="d-flex flex-column justify-content-end align-items-center bg-dark bg-opacity-40 p-4">
-                        <h5 className="fw-bold text-white mb-0">{cat.name}</h5>
-                        <span className="text-danger fw-semibold" style={{ fontSize: '13px' }}>Explore Catalog →</span>
-                      </Card.ImgOverlay>
-                    </Card>
+            <div className="position-relative px-md-5">
+              <Swiper
+                modules={[Navigation, A11y]}
+                navigation={{
+                  prevEl: '.cat-prev',
+                  nextEl: '.cat-next',
+                }}
+                spaceBetween={0}
+                slidesPerView="auto"
+                className="category-text-swiper"
+                style={{ width: '100%' }}
+              >
+                {/* SHOP NOW / ALL link with slanted background */}
+                <SwiperSlide style={{ width: 'auto' }}>
+                  <Link href="/shop" className="text-decoration-none">
+                    <div className="shop-now-tab">
+                      <span>SHOP NOW</span>
+                    </div>
                   </Link>
-                </Col>
-              ))}
-            </Row>
+                </SwiperSlide>
+
+                {categories.map((cat) => (
+                  <SwiperSlide key={cat._id || cat.slug} style={{ width: 'auto' }}>
+                    <Link href={`/shop?category=${cat.slug}`} className="text-decoration-none">
+                      <div className="category-text-item" style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                        <span>{cat.name}</span>
+                      </div>
+                    </Link>
+                  </SwiperSlide>
+                ))}
+              </Swiper>
+              
+              {/* Navigation Arrows (Mobile Only) */}
+              <button className="cat-prev position-absolute start-0 top-50 translate-middle-y d-md-none" style={{ zIndex: 12, left: '5px' }}>
+                <FiChevronLeft size={18} />
+              </button>
+              <button className="cat-next position-absolute end-0 top-50 translate-middle-y d-md-none" style={{ zIndex: 12, right: '5px' }}>
+                <FiChevronRight size={18} />
+              </button>
+            </div>
           </Container>
         </section>
       )}
