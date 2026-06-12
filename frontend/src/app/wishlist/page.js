@@ -4,8 +4,9 @@ export const dynamic = 'force-dynamic';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Container, Row, Col, Card, Button } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Modal } from 'react-bootstrap';
 import { IoHeart, IoTrashOutline, IoCartOutline, IoHeartOutline } from 'react-icons/io5';
+import { FiZoomIn } from 'react-icons/fi';
 import { useSelector, useDispatch } from 'react-redux';
 import { getProductImageUrl } from '../../utils/api';
 import { removeFromWishlist } from '../../store/wishlistSlice';
@@ -16,7 +17,10 @@ export default function WishlistPage() {
   const dispatch = useDispatch();
   const { showToast } = useUI();
   const wishlistItems = useSelector((state) => state.wishlist.items);
+  const cartItems = useSelector((state) => state.cart.items);
+  const isInCart = (id) => cartItems?.some((item) => item.productId === id);
   const [mounted, setMounted] = useState(false);
+  const [zoomImage, setZoomImage] = useState(null);
 
   useEffect(() => {
     setMounted(true);
@@ -71,57 +75,110 @@ export default function WishlistPage() {
 
       <Row className="g-4">
         {wishlistItems.map((item) => (
-          <Col lg={3} md={4} sm={6} key={item.id}>
-            <Card className="custom-card h-100">
-              <div className="position-relative overflow-hidden" style={{ height: '240px' }}>
-                <Card.Img
-                  variant="top"
-                  src={getProductImageUrl(item.image)}
-                  alt={item.name}
-                  className="w-100 h-100 object-fit-cover scale-hover-img"
-                />
+          <Col lg={3} md={4} sm={6} xs={6} key={item.id}>
+            <div className="custom-card d-flex flex-column h-100">
+              <div className="product-image-container position-relative overflow-hidden">
+                <Link href={`/product/${item.id}`}>
+                  <Card.Img
+                    variant="top"
+                    src={getProductImageUrl(item.image)}
+                    alt={item.name}
+                    className="primary-img"
+                  />
+                </Link>
                 <button
                   onClick={() => dispatch(removeFromWishlist(item.id))}
-                  className="position-absolute border-0 bg-white rounded-circle shadow p-2 d-flex align-items-center justify-content-center text-danger"
-                  style={{ width: '36px', height: '36px', zIndex: 10, top: '12px', right: '12px' }}
+                  className="position-absolute border-0 rounded-circle d-flex align-items-center justify-content-center wishlist-float-btn"
                   title="Remove from wishlist"
                 >
-                  <IoTrashOutline size={18} />
+                  <IoTrashOutline size={16} color="#DC2626" />
+                </button>
+
+                {/* Zoom Floating Button */}
+                <button
+                  onClick={() => setZoomImage(getProductImageUrl(item.image))}
+                  className="position-absolute border-0 rounded-circle d-flex align-items-center justify-content-center zoom-float-btn"
+                  title="Zoom Image"
+                >
+                  <FiZoomIn size={16} color="#475569" />
                 </button>
               </div>
 
-              <Card.Body className="d-flex flex-column p-4">
+              <div className="product-details d-flex flex-column flex-grow-1">
                 <Link href={`/product/${item.id}`} className="text-decoration-none">
-                  <Card.Title className="fw-bold text-dark mt-1 text-truncate" style={{ fontSize: '15px', cursor: 'pointer' }}>
+                  <h4 className="product-card-title text-truncate">
                     {item.name}
-                  </Card.Title>
+                  </h4>
                 </Link>
 
-                <div className="d-flex align-items-center gap-2 my-2">
-                  <span className="fw-extrabold text-danger fs-5">৳{item.price}</span>
-                </div>
+                {/* Price and Actions Section */}
+                <div className="d-flex align-items-center justify-content-between mt-auto pt-1">
+                  {/* Price */}
+                  <div className="d-flex align-items-baseline gap-1">
+                    <span className="product-card-price text-danger">৳{item.price}</span>
+                  </div>
 
-                <Button
-                  onClick={() => handleMoveToCart(item)}
-                  variant="dark"
-                  className="w-100 mt-auto btn-premium-primary d-flex align-items-center justify-content-center gap-2"
-                  size="sm"
-                >
-                  <IoCartOutline size={16} /> Move to Cart
-                </Button>
-              </Card.Body>
-            </Card>
+                  {/* Actions */}
+                  <div className="d-flex align-items-center">
+                    <button
+                      onClick={() => handleMoveToCart(item)}
+                      className={`card-action-btn ${isInCart(item.id) ? 'active' : ''}`}
+                      title="Move to Cart"
+                    >
+                      <IoCartOutline size={16} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </Col>
         ))}
       </Row>
       
+      {/* Premium Image Lightbox Modal */}
+      <Modal 
+        show={!!zoomImage} 
+        onHide={() => setZoomImage(null)} 
+        centered 
+        size="lg"
+        dialogClassName="modal-dialog-centered"
+        contentClassName="bg-transparent border-0 shadow-none"
+      >
+        <Modal.Body className="p-0 position-relative d-flex justify-content-center align-items-center">
+          <button 
+            onClick={() => setZoomImage(null)}
+            className="position-absolute btn-close btn-close-white" 
+            style={{ 
+              top: '-40px', 
+              right: '0', 
+              zIndex: 1050,
+              backgroundSize: '1.2em',
+              padding: '0.8rem',
+              opacity: 0.8,
+              cursor: 'pointer'
+            }} 
+            aria-label="Close"
+          ></button>
+          <img 
+            src={zoomImage} 
+            alt="Product preview" 
+            className="img-fluid"
+            style={{ 
+              maxHeight: '80vh', 
+              objectFit: 'contain',
+              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.4)',
+              backgroundColor: '#FFFFFF',
+              borderRadius: '0px'
+            }} 
+          />
+        </Modal.Body>
+      </Modal>
+
       <style>{`
         .scale-hover-img {
           transition: transform 0.5s ease;
         }
-        .scale-hover-img:hover {
-          transform: scale(1.08);
-        }
+      
       `}</style>
     </Container>
   );

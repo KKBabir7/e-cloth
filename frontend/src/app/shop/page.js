@@ -5,8 +5,9 @@ export const dynamic = 'force-dynamic';
 import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Container, Row, Col, Card, Button, Form, Badge, Pagination, Alert } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Form, Badge, Pagination, Alert, Modal } from 'react-bootstrap';
 import { IoCart, IoHeartOutline, IoHeart, IoFilterOutline, IoSearch } from 'react-icons/io5';
+import { FiZoomIn } from 'react-icons/fi';
 import { useDispatch, useSelector } from 'react-redux';
 import { toggleWishlist } from '../../store/wishlistSlice';
 import { addToCart } from '../../store/cartSlice';
@@ -35,6 +36,8 @@ function ShopContent() {
   const dispatch = useDispatch();
   const { showToast } = useUI();
   const wishlistItems = useSelector((state) => state.wishlist.items);
+  const cartItems = useSelector((state) => state.cart.items);
+  const [zoomImage, setZoomImage] = useState(null);
 
   // Parse filters from URL Search Params
   const categoryParam = searchParams.get('category') || '';
@@ -131,7 +134,7 @@ function ShopContent() {
     dispatch(toggleWishlist({
       id: product._id,
       name: product.name,
-      price: product.price,
+      price: product.discountPrice > 0 ? product.discountPrice : product.price,
       image: product.images[0]
     }));
     showToast('Wishlist updated!', 'info');
@@ -141,7 +144,7 @@ function ShopContent() {
     dispatch(addToCart({
       productId: product._id,
       name: product.name,
-      price: product.price,
+      price: product.discountPrice > 0 ? product.discountPrice : product.price,
       image: product.images[0],
       size: 'L',
       color: '#000000',
@@ -163,6 +166,7 @@ function ShopContent() {
   };
 
   const isInWishlist = (id) => wishlistItems.some((item) => item.id === id);
+  const isInCart = (id) => cartItems?.some((item) => item.productId === id);
 
   if (!mounted) {
     return (
@@ -380,59 +384,102 @@ function ShopContent() {
             ) : (
               <>
                 <Row className="g-4">
-                  {products.map((product) => (
-                    <Col key={product._id} md={4} sm={6}>
-                      <Card className="custom-card h-100">
-                        <div className="position-relative overflow-hidden" style={{ height: '240px' }}>
-                          <Card.Img
-                            variant="top"
-                            src={getProductImageUrl(product.images[0])}
-                            alt={product.name}
-                            className="w-100 h-100 object-fit-cover scale-hover-img"
-                          />
-                          {product.stock === 0 && (
-                            <Badge bg="secondary" className="position-absolute px-3 py-2" style={{ top: '12px', left: '12px' }}>
-                              Out of Stock
-                            </Badge>
-                          )}
-                          <button
-                            onClick={() => handleToggleWishlist(product)}
-                            className="position-absolute border-0 bg-white rounded-circle shadow p-2 d-flex align-items-center justify-content-center"
-                            style={{ width: '36px', height: '36px', zIndex: 10, top: '12px', right: '12px' }}
-                          >
-                            {isInWishlist(product._id) ? (
-                              <IoHeart size={18} color="#DC2626" />
-                            ) : (
-                              <IoHeartOutline size={18} color="var(--primary-navy)" />
+                  {products.map((product) => {
+                    const isDiscounted = product.discountPrice > 0;
+                    const discountPercent = isDiscounted ? Math.round(((product.price - product.discountPrice) / product.price) * 100) : 0;
+                    
+                    return (
+                      <Col key={product._id} md={4} sm={6} xs={6}>
+                        <div className="custom-card d-flex flex-column h-100">
+                          {/* Image wrapper */}
+                          <div className="product-image-container position-relative overflow-hidden">
+                            <Link href={`/product/${product.slug || product._id}`}>
+                              <Card.Img
+                                variant="top"
+                                src={getProductImageUrl(product.images[0])}
+                                alt={product.name}
+                                className="primary-img"
+                              />
+                              {product.images && product.images.length > 1 && (
+                                <Card.Img
+                                  variant="top"
+                                  src={getProductImageUrl(product.images[1])}
+                                  alt={product.name}
+                                  className="secondary-img"
+                                />
+                              )}
+                            </Link>
+                            {product.stock === 0 && (
+                              <Badge bg="secondary" className="position-absolute px-3 py-2" style={{ top: '12px', left: '12px', zIndex: 10 }}>
+                                Out of Stock
+                              </Badge>
                             )}
-                          </button>
-                        </div>
+                            <button
+                              onClick={() => handleToggleWishlist(product)}
+                              className="position-absolute border-0 rounded-circle d-flex align-items-center justify-content-center wishlist-float-btn"
+                              title={isInWishlist(product._id) ? "Remove from Wishlist" : "Add to Wishlist"}
+                            >
+                              {isInWishlist(product._id) ? (
+                                <IoHeart size={16} color="var(--accent-red)" />
+                              ) : (
+                                <IoHeartOutline size={16} color="#475569" />
+                              )}
+                            </button>
 
-                        <Card.Body className="d-flex flex-column p-4">
-                          <span className="text-danger fw-bold uppercase" style={{ fontSize: '11px' }}>{product.category}</span>
-                          <Link href={`/product/${product.slug || product._id}`} className="text-decoration-none">
-                            <Card.Title className="fw-bold text-dark mt-1 text-truncate" style={{ fontSize: '15px', cursor: 'pointer' }}>
-                              {product.name}
-                            </Card.Title>
-                          </Link>
-                          
-                          <div className="d-flex align-items-center gap-2 my-2">
-                            <span className="fw-extrabold text-danger fs-5">৳{product.price}</span>
+                            {/* Zoom Floating Button */}
+                            <button
+                              onClick={() => setZoomImage(getProductImageUrl(product.images[0]))}
+                              className="position-absolute border-0 rounded-circle d-flex align-items-center justify-content-center zoom-float-btn"
+                              title="Zoom Image"
+                            >
+                              <FiZoomIn size={16} color="#475569" />
+                            </button>
                           </div>
 
-                          <Button
-                            onClick={() => handleQuickAdd(product)}
-                            disabled={product.stock === 0}
-                            variant="dark"
-                            className="w-100 mt-auto btn-premium-primary d-flex align-items-center justify-content-center gap-2"
-                            size="sm"
-                          >
-                            <IoCart size={16} /> Add to Cart
-                          </Button>
-                        </Card.Body>
-                      </Card>
-                    </Col>
-                  ))}
+                          {/* Details */}
+                          <div className="product-details d-flex flex-column flex-grow-1">
+                            <Link href={`/product/${product.slug || product._id}`} className="text-decoration-none">
+                              <h4 className="product-card-title text-truncate">
+                                {product.name}
+                              </h4>
+                            </Link>
+                            
+                            {/* Price and Actions Section */}
+                            <div className="d-flex align-items-center justify-content-between mt-auto pt-1">
+                              {/* Price */}
+                              <div className="d-flex align-items-baseline gap-1">
+                                {isDiscounted ? (
+                                  <>
+                                    <span className="product-card-price discounted">৳{product.discountPrice}</span>
+                                    <span className="product-card-price-original">৳{product.price}</span>
+                                  </>
+                                ) : (
+                                  <span className="product-card-price">৳{product.price}</span>
+                                )}
+                              </div>
+
+                              {/* Actions */}
+                              <div className="d-flex align-items-center gap-2">
+                                {isDiscounted && (
+                                  <span className="discount-badge-inline">
+                                    Save {discountPercent}%
+                                  </span>
+                                )}
+                                <button
+                                  onClick={() => handleQuickAdd(product)}
+                                  disabled={product.stock === 0}
+                                  className={`card-action-btn ${isInCart(product._id) ? 'active' : ''}`}
+                                  title="Add to Cart"
+                                >
+                                  <IoCart size={16} />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </Col>
+                    );
+                  })}
                 </Row>
 
                 {/* Pagination */}
@@ -476,13 +523,50 @@ function ShopContent() {
 
       </Row>
       
+      {/* Premium Image Lightbox Modal */}
+      <Modal 
+        show={!!zoomImage} 
+        onHide={() => setZoomImage(null)} 
+        centered 
+        size="lg"
+        dialogClassName="modal-dialog-centered"
+        contentClassName="bg-transparent border-0 shadow-none"
+      >
+        <Modal.Body className="p-0 position-relative d-flex justify-content-center align-items-center">
+          <button 
+            onClick={() => setZoomImage(null)}
+            className="position-absolute btn-close btn-close-white" 
+            style={{ 
+              top: '-40px', 
+              right: '0', 
+              zIndex: 1050,
+              backgroundSize: '1.2em',
+              padding: '0.8rem',
+              opacity: 0.8,
+              cursor: 'pointer'
+            }} 
+            aria-label="Close"
+          ></button>
+          <img 
+            src={zoomImage} 
+            alt="Product preview" 
+            className="img-fluid"
+            style={{ 
+              maxHeight: '80vh', 
+              objectFit: 'contain',
+              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.4)',
+              backgroundColor: '#FFFFFF',
+              borderRadius: '0px'
+            }} 
+          />
+        </Modal.Body>
+      </Modal>
+
       <style>{`
         .scale-hover-img {
           transition: transform 0.5s ease;
         }
-        .scale-hover-img:hover {
-          transform: scale(1.08);
-        }
+       
       `}</style>
     </Container>
   );

@@ -5,14 +5,14 @@ export const dynamic = 'force-dynamic';
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Container, Row, Col, Card, Button, Badge } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Badge, Modal } from 'react-bootstrap';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Autoplay, A11y } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import { IoShirtOutline, IoSparkles, IoCart, IoHeartOutline, IoHeart, IoCheckmarkCircle } from 'react-icons/io5';
-import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { FiChevronLeft, FiChevronRight, FiZoomIn } from 'react-icons/fi';
 import { useDispatch, useSelector } from 'react-redux';
 import { toggleWishlist } from '../store/wishlistSlice';
 import { addToCart } from '../store/cartSlice';
@@ -26,8 +26,10 @@ export default function HomePage() {
   const dispatch = useDispatch();
   const { showToast } = useUI();
   const wishlistItems = useSelector((state) => state.wishlist.items);
+  const cartItems = useSelector((state) => state.cart.items);
 
   const [mounted, setMounted] = useState(false);
+  const [zoomImage, setZoomImage] = useState(null);
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -42,49 +44,8 @@ export default function HomePage() {
         }
         throw new Error('Not successful');
       } catch (err) {
-        console.warn('Backend server unseeded or offline, falling back to offline catalog');
-        return [
-          {
-            _id: 'fallback-1',
-            name: 'Classic Crimson Polo Shirt',
-            category: 'Polo',
-            price: 1250,
-            discountPrice: 950,
-            images: ['https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=500&auto=format&fit=crop'],
-            stock: 12,
-            ratings: { average: 4.8, count: 24 }
-          },
-          {
-            _id: 'fallback-2',
-            name: 'Banarasi Premium Punjabi',
-            category: 'Panjabi',
-            price: 4500,
-            discountPrice: 3800,
-            images: ['https://images.unsplash.com/photo-1608748010899-18f300247112?w=500&auto=format&fit=crop'],
-            stock: 8,
-            ratings: { average: 4.9, count: 42 }
-          },
-          {
-            _id: 'fallback-3',
-            name: 'Summer Breathable Solid T-Shirt',
-            category: 'T-shirt',
-            price: 750,
-            discountPrice: 490,
-            images: ['https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500&auto=format&fit=crop'],
-            stock: 120,
-            ratings: { average: 4.7, count: 18 }
-          },
-          {
-            _id: 'fallback-4',
-            name: 'Oxford Casual Navy Blue Shirt',
-            category: 'Shirt',
-            price: 1850,
-            discountPrice: 1450,
-            images: ['https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=500&auto=format&fit=crop'],
-            stock: 15,
-            ratings: { average: 4.6, count: 31 }
-          }
-        ];
+        console.warn('Backend server unseeded or offline');
+        return [];
       }
     }
   });
@@ -101,89 +62,8 @@ export default function HomePage() {
         }
         throw new Error('Not successful');
       } catch (err) {
-        console.warn('Backend server offline, falling back to offline new arrivals catalog');
-        return [
-          {
-            _id: 'new-1',
-            name: 'Classic Crimson Polo Shirt',
-            category: 'Polo',
-            price: 1250,
-            discountPrice: 950,
-            images: ['https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=500&auto=format&fit=crop'],
-            stock: 12,
-            ratings: { average: 4.8, count: 24 }
-          },
-          {
-            _id: 'new-2',
-            name: 'Banarasi Premium Punjabi',
-            category: 'Panjabi',
-            price: 4500,
-            discountPrice: 3800,
-            images: ['https://images.unsplash.com/photo-1608748010899-18f300247112?w=500&auto=format&fit=crop'],
-            stock: 8,
-            ratings: { average: 4.9, count: 42 }
-          },
-          {
-            _id: 'new-3',
-            name: 'Summer Breathable Solid T-Shirt',
-            category: 'T-shirt',
-            price: 750,
-            discountPrice: 490,
-            images: ['https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500&auto=format&fit=crop'],
-            stock: 120,
-            ratings: { average: 4.7, count: 18 }
-          },
-          {
-            _id: 'new-4',
-            name: 'Oxford Casual Navy Blue Shirt',
-            category: 'Shirt',
-            price: 1850,
-            discountPrice: 1450,
-            images: ['https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=500&auto=format&fit=crop'],
-            stock: 15,
-            ratings: { average: 4.6, count: 31 }
-          },
-          {
-            _id: 'new-5',
-            name: 'Premium Silk Blend Blazer',
-            category: 'Blazer',
-            price: 7800,
-            discountPrice: 6500,
-            images: ['https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=500&auto=format&fit=crop'],
-            stock: 5,
-            ratings: { average: 4.9, count: 12 }
-          },
-          {
-            _id: 'new-6',
-            name: 'Slim Fit Indigo Jeans',
-            category: 'Jeans',
-            price: 2200,
-            discountPrice: 1800,
-            images: ['https://images.unsplash.com/photo-1542272604-787c3835535d?w=500&auto=format&fit=crop'],
-            stock: 25,
-            ratings: { average: 4.5, count: 15 }
-          },
-          {
-            _id: 'new-7',
-            name: 'Vibrant Floral Summer Dress',
-            category: 'Dress',
-            price: 3500,
-            discountPrice: 2900,
-            images: ['https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=500&auto=format&fit=crop'],
-            stock: 10,
-            ratings: { average: 4.8, count: 22 }
-          },
-          {
-            _id: 'new-8',
-            name: 'Minimalist Leather Sneakers',
-            category: 'Sneakers',
-            price: 4800,
-            discountPrice: 3990,
-            images: ['https://images.unsplash.com/photo-1549298916-b41d501d3772?w=500&auto=format&fit=crop'],
-            stock: 14,
-            ratings: { average: 4.7, count: 19 }
-          }
-        ];
+        console.warn('Backend server offline');
+        return [];
       }
     }
   });
@@ -247,6 +127,7 @@ export default function HomePage() {
   };
 
   const isInWishlist = (id) => wishlistItems.some((item) => item.id === id);
+  const isInCart = (id) => cartItems?.some((item) => item.productId === id);
 
   const renderProductCard = (product) => {
     const isDiscounted = product.discountPrice > 0;
@@ -255,22 +136,24 @@ export default function HomePage() {
     return (
       <div className="custom-card d-flex flex-column h-100">
         {/* Image wrapper */}
-        <div className="product-image-container position-relative overflow-hidden mb-3">
+        <div className="product-image-container position-relative overflow-hidden">
           <Link href={`/product/${product.slug || product._id}`}>
             <Card.Img
               variant="top"
               src={getProductImageUrl(product.images[0])}
               alt={product.name}
-              className="w-100 h-100 object-fit-cover scale-hover-img"
+              className="primary-img"
             />
+            {product.images && product.images.length > 1 && (
+              <Card.Img
+                variant="top"
+                src={getProductImageUrl(product.images[1])}
+                alt={product.name}
+                className="secondary-img"
+              />
+            )}
           </Link>
-          
-          {isDiscounted && (
-            <span className="discount-badge position-absolute fw-bold">
-              -{discountPercent}% OFF
-            </span>
-          )}
-          
+
           {/* Wishlist Floating Button */}
           <button
             onClick={() => handleToggleWishlist(product)}
@@ -278,53 +161,61 @@ export default function HomePage() {
             title={isInWishlist(product._id) ? "Remove from Wishlist" : "Add to Wishlist"}
           >
             {isInWishlist(product._id) ? (
-              <IoHeart size={18} color="var(--accent-red)" />
+              <IoHeart size={16} color="var(--accent-red)" />
             ) : (
-              <IoHeartOutline size={18} color="#475569" />
+              <IoHeartOutline size={16} color="#475569" />
             )}
+          </button>
+
+          {/* Zoom Floating Button */}
+          <button
+            onClick={() => setZoomImage(getProductImageUrl(product.images[0]))}
+            className="position-absolute border-0 rounded-circle d-flex align-items-center justify-content-center zoom-float-btn"
+            title="Zoom Image"
+          >
+            <FiZoomIn size={16} color="#475569" />
           </button>
         </div>
         
         {/* Details */}
         <div className="product-details d-flex flex-column flex-grow-1">
-          <div className="d-flex align-items-center justify-content-between mb-1">
-            <span className="product-card-category">
-              {product.category}
-            </span>
-            {product.ratings && product.ratings.average > 0 && (
-              <div className="d-flex align-items-center gap-1 product-card-rating">
-                <span>★</span>
-                <span className="fw-bold">{product.ratings.average}</span>
-              </div>
-            )}
-          </div>
-          
           <Link href={`/product/${product.slug || product._id}`} className="text-decoration-none">
             <h4 className="product-card-title text-truncate">
               {product.name}
             </h4>
           </Link>
           
-          {/* Price Section */}
-          <div className="d-flex align-items-baseline gap-2 mb-3">
-            {isDiscounted ? (
-              <>
-                <span className="product-card-price discounted">৳{product.discountPrice}</span>
-                <span className="product-card-price-original">৳{product.price}</span>
-              </>
-            ) : (
-              <span className="product-card-price">৳{product.price}</span>
-            )}
-          </div>
+          {/* Price and Actions Section */}
+          <div className="d-flex align-items-center justify-content-between mt-auto pt-1">
+            {/* Price */}
+            <div className="d-flex align-items-baseline gap-1">
+              {isDiscounted ? (
+                <>
+                  <span className="product-card-price discounted">৳{product.discountPrice}</span>
+                  <span className="product-card-price-original">৳{product.price}</span>
+                </>
+              ) : (
+                <span className="product-card-price">৳{product.price}</span>
+              )}
+            </div>
 
-          {/* Buy Now Button */}
-          <Button
-            onClick={() => handleQuickAdd(product)}
-            className="product-quick-add-btn mt-auto d-flex align-items-center justify-content-center gap-2 border-0"
-            size="sm"
-          >
-            <IoCart size={16} /> Buy Now
-          </Button>
+            {/* Actions */}
+            <div className="d-flex align-items-center gap-2">
+              {isDiscounted && (
+                <span className="discount-badge-inline">
+                  Save {discountPercent}%
+                </span>
+              )}
+              <button
+                onClick={() => handleQuickAdd(product)}
+                disabled={product.stock === 0}
+                className={`card-action-btn ${isInCart(product._id) ? 'active' : ''}`}
+                title="Add to Cart"
+              >
+                <IoCart size={16} />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -435,7 +326,7 @@ export default function HomePage() {
           {isLoading ? (
             <Row className="g-4">
               {[1, 2, 3, 4].map((i) => (
-                <Col key={i} lg={3} md={6}>
+                <Col key={i} lg={3} md={6} xs={6}>
                   <Card className="border-0 shadow-sm rounded-4 p-3" style={{ height: '380px' }}>
                     <div className="skeleton rounded-4 mb-3" style={{ height: '220px' }}></div>
                     <div className="skeleton mb-2" style={{ height: '20px', width: '80%' }}></div>
@@ -448,7 +339,7 @@ export default function HomePage() {
           ) : (
             <Row className="g-4">
               {products.map((product) => (
-                <Col key={product._id} lg={3} md={6}>
+                <Col key={product._id} lg={3} md={6} xs={6}>
                   {renderProductCard(product)}
                 </Col>
               ))}
@@ -473,7 +364,7 @@ export default function HomePage() {
           {newArrivalsLoading ? (
             <Row className="g-4">
               {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                <Col key={i} lg={3} md={6}>
+                <Col key={i} lg={3} md={6} xs={6}>
                   <Card className="border-0 shadow-sm rounded-4 p-3" style={{ height: '380px' }}>
                     <div className="skeleton rounded-4 mb-3" style={{ height: '220px' }}></div>
                     <div className="skeleton mb-2" style={{ height: '20px', width: '80%' }}></div>
@@ -486,7 +377,7 @@ export default function HomePage() {
           ) : (
             <Row className="g-4">
               {newArrivals.map((product) => (
-                <Col key={product._id} lg={3} md={6}>
+                <Col key={product._id} lg={3} md={6} xs={6}>
                   {renderProductCard(product)}
                 </Col>
               ))}
@@ -521,40 +412,44 @@ export default function HomePage() {
         </Container>
       </section>
 
-      {/* 5. BANGLADESH-STYLE TESTIMONIALS */}
-      <section className="py-5 bg-white border-top">
-        <Container>
-          <div className="text-center mb-5">
-            <h2 className="fw-bold" style={{ color: 'var(--primary-navy)' }}>What Our Customers Say</h2>
-            <div className="bg-danger mx-auto" style={{ width: '60px', height: '4px', borderRadius: '2px' }}></div>
-          </div>
-          
-          <Row className="g-4">
-            {[
-              { name: 'Siam Rahman', location: 'Dhanmondi, Dhaka', feedback: 'I created a custom T-shirt with a local script and a complex SVG file. The Fabric editor worked flawlessly. The bKash checkout was smooth, and the worker sent me my PDF invoice immediately. 5 stars for the delivery!' },
-              { name: 'Nabila Karim', location: 'Agrabad, Chattogram', feedback: 'Absolutely in love with the Banarasi Cotton Punjabi! The size guide was extremely precise and the fabric feels premium. Will order again next Eid!' },
-              { name: 'Rayan Ahmed', location: 'Sylhet City', feedback: 'High-quality 100% cotton T-shirt custom print. The printing matches the canvas preview perfectly. Cash on delivery was seamless, and the hotline support was helpful.' }
-            ].map((test, index) => (
-              <Col key={index} lg={4} md={6}>
-                <Card className="custom-card border-0 p-4 h-100">
-                  <Card.Body className="d-flex flex-column h-100">
-                    <p className="text-muted italic mb-4 flex-grow-1" style={{ fontSize: '14.5px', lineHeight: '1.7', fontStyle: 'italic' }}>
-                      "{test.feedback}"
-                    </p>
-                    <div className="d-flex align-items-center gap-2 mt-3">
-                      <IoCheckmarkCircle size={22} className="text-danger" />
-                      <div>
-                        <h6 className="fw-bold mb-0" style={{ color: 'var(--primary-navy)' }}>{test.name}</h6>
-                        <span className="text-muted" style={{ fontSize: '11px' }}>{test.location}</span>
-                      </div>
-                    </div>
-                  </Card.Body>
-                </Card>
-              </Col>
-            ))}
-          </Row>
-        </Container>
-      </section>
+      {/* Premium Image Lightbox Modal */}
+      <Modal 
+        show={!!zoomImage} 
+        onHide={() => setZoomImage(null)} 
+        centered 
+        size="lg"
+        dialogClassName="modal-dialog-centered"
+        contentClassName="bg-transparent border-0 shadow-none"
+      >
+        <Modal.Body className="p-0 position-relative d-flex justify-content-center align-items-center">
+          <button 
+            onClick={() => setZoomImage(null)}
+            className="position-absolute btn-close btn-close-white" 
+            style={{ 
+              top: '-40px', 
+              right: '0', 
+              zIndex: 1050,
+              backgroundSize: '1.2em',
+              padding: '0.8rem',
+              opacity: 0.8,
+              cursor: 'pointer'
+            }} 
+            aria-label="Close"
+          ></button>
+          <img 
+            src={zoomImage} 
+            alt="Product preview" 
+            className="img-fluid"
+            style={{ 
+              maxHeight: '80vh', 
+              objectFit: 'contain',
+              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.4)',
+              backgroundColor: '#FFFFFF',
+              borderRadius: '0px'
+            }} 
+          />
+        </Modal.Body>
+      </Modal>
 
       <style>{`
         .hero-slider-wrap,
@@ -574,9 +469,7 @@ export default function HomePage() {
         .scale-hover-img {
           transition: transform 0.5s ease;
         }
-        .scale-hover-img:hover {
-          transform: scale(1.08);
-        }
+      
         .float-bounce {
           animation: float 4s ease-in-out infinite;
         }

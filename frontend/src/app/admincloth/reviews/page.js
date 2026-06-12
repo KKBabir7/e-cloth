@@ -66,26 +66,7 @@ export default function AdminReviewsPage() {
       }
     } catch (err) {
       showToast('Could not load reviews from server.', 'error');
-      /* fallback demo data */
-      setAllProducts([
-        {
-          _id: 'demo-product-1',
-          name: 'Summer Breathable T-Shirt',
-          reviews: [
-            { _id: 'r1', name: 'Tanvir Rahman', rating: 5, comment: 'Excellent fabric, very comfortable!', createdAt: new Date().toISOString() },
-            { _id: 'r2', name: 'Sadia Akter', rating: 4, comment: 'Good quality. Delivery was fast.', createdAt: new Date().toISOString() },
-            { _id: 'r3', name: 'Rifat Hasan', rating: 2, comment: 'Color faded after first wash. Disappointed.', createdAt: new Date().toISOString() },
-          ]
-        },
-        {
-          _id: 'demo-product-2',
-          name: 'Classic Crimson Polo Shirt',
-          reviews: [
-            { _id: 'r4', name: 'Mehedi Islam', rating: 5, comment: 'Perfect fit. Will order again!', createdAt: new Date().toISOString() },
-            { _id: 'r5', name: 'Fatema Begum', rating: 3, comment: 'Sizing was a bit off, otherwise nice.', createdAt: new Date().toISOString() },
-          ]
-        }
-      ]);
+      setAllProducts([]);
     } finally {
       setLoading(false);
     }

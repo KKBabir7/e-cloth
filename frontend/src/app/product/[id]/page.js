@@ -51,27 +51,8 @@ export default function ProductDetailsPage() {
         }
         throw new Error('Not successful');
       } catch (err) {
-        console.warn('Backend server unseeded or offline, falling back to mock product details');
-        // Fallback premium details
-        return {
-          _id: params.id,
-          name: 'Summer Breathable Solid Cotton T-Shirt',
-          category: 'T-shirt',
-          price: 750,
-          discountPrice: 490,
-          images: [
-            'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop',
-            'https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=800&auto=format&fit=crop',
-            'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=800&auto=format&fit=crop'
-          ],
-          stock: 45,
-          variants: {
-            sizes: ['S', 'M', 'L', 'XL', 'XXL'],
-            colors: ['#000000', '#ffffff', '#ff0000', '#0000ff']
-          },
-          description: 'Engineered with 100% premium combed organic cotton (180+ GSM), this crew-neck T-shirt offers unmatched comfort, shape retention, and durability. Pre-shrunk fabric to prevent sizing variations. Ideal for standard printing, custom lettering, or casual retail styling.',
-          ratings: { average: 4.8, count: 24 }
-        };
+        console.warn('Backend server unseeded or offline', err);
+        return null;
       }
     },
     enabled: !!params.id
