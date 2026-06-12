@@ -91,6 +91,105 @@ export default function HomePage() {
 
   const products = productsData || [];
 
+  const { data: newArrivalsData, isLoading: newArrivalsLoading } = useQuery({
+    queryKey: ['products', 'newArrivals'],
+    queryFn: async () => {
+      try {
+        const res = await axios.get(`${getBackendUrl()}/api/products?limit=8&sort=newest`);
+        if (res.data.success) {
+          return res.data.products;
+        }
+        throw new Error('Not successful');
+      } catch (err) {
+        console.warn('Backend server offline, falling back to offline new arrivals catalog');
+        return [
+          {
+            _id: 'new-1',
+            name: 'Classic Crimson Polo Shirt',
+            category: 'Polo',
+            price: 1250,
+            discountPrice: 950,
+            images: ['https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=500&auto=format&fit=crop'],
+            stock: 12,
+            ratings: { average: 4.8, count: 24 }
+          },
+          {
+            _id: 'new-2',
+            name: 'Banarasi Premium Punjabi',
+            category: 'Panjabi',
+            price: 4500,
+            discountPrice: 3800,
+            images: ['https://images.unsplash.com/photo-1608748010899-18f300247112?w=500&auto=format&fit=crop'],
+            stock: 8,
+            ratings: { average: 4.9, count: 42 }
+          },
+          {
+            _id: 'new-3',
+            name: 'Summer Breathable Solid T-Shirt',
+            category: 'T-shirt',
+            price: 750,
+            discountPrice: 490,
+            images: ['https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500&auto=format&fit=crop'],
+            stock: 120,
+            ratings: { average: 4.7, count: 18 }
+          },
+          {
+            _id: 'new-4',
+            name: 'Oxford Casual Navy Blue Shirt',
+            category: 'Shirt',
+            price: 1850,
+            discountPrice: 1450,
+            images: ['https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=500&auto=format&fit=crop'],
+            stock: 15,
+            ratings: { average: 4.6, count: 31 }
+          },
+          {
+            _id: 'new-5',
+            name: 'Premium Silk Blend Blazer',
+            category: 'Blazer',
+            price: 7800,
+            discountPrice: 6500,
+            images: ['https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=500&auto=format&fit=crop'],
+            stock: 5,
+            ratings: { average: 4.9, count: 12 }
+          },
+          {
+            _id: 'new-6',
+            name: 'Slim Fit Indigo Jeans',
+            category: 'Jeans',
+            price: 2200,
+            discountPrice: 1800,
+            images: ['https://images.unsplash.com/photo-1542272604-787c3835535d?w=500&auto=format&fit=crop'],
+            stock: 25,
+            ratings: { average: 4.5, count: 15 }
+          },
+          {
+            _id: 'new-7',
+            name: 'Vibrant Floral Summer Dress',
+            category: 'Dress',
+            price: 3500,
+            discountPrice: 2900,
+            images: ['https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=500&auto=format&fit=crop'],
+            stock: 10,
+            ratings: { average: 4.8, count: 22 }
+          },
+          {
+            _id: 'new-8',
+            name: 'Minimalist Leather Sneakers',
+            category: 'Sneakers',
+            price: 4800,
+            discountPrice: 3990,
+            images: ['https://images.unsplash.com/photo-1549298916-b41d501d3772?w=500&auto=format&fit=crop'],
+            stock: 14,
+            ratings: { average: 4.7, count: 19 }
+          }
+        ];
+      }
+    }
+  });
+
+  const newArrivals = newArrivalsData || [];
+
 
   const { data: slidesData, isLoading: slidesLoading } = useQuery({
     queryKey: ['heroSlides'],
@@ -148,6 +247,88 @@ export default function HomePage() {
   };
 
   const isInWishlist = (id) => wishlistItems.some((item) => item.id === id);
+
+  const renderProductCard = (product) => {
+    const isDiscounted = product.discountPrice > 0;
+    const discountPercent = isDiscounted ? Math.round(((product.price - product.discountPrice) / product.price) * 100) : 0;
+
+    return (
+      <div className="custom-card d-flex flex-column h-100">
+        {/* Image wrapper */}
+        <div className="product-image-container position-relative overflow-hidden mb-3">
+          <Link href={`/product/${product.slug || product._id}`}>
+            <Card.Img
+              variant="top"
+              src={getProductImageUrl(product.images[0])}
+              alt={product.name}
+              className="w-100 h-100 object-fit-cover scale-hover-img"
+            />
+          </Link>
+          
+          {isDiscounted && (
+            <span className="discount-badge position-absolute fw-bold">
+              -{discountPercent}% OFF
+            </span>
+          )}
+          
+          {/* Wishlist Floating Button */}
+          <button
+            onClick={() => handleToggleWishlist(product)}
+            className="position-absolute border-0 rounded-circle d-flex align-items-center justify-content-center wishlist-float-btn"
+            title={isInWishlist(product._id) ? "Remove from Wishlist" : "Add to Wishlist"}
+          >
+            {isInWishlist(product._id) ? (
+              <IoHeart size={18} color="var(--accent-red)" />
+            ) : (
+              <IoHeartOutline size={18} color="#475569" />
+            )}
+          </button>
+        </div>
+        
+        {/* Details */}
+        <div className="product-details d-flex flex-column flex-grow-1">
+          <div className="d-flex align-items-center justify-content-between mb-1">
+            <span className="product-card-category">
+              {product.category}
+            </span>
+            {product.ratings && product.ratings.average > 0 && (
+              <div className="d-flex align-items-center gap-1 product-card-rating">
+                <span>★</span>
+                <span className="fw-bold">{product.ratings.average}</span>
+              </div>
+            )}
+          </div>
+          
+          <Link href={`/product/${product.slug || product._id}`} className="text-decoration-none">
+            <h4 className="product-card-title text-truncate">
+              {product.name}
+            </h4>
+          </Link>
+          
+          {/* Price Section */}
+          <div className="d-flex align-items-baseline gap-2 mb-3">
+            {isDiscounted ? (
+              <>
+                <span className="product-card-price discounted">৳{product.discountPrice}</span>
+                <span className="product-card-price-original">৳{product.price}</span>
+              </>
+            ) : (
+              <span className="product-card-price">৳{product.price}</span>
+            )}
+          </div>
+
+          {/* Buy Now Button */}
+          <Button
+            onClick={() => handleQuickAdd(product)}
+            className="product-quick-add-btn mt-auto d-flex align-items-center justify-content-center gap-2 border-0"
+            size="sm"
+          >
+            <IoCart size={16} /> Buy Now
+          </Button>
+        </div>
+      </div>
+    );
+  };
 
   if (!mounted) {
     return (
@@ -268,65 +449,45 @@ export default function HomePage() {
             <Row className="g-4">
               {products.map((product) => (
                 <Col key={product._id} lg={3} md={6}>
-                  <Card className="custom-card h-100">
-                    <div className="position-relative overflow-hidden" style={{ height: '260px' }}>
-                      <Card.Img
-                        variant="top"
-                        src={getProductImageUrl(product.images[0])}
-                        alt={product.name}
-                        className="w-100 h-100 object-fit-cover scale-hover-img"
-                      />
-                      {product.discountPrice > 0 && (
-                        <Badge bg="danger" className="position-absolute px-3 py-2 bg-red-gradient" style={{ top: '12px', left: '12px' }}>
-                          Save ৳{product.price - product.discountPrice}
-                        </Badge>
-                      )}
-                      
-                      {/* Floating actions */}
-                      <button
-                        onClick={() => handleToggleWishlist(product)}
-                        className="position-absolute border-0 bg-white rounded-circle shadow p-2 d-flex align-items-center justify-content-center"
-                        style={{ width: '38px', height: '38px', transition: '0.2s', zIndex: 10, top: '12px', right: '12px' }}
-                      >
-                        {isInWishlist(product._id) ? (
-                          <IoHeart size={20} color="#DC2626" />
-                        ) : (
-                          <IoHeartOutline size={20} color="var(--primary-navy)" />
-                        )}
-                      </button>
-                    </div>
-                    
-                    <Card.Body className="d-flex flex-column p-4">
-                      <span className="text-danger fw-bold uppercase" style={{ fontSize: '11px', letterSpacing: '0.5px' }}>{product.category}</span>
-                      <Link href={`/product/${product.slug || product._id}`} className="text-decoration-none">
-                        <Card.Title className="fw-bold text-dark mt-1 text-truncate" style={{ fontSize: '16px', cursor: 'pointer' }}>
-                          {product.name}
-                        </Card.Title>
-                      </Link>
-                      
-                      {/* Price Section */}
-                      <div className="d-flex align-items-center gap-2 my-2">
-                        {product.discountPrice > 0 ? (
-                          <>
-                            <span className="fw-extrabold text-danger fs-5">৳{product.discountPrice}</span>
-                            <span className="text-decoration-line-through text-muted" style={{ fontSize: '14px' }}>৳{product.price}</span>
-                          </>
-                        ) : (
-                          <span className="fw-extrabold text-navy fs-5" style={{ color: 'var(--primary-navy)' }}>৳{product.price}</span>
-                        )}
-                      </div>
+                  {renderProductCard(product)}
+                </Col>
+              ))}
+            </Row>
+          )}
+        </Container>
+      </section>
 
-                      {/* Quick Cart Trigger */}
-                      <Button
-                        onClick={() => handleQuickAdd(product)}
-                        variant="dark"
-                        className="w-100 mt-auto btn-premium-primary d-flex align-items-center justify-content-center gap-2"
-                        size="sm"
-                      >
-                        <IoCart size={18} /> Quick Add to Cart
-                      </Button>
-                    </Card.Body>
+      {/* New Arrivals Section */}
+      <section className="py-5 bg-light border-top">
+        <Container>
+          <div className="d-flex justify-content-between align-items-end mb-5">
+            <div>
+              <h2 className="fw-bold" style={{ color: 'var(--primary-navy)' }}>New Arrivals</h2>
+              <p className="text-muted mb-0">Discover the latest additions to our collection</p>
+            </div>
+            <Link href="/shop?sort=newest" passHref legacyBehavior>
+              <Button variant="link" className="text-danger fw-bold text-decoration-none">View All New →</Button>
+            </Link>
+          </div>
+
+          {newArrivalsLoading ? (
+            <Row className="g-4">
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                <Col key={i} lg={3} md={6}>
+                  <Card className="border-0 shadow-sm rounded-4 p-3" style={{ height: '380px' }}>
+                    <div className="skeleton rounded-4 mb-3" style={{ height: '220px' }}></div>
+                    <div className="skeleton mb-2" style={{ height: '20px', width: '80%' }}></div>
+                    <div className="skeleton mb-3" style={{ height: '15px', width: '50%' }}></div>
+                    <div className="skeleton" style={{ height: '35px' }}></div>
                   </Card>
+                </Col>
+              ))}
+            </Row>
+          ) : (
+            <Row className="g-4">
+              {newArrivals.map((product) => (
+                <Col key={product._id} lg={3} md={6}>
+                  {renderProductCard(product)}
                 </Col>
               ))}
             </Row>
