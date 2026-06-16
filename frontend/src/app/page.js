@@ -318,7 +318,7 @@ export default function HomePage() {
               <h2 className="fw-bold" style={{ color: 'var(--primary-navy)' }}>Trending Collection</h2>
               <p className="text-muted mb-0">Hot apparel selling right now in Bangladesh</p>
             </div>
-            <Link href="/shop" className="btn-view-all">
+            <Link href="/shop" className="btn-view-all btn-view-all-desktop">
               View All Products &rarr;
             </Link>
           </div>
@@ -345,6 +345,12 @@ export default function HomePage() {
               ))}
             </Row>
           )}
+
+          <div className="btn-view-all-mobile-wrap">
+            <Link href="/shop" className="btn-view-all">
+              View All Products &rarr;
+            </Link>
+          </div>
         </Container>
       </section>
 
@@ -356,7 +362,7 @@ export default function HomePage() {
               <h2 className="fw-bold" style={{ color: 'var(--primary-navy)' }}>New Arrivals</h2>
               <p className="text-muted mb-0">Discover the latest additions to our collection</p>
             </div>
-            <Link href="/shop?sort=newest" className="btn-view-all">
+            <Link href="/shop?sort=newest" className="btn-view-all btn-view-all-desktop">
               View All New &rarr;
             </Link>
           </div>
@@ -383,6 +389,12 @@ export default function HomePage() {
               ))}
             </Row>
           )}
+
+          <div className="btn-view-all-mobile-wrap">
+            <Link href="/shop?sort=newest" className="btn-view-all">
+              View All New &rarr;
+            </Link>
+          </div>
         </Container>
       </section>
 

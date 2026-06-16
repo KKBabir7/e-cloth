@@ -1009,6 +1009,11 @@ font-size: 14.5px;
   transform: translateY(0);
 }
 
+/* Mobile View All button wrapper default hidden */
+.btn-view-all-mobile-wrap {
+  display: none !important;
+}
+
 @media (max-width: 472px) {
   .discount-badge-inline {
         position: absolute !important;
@@ -1088,7 +1093,7 @@ font-size: 14.5px;
     display: flex !important;
     flex-direction: column !important;
     align-items: flex-start !important;
-    gap: 12px !important;
+    gap: 4px !important;
   }
   
   .responsive-section-header h2 {
@@ -1100,9 +1105,22 @@ font-size: 14.5px;
     font-size: 12.5px !important;
   }
 
+  /* Show bottom View All button and hide header button on mobile */
+  .btn-view-all-desktop {
+    display: none !important;
+  }
+
+  .btn-view-all-mobile-wrap {
+    display: flex !important;
+    justify-content: center !important;
+    margin-top: 24px !important;
+    margin-bottom: 8px !important;
+    width: 100% !important;
+  }
+
   .btn-view-all {
     font-size: 11.5px !important;
-    padding: 5px 14px !important;
+    padding: 6px 16px !important;
   }
 
   .display-5 {
