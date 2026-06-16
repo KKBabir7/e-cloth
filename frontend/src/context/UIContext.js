@@ -256,10 +256,11 @@ const SelectOptionsModal = ({ product, onConfirm, onClose }) => {
           disabled={isAddToCartDisabled}
           className="w-100 py-2.5 rounded-3 fw-bold border-0 text-white options-modal-submit-btn"
           style={{
-            backgroundColor: isAddToCartDisabled ? '#94A3B8' : '#1e293b',
+            background: isAddToCartDisabled ? '#94A3B8' : 'var(--primary-navy) !important',
             cursor: isAddToCartDisabled ? 'not-allowed' : 'pointer',
             transition: 'all 0.2s',
-            fontSize: '15px'
+            fontSize: '15px',
+            boxShadow: isAddToCartDisabled ? 'none' : '0 4px 14px rgba(239, 68, 68, 0.35)'
           }}
         >
           Add to Cart

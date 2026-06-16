@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Card, Table, Badge, Button, Row, Col } from 'react-bootstrap';
+import Link from 'next/link';
+import { Card, Table, Badge, Button, Row, Col, Container } from 'react-bootstrap';
 import { IoReceiptOutline, IoDownloadOutline, IoTimeOutline } from 'react-icons/io5';
 import { useUI } from '../../../context/UIContext';
 import axios from 'axios';
@@ -49,23 +50,23 @@ export default function AccountOrdersPage() {
   const getStatusBadge = (status) => {
     switch (status) {
       case 'Delivered':
-        return <Badge bg="success">Delivered</Badge>;
+        return <span className="badge-soft-success">✓ Delivered</span>;
       case 'Shipped':
-        return <Badge bg="info">Shipped</Badge>;
+        return <span className="badge-soft-info">Shipped</span>;
       case 'Processing':
-        return <Badge bg="primary">Processing</Badge>;
+        return <span className="badge-soft-warning">Processing</span>;
       case 'Cancelled':
-        return <Badge bg="secondary">Cancelled</Badge>;
+        return <span className="badge-soft-danger">Cancelled</span>;
       case 'Pending':
       default:
-        return <Badge bg="warning" text="dark">Pending Approval</Badge>;
+        return <span className="badge-soft-secondary">Pending Approval</span>;
     }
   };
 
   const getPaymentBadge = (status) => {
-    if (status === 'Paid') return <Badge bg="success">Paid</Badge>;
-    if (status === 'Failed') return <Badge bg="danger">Failed</Badge>;
-    return <Badge bg="warning" text="dark">Unpaid</Badge>;
+    if (status === 'Paid') return <span className="badge-soft-success">Paid</span>;
+    if (status === 'Failed') return <span className="badge-soft-danger">Failed</span>;
+    return <span className="badge-soft-warning">Unpaid</span>;
   };
 
   if (isLoading) {
@@ -77,80 +78,105 @@ export default function AccountOrdersPage() {
   }
 
   return (
-    <Card className="custom-card border-0 p-4 shadow-sm bg-white">
+    <div>
+      {/* Funnel Progress Steps */}
+      <div className="checkout-steps-bar d-flex justify-content-center align-items-center mb-5 flex-wrap">
+        <div className="checkout-step completed">
+          <span className="checkout-step-num">1</span>
+          <span className="checkout-step-text">Shopping Bag</span>
+        </div>
+        <div className="checkout-step-line active" />
+        <div className="checkout-step completed">
+          <span className="checkout-step-num">2</span>
+          <span className="checkout-step-text">Checkout</span>
+        </div>
+        <div className="checkout-step-line active" />
+        <div className="checkout-step active">
+          <span className="checkout-step-num">3</span>
+          <span className="checkout-step-text">Confirmation</span>
+        </div>
+      </div>
+
+      <Card className="custom-card border-0 p-4 shadow-sm bg-white border">
       <Card.Body>
-        <h5 className="fw-bold mb-4 d-flex align-items-center gap-2" style={{ color: 'var(--primary-navy)' }}>
-          <IoReceiptOutline /> My Order History
+        <h5 className="fw-bold mb-4 d-flex align-items-center gap-2" style={{ color: 'var(--primary-navy)', fontSize: '16px' }}>
+          <IoReceiptOutline size={18} /> My Order History
         </h5>
 
         {orders.length === 0 ? (
           <div className="text-center py-5">
-            <IoReceiptOutline size={48} className="text-muted mb-3 opacity-50" />
-            <h6>No Orders Found</h6>
-            <p className="text-muted small">You haven't placed any checkouts yet.</p>
+            <div className="d-inline-flex align-items-center justify-content-center rounded-circle mb-4 bg-light shadow-sm" style={{ width: '80px', height: '80px', border: '1px solid #E2E8F0' }}>
+              <IoReceiptOutline size={36} style={{ color: 'var(--primary-navy)' }} />
+            </div>
+            <h6 className="fw-bold text-dark mb-2">No Orders Found</h6>
+            <p className="text-muted small mb-4">You haven't placed any orders yet.</p>
+            <Link href="/shop" passHref legacyBehavior>
+              <Button className="btn-premium-accent border-0 text-white rounded-3 fw-bold px-4">Start Shopping</Button>
+            </Link>
           </div>
         ) : (
           <div className="d-flex flex-column gap-4">
             {orders.map((order) => (
-              <div key={order._id} className="p-3 border rounded-3 bg-light">
+              <div key={order._id} className="p-4 border rounded-3 bg-white" style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
                 
                 {/* Header */}
                 <Row className="gy-2 align-items-center border-bottom pb-2 mb-3">
                   <Col md={4}>
-                    <span className="small text-muted d-block">Order Reference:</span>
-                    <strong className="text-dark" style={{ fontSize: '14.5px' }}>{order.orderId}</strong>
+                    <span className="small text-muted d-block mb-1" style={{ fontSize: '11px' }}>Order Reference:</span>
+                    <strong className="text-dark" style={{ fontSize: '14.5px', letterSpacing: '0.3px' }}>{order.orderId}</strong>
                   </Col>
                   <Col md={3}>
-                    <span className="small text-muted d-block">Date Placed:</span>
-                    <span className="fw-semibold text-dark">{new Date(order.createdAt).toLocaleDateString('en-BD')}</span>
+                    <span className="small text-muted d-block mb-1" style={{ fontSize: '11px' }}>Date Placed:</span>
+                    <span className="fw-semibold text-dark" style={{ fontSize: '13.5px' }}>{new Date(order.createdAt).toLocaleDateString('en-BD')}</span>
                   </Col>
                   <Col md={2}>
-                    <span className="small text-muted d-block">Payment ({order.paymentMethod}):</span>
+                    <span className="small text-muted d-block mb-1" style={{ fontSize: '11px' }}>Payment ({order.paymentMethod}):</span>
                     {getPaymentBadge(order.paymentStatus)}
                   </Col>
                   <Col md={3} className="text-md-end">
-                    <span className="small text-muted d-block mb-1">Status:</span>
+                    <span className="small text-muted d-block mb-1" style={{ fontSize: '11px' }}>Order Status:</span>
                     {getStatusBadge(order.status)}
                   </Col>
                 </Row>
 
                 {/* Items loop */}
                 <div className="d-flex flex-column gap-2 mb-3">
-                  {order.products.map((item, idx) => (
-                    <div key={idx} className="d-flex align-items-center justify-content-between">
-                      <div className="d-flex align-items-center gap-2">
-                        <img
-                          src={getProductImageUrl(item.productId?.images?.[0])}
-                          alt="product"
-                          width={40}
-                          height={40}
-                          className="object-fit-cover rounded border"
-                        />
-                        <div>
-                          <span className="fw-bold d-block" style={{ fontSize: '13px', maxWidth: '240px' }}>
-                            {item.productId ? item.productId.name : 'Custom Designed T-Shirt'}
-                          </span>
-                          <span className="text-muted" style={{ fontSize: '11px' }}>Size: {item.size} x {item.quantity}</span>
+                    {order.products.map((item, idx) => (
+                      <div key={idx} className="d-flex align-items-center justify-content-between">
+                        <div className="d-flex align-items-center gap-3">
+                          <div className="rounded border bg-light overflow-hidden shadow-sm" style={{ width: '44px', height: '56px', flexShrink: 0 }}>
+                            <img
+                              src={getProductImageUrl(item.productId?.images?.[0])}
+                              alt="product"
+                              className="w-100 h-100 object-fit-cover"
+                            />
+                          </div>
+                          <div>
+                            <span className="fw-bold d-block" style={{ fontSize: '13px', maxWidth: '240px' }}>
+                              {item.productId ? item.productId.name : 'Custom Designed T-Shirt'}
+                            </span>
+                            <span className="text-muted" style={{ fontSize: '11px' }}>Size: {item.size} &times; {item.quantity}</span>
+                          </div>
                         </div>
+                        <span className="fw-bold" style={{ fontSize: '13.5px', color: 'var(--primary-navy)' }}>৳{item.price * item.quantity}</span>
                       </div>
-                      <span className="fw-bold" style={{ fontSize: '13px' }}>৳{item.price * item.quantity}</span>
-                    </div>
                   ))}
                 </div>
 
                 {/* Footer Invoice trigger */}
-                <div className="d-flex justify-content-between align-items-center pt-2 border-top">
+                <div className="d-flex justify-content-between align-items-center pt-3 border-top">
                   <div style={{ fontSize: '14.5px' }}>
-                    Total Bill: <strong className="text-danger">৳{order.totalAmount}</strong>
+                    Total Bill: <strong style={{ color: 'var(--primary-navy)', fontSize: '16px' }}>৳{order.totalAmount}</strong>
                   </div>
                   {order.invoicePath && (
                     <a
                       href={order.invoicePath === '#' ? '#' : `${getBackendUrl()}${order.invoicePath}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="btn btn-outline-dark btn-sm d-flex align-items-center gap-2 rounded-3 px-3"
+                      className="btn-premium-outline d-inline-flex align-items-center gap-2 rounded-3 px-3 py-2 text-decoration-none"
+                      style={{ fontSize: '12.5px', fontWeight: 600 }}
                     >
-                      <IoDownloadOutline /> Download PDF Invoice
+                      <IoDownloadOutline size={14} /> Download Invoice
                     </a>
                   )}
                 </div>
@@ -161,5 +187,6 @@ export default function AccountOrdersPage() {
         )}
       </Card.Body>
     </Card>
+    </div>
   );
 }

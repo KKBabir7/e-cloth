@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSelector, useDispatch } from 'react-redux';
 import { Container, Row, Col, Card, Form, Button, Badge, Modal, InputGroup } from 'react-bootstrap';
@@ -153,20 +154,48 @@ export default function CheckoutPage() {
   };
 
   if (items.length === 0) {
-    return <Container className="py-5 text-center"><h5>Your checkout cart is empty</h5></Container>;
+    return (
+      <Container className="py-5 text-center d-flex align-items-center justify-content-center" style={{ minHeight: '65vh' }}>
+        <div className="py-5 glass-panel p-5 bg-white shadow-sm" style={{ maxWidth: '500px' }}>
+          <h3 className="fw-bold mb-3" style={{ color: 'var(--primary-navy)' }}>Your Checkout Cart is Empty</h3>
+          <p className="text-muted mb-4">Add products to your shopping bag before checking out.</p>
+          <Link href="/shop" passHref legacyBehavior>
+            <Button className="btn-premium-accent btn-lg px-5 border-0 text-white rounded-3 fw-bold">Shop Our Collections</Button>
+          </Link>
+        </div>
+      </Container>
+    );
   }
 
   return (
     <Container className="py-5">
-      <h2 className="fw-bold mb-5" style={{ color: 'var(--primary-navy)' }}>Secure Checkout</h2>
+      {/* Funnel Progress Steps */}
+      <div className="checkout-steps-bar d-flex justify-content-center align-items-center mb-5 flex-wrap">
+        <div className="checkout-step completed">
+          <span className="checkout-step-num">1</span>
+          <span className="checkout-step-text">Shopping Bag</span>
+        </div>
+        <div className="checkout-step-line active" />
+        <div className="checkout-step active">
+          <span className="checkout-step-num">2</span>
+          <span className="checkout-step-text">Checkout</span>
+        </div>
+        <div className="checkout-step-line" />
+        <div className="checkout-step">
+          <span className="checkout-step-num">3</span>
+          <span className="checkout-step-text">Confirmation</span>
+        </div>
+      </div>
+
+      <h3 className="fw-bold mb-4" style={{ color: 'var(--primary-navy)', letterSpacing: '0.3px' }}>Secure Checkout</h3>
 
       <Row className="gy-4">
         
         {/* LEFT SIDE: SHIPPING ADDRESS & MFS SELECTOR */}
         <Col lg={7}>
-          <div className="glass-panel p-4 bg-white shadow-sm mb-4">
-            <h5 className="fw-bold mb-4 d-flex align-items-center gap-2" style={{ color: 'var(--primary-navy)' }}>
-              <IoLocationOutline /> Shipping Details
+          <div className="glass-panel p-4 bg-white shadow-sm mb-4 border">
+            <h5 className="fw-bold mb-4 d-flex align-items-center gap-2" style={{ color: 'var(--primary-navy)', fontSize: '16px' }}>
+              <IoLocationOutline size={18} /> Shipping Details
             </h5>
 
             <Form onSubmit={handleSubmitOrder}>
@@ -174,7 +203,7 @@ export default function CheckoutPage() {
               <Row className="mb-3">
                 <Col md={6}>
                   <Form.Group className="mb-3 mb-md-0">
-                    <Form.Label className="small fw-semibold">Recipient Full Name *</Form.Label>
+                    <Form.Label className="small fw-semibold text-secondary mb-1">Recipient Full Name *</Form.Label>
                     <Form.Control
                       type="text"
                       value={name}
@@ -187,7 +216,7 @@ export default function CheckoutPage() {
                 
                 <Col md={6}>
                   <Form.Group>
-                    <Form.Label className="small fw-semibold">Contact Mobile Phone *</Form.Label>
+                    <Form.Label className="small fw-semibold text-secondary mb-1">Contact Mobile Phone *</Form.Label>
                     <Form.Control
                       type="text"
                       placeholder="e.g. 01712345678"
@@ -203,7 +232,7 @@ export default function CheckoutPage() {
               <Row className="mb-3">
                 <Col md={6}>
                   <Form.Group className="mb-3 mb-md-0">
-                    <Form.Label className="small fw-semibold">District / Division *</Form.Label>
+                    <Form.Label className="small fw-semibold text-secondary mb-1">District / Division *</Form.Label>
                     <Form.Select
                       value={district}
                       onChange={(e) => setDistrict(e.target.value)}
@@ -220,7 +249,7 @@ export default function CheckoutPage() {
                 
                 <Col md={6}>
                   <Form.Group>
-                    <Form.Label className="small fw-semibold">Thana / Upazila / Area *</Form.Label>
+                    <Form.Label className="small fw-semibold text-secondary mb-1">Thana / Upazila / Area *</Form.Label>
                     <Form.Control
                       type="text"
                       placeholder="e.g. Dhanmondi / Agrabad"
@@ -234,7 +263,7 @@ export default function CheckoutPage() {
               </Row>
 
               <Form.Group className="mb-4">
-                <Form.Label className="small fw-semibold">Full Address Details *</Form.Label>
+                <Form.Label className="small fw-semibold text-secondary mb-1">Full Address Details *</Form.Label>
                 <Form.Control
                   as="textarea"
                   rows={2}
@@ -246,29 +275,29 @@ export default function CheckoutPage() {
                 />
               </Form.Group>
 
-              <hr className="my-4" />
+              <hr className="my-4 text-muted opacity-25" />
 
               {/* MFS Selector modules */}
-              <h5 className="fw-bold mb-4 d-flex align-items-center gap-2" style={{ color: 'var(--primary-navy)' }}>
-                <IoCardOutline /> Choose Payment Option
+              <h5 className="fw-bold mb-4 d-flex align-items-center gap-2" style={{ color: 'var(--primary-navy)', fontSize: '16px' }}>
+                <IoCardOutline size={18} /> Choose Payment Option
               </h5>
 
               <Row className="g-3">
                 {[
-                  { id: 'COD', title: 'Cash on Delivery', icon: <IoCashOutline size={24} />, desc: 'Pay with cash at your doorstep' },
-                  { id: 'bKash', title: 'bKash Mobile Bank', icon: <span className="fw-bold text-white bg-pink px-2 py-0.5 rounded" style={{ backgroundColor: '#e2125c', fontSize: '12px' }}>bKash</span>, desc: 'Simulated bKash Payment gateway' },
-                  { id: 'Nagad', title: 'Nagad Mobile Bank', icon: <span className="fw-bold text-white px-2 py-0.5 rounded" style={{ backgroundColor: '#f04923', fontSize: '12px' }}>Nagad</span>, desc: 'Simulated Nagad Payment gateway' }
+                  { id: 'COD', title: 'Cash on Delivery', icon: <IoCashOutline size={28} />, desc: 'Pay with cash at your doorstep' },
+                  { id: 'bKash', title: 'bKash Mobile Bank', icon: <span className="fw-bold text-white px-2 rounded" style={{ backgroundColor: '#e2125c', fontSize: '11px', letterSpacing: '0.3px', padding: '3px 8px' }}>bKash</span>, desc: 'Simulated bKash gateway' },
+                  { id: 'Nagad', title: 'Nagad Mobile Bank', icon: <span className="fw-bold text-white px-2 rounded" style={{ backgroundColor: '#f04923', fontSize: '11px', letterSpacing: '0.3px', padding: '3px 8px' }}>Nagad</span>, desc: 'Simulated Nagad gateway' }
                 ].map((pay) => (
                   <Col md={4} key={pay.id}>
-                    <Card
+                    <div
                       onClick={() => setPaymentMethod(pay.id)}
-                      className={`custom-card p-3 border text-center h-100 ${paymentMethod === pay.id ? 'border-danger bg-danger bg-opacity-5' : 'border-light'}`}
-                      style={{ cursor: 'pointer', minHeight: '120px' }}
+                      className={`payment-select-card p-3 text-center h-100 d-flex flex-column align-items-center justify-content-center ${paymentMethod === pay.id ? 'active' : ''}`}
+                      style={{ cursor: 'pointer', minHeight: '130px' }}
                     >
-                      <div className="d-flex justify-content-center mb-2">{pay.icon}</div>
-                      <h6 className="fw-bold small mb-1">{pay.title}</h6>
-                      <span className="text-muted" style={{ fontSize: '10px' }}>{pay.desc}</span>
-                    </Card>
+                      <div className="mb-2" style={{ color: paymentMethod === pay.id ? 'var(--accent-red)' : '#64748B' }}>{pay.icon}</div>
+                      <h6 className="fw-bold mb-1" style={{ fontSize: '13px', color: 'var(--primary-navy)' }}>{pay.title}</h6>
+                      <span className="text-secondary" style={{ fontSize: '10.5px', lineHeight: '1.3' }}>{pay.desc}</span>
+                    </div>
                   </Col>
                 ))}
               </Row>
@@ -279,28 +308,34 @@ export default function CheckoutPage() {
 
         {/* RIGHT SIDE: BILL TOTALS */}
         <Col lg={5}>
-          <div className="glass-panel p-4 bg-white shadow-sm h-100 d-flex flex-column justify-content-between">
+          <div className="glass-panel p-4 bg-white shadow-sm border h-100 d-flex flex-column justify-content-between">
             <div>
-              <h5 className="fw-bold mb-4 text-dark">Order Items Summary</h5>
+              <h5 className="fw-bold mb-4 text-dark" style={{ fontSize: '16px', letterSpacing: '0.3px' }}>Order Items Summary</h5>
               
               {/* items loop list */}
               <div className="d-flex flex-column gap-3 mb-4 max-vh-50 overflow-y-auto">
                 {items.map((item, idx) => (
                   <div key={idx} className="d-flex justify-content-between align-items-center py-2 border-bottom">
-                    <div className="d-flex align-items-center gap-2">
-                      <img src={getProductImageUrl(item.image)} alt={item.name} width={48} height={48} className="object-fit-cover rounded border" />
+                    <div className="d-flex align-items-center gap-3">
+                      <div className="rounded border bg-light overflow-hidden shadow-sm" style={{ width: '48px', height: '60px', flexShrink: 0 }}>
+                        <img src={getProductImageUrl(item.image)} alt={item.name} className="w-100 h-100 object-fit-cover" />
+                      </div>
                       <div style={{ maxWidth: '200px' }}>
-                        <h6 className="fw-bold mb-0 text-truncate" style={{ fontSize: '13px' }}>{item.name}</h6>
-                        <span className="text-muted small" style={{ fontSize: '11px' }}>Size: {item.size} x {item.quantity}</span>
+                        <h6 className="fw-bold mb-1 text-truncate text-dark" style={{ fontSize: '13px', lineHeight: '1.4' }}>{item.name}</h6>
+                        <div className="d-flex gap-2 text-muted" style={{ fontSize: '11px' }}>
+                          <span>Size: <strong>{item.size}</strong></span>
+                          <span>•</span>
+                          <span>x{item.quantity}</span>
+                        </div>
                       </div>
                     </div>
-                    <span className="fw-extrabold text-dark" style={{ fontSize: '14px' }}>৳{item.price * item.quantity}</span>
+                    <span className="fw-bold" style={{ fontSize: '14.5px', color: 'var(--primary-navy)' }}>৳{item.price * item.quantity}</span>
                   </div>
                 ))}
               </div>
 
               {/* Pricing aggregation values */}
-              <div className="d-flex flex-column gap-3 mb-4" style={{ fontSize: '14.5px' }}>
+              <div className="d-flex flex-column gap-3 mb-4" style={{ fontSize: '14px' }}>
                 <div className="d-flex justify-content-between text-muted">
                   <span>Subtotal Amount:</span>
                   <span className="fw-bold text-dark">৳{subtotal}</span>
@@ -318,11 +353,11 @@ export default function CheckoutPage() {
                   </div>
                 )}
 
-                <hr className="my-1" />
+                <hr className="my-2" />
 
                 <div className="d-flex justify-content-between align-items-baseline">
-                  <span className="fw-bold text-dark">Total Amount Due:</span>
-                  <span className="fs-3 fw-extrabold text-danger">৳{total}</span>
+                  <span className="fw-bold text-dark" style={{ fontSize: '14.5px' }}>Total Amount Due:</span>
+                  <span className="fs-3 fw-extrabold" style={{ color: 'var(--primary-navy)' }}>৳{total}</span>
                 </div>
               </div>
             </div>
@@ -331,8 +366,8 @@ export default function CheckoutPage() {
             <Button
               onClick={handleSubmitOrder}
               disabled={submittingOrder}
-              variant="danger"
-              className="w-100 btn-premium-accent py-3 justify-content-center bg-red-gradient"
+              className="w-100 btn-premium-accent py-3 justify-content-center bg-red-gradient border-0 text-white rounded-3 fw-bold d-flex align-items-center gap-2"
+              style={{ transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}
             >
               <IoBagCheck size={20} /> {submittingOrder ? 'Processing...' : 'Confirm Checkout & Pay'}
             </Button>
@@ -349,15 +384,12 @@ export default function CheckoutPage() {
         backdrop="static"
         dialogClassName="mfs-modal"
       >
-        <div className="rounded-4 overflow-hidden shadow-lg border-0">
+        <div className="rounded-4 overflow-hidden border-0 bg-white shadow-lg">
           
           {/* Header styled matching bKash / Nagad brands */}
-          <div className="p-4 text-center text-white" style={{
-            backgroundColor: paymentMethod === 'bKash' ? '#e2125c' : '#f04923',
-            transition: 'background-color 0.3s'
-          }}>
-            <h4 className="fw-bold mb-1">{paymentMethod} Merchant Payment</h4>
-            <span className="small opacity-75">CustomWear BD Checkout Gateway</span>
+          <div className={`p-4 text-center text-white ${paymentMethod === 'bKash' ? 'mfs-header-bkash' : 'mfs-header-nagad'}`} style={{ transition: 'background 0.3s' }}>
+            <h4 className="fw-bold mb-1" style={{ letterSpacing: '0.5px' }}>{paymentMethod} Payment</h4>
+            <span className="small opacity-75">Secure Checkout Gateway</span>
             <div className="fs-3 fw-extrabold mt-3">৳{total}</div>
           </div>
 
@@ -366,18 +398,19 @@ export default function CheckoutPage() {
             {/* Step 1: Wallet Number */}
             {gatewayStep === 1 && (
               <div className="d-flex flex-column gap-3 text-center">
-                <span className="fw-semibold">Enter your {paymentMethod} Account number</span>
+                <span className="fw-semibold text-secondary" style={{ fontSize: '13.5px' }}>Enter your {paymentMethod} Account number</span>
                 <Form.Control
                   type="text"
                   placeholder="e.g. 01XXXXXXXXX"
                   value={mfsNumber}
                   onChange={(e) => setMfsNumber(e.target.value)}
-                  className="form-control-premium text-center fw-bold fs-5"
+                  className="form-control-premium text-center fw-bold fs-5 shadow-sm"
+                  style={{ letterSpacing: '1px' }}
                 />
-                <small className="text-muted">By clicking proceed, you agree to merchant terms of service.</small>
+                <small className="text-muted px-2" style={{ fontSize: '11px', lineHeight: '1.4' }}>By clicking proceed, you agree to payment merchant terms of service.</small>
                 <div className="d-flex gap-2 mt-2">
-                  <Button variant="outline-secondary" className="w-100" onClick={() => setShowGateway(false)}>Close</Button>
-                  <Button variant="danger" className="w-100 bg-red-gradient border-0" onClick={handleMfsSubmitNumber}>Proceed</Button>
+                  <Button variant="outline-secondary" className="w-100 rounded-3 py-2" style={{ fontSize: '13.5px' }} onClick={() => setShowGateway(false)}>Close</Button>
+                  <button className={`w-100 py-2 border-0 rounded-3 text-white fw-bold ${paymentMethod === 'bKash' ? 'mfs-btn-bkash' : 'mfs-btn-nagad'}`} style={{ fontSize: '13.5px' }} onClick={handleMfsSubmitNumber}>Proceed</button>
                 </div>
               </div>
             )}
@@ -385,18 +418,19 @@ export default function CheckoutPage() {
             {/* Step 2: Verification Code OTP */}
             {gatewayStep === 2 && (
               <div className="d-flex flex-column gap-3 text-center">
-                <span className="fw-semibold">Enter 6-digit OTP code sent to your mobile wallet</span>
+                <span className="fw-semibold text-secondary" style={{ fontSize: '13.5px' }}>Enter OTP code sent to your mobile wallet</span>
                 <Form.Control
                   type="text"
                   placeholder="Enter Dummy OTP"
                   value={otpInput}
                   onChange={(e) => setOtpInput(e.target.value)}
-                  className="form-control-premium text-center fw-bold fs-5"
+                  className="form-control-premium text-center fw-bold fs-5 shadow-sm"
+                  style={{ letterSpacing: '2px' }}
                 />
-                <small className="text-muted">Enter any 4-6 digit numeric value to bypass simulator.</small>
+                <small className="text-muted px-2" style={{ fontSize: '11px', lineHeight: '1.4' }}>Enter any 4-6 digit numeric value to bypass simulator verification.</small>
                 <div className="d-flex gap-2 mt-2">
-                  <Button variant="outline-secondary" className="w-100" onClick={() => setGatewayStep(1)}>Back</Button>
-                  <Button variant="danger" className="w-100 bg-red-gradient border-0" onClick={handleMfsSubmitOtp}>Verify</Button>
+                  <Button variant="outline-secondary" className="w-100 rounded-3 py-2" style={{ fontSize: '13.5px' }} onClick={() => setGatewayStep(1)}>Back</Button>
+                  <button className={`w-100 py-2 border-0 rounded-3 text-white fw-bold ${paymentMethod === 'bKash' ? 'mfs-btn-bkash' : 'mfs-btn-nagad'}`} style={{ fontSize: '13.5px' }} onClick={handleMfsSubmitOtp}>Verify</button>
                 </div>
               </div>
             )}
@@ -404,19 +438,19 @@ export default function CheckoutPage() {
             {/* Step 3: Secure Wallet PIN */}
             {gatewayStep === 3 && (
               <div className="d-flex flex-column gap-3 text-center">
-                <span className="fw-semibold">Enter your secure MFS account PIN</span>
+                <span className="fw-semibold text-secondary" style={{ fontSize: '13.5px' }}>Enter your secure MFS account PIN</span>
                 <Form.Control
                   type="password"
                   placeholder="Enter Secure PIN"
                   value={pinInput}
                   onChange={(e) => setPinInput(e.target.value)}
-                  className="form-control-premium text-center fw-bold fs-4"
+                  className="form-control-premium text-center fw-bold fs-4 shadow-sm"
                   style={{ letterSpacing: '8px' }}
                 />
-                <small className="text-muted">To test gateway failure, type **FAIL** as the transaction ID or bypass using dummy PIN.</small>
+                <small className="text-muted px-2" style={{ fontSize: '11px', lineHeight: '1.4' }}>Enter any dummy PIN to simulate payment confirmation.</small>
                 <div className="d-flex gap-2 mt-2">
-                  <Button variant="outline-secondary" className="w-100" onClick={() => setGatewayStep(2)}>Back</Button>
-                  <Button variant="danger" className="w-100 bg-red-gradient border-0" onClick={handleMfsSubmitPin}>Confirm Payment</Button>
+                  <Button variant="outline-secondary" className="w-100 rounded-3 py-2" style={{ fontSize: '13.5px' }} onClick={() => setGatewayStep(2)}>Back</Button>
+                  <button className={`w-100 py-2 border-0 rounded-3 text-white fw-bold ${paymentMethod === 'bKash' ? 'mfs-btn-bkash' : 'mfs-btn-nagad'}`} style={{ fontSize: '13.5px' }} onClick={handleMfsSubmitPin}>Confirm Payment</button>
                 </div>
               </div>
             )}
