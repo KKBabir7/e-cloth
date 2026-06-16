@@ -5,17 +5,18 @@ export const dynamic = 'force-dynamic';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Container, Row, Col, Card, Button, Modal } from 'react-bootstrap';
-import { IoHeart, IoTrashOutline, IoCartOutline, IoHeartOutline } from 'react-icons/io5';
+import { IoHeart, IoTrashOutline, IoCart, IoHeartOutline } from 'react-icons/io5';
 import { FiZoomIn } from 'react-icons/fi';
 import { useSelector, useDispatch } from 'react-redux';
-import { getProductImageUrl } from '../../utils/api';
+import { getBackendUrl, getProductImageUrl } from '../../utils/api';
 import { removeFromWishlist } from '../../store/wishlistSlice';
-import { addToCart } from '../../store/cartSlice';
+import { addToCart, updateCartQty } from '../../store/cartSlice';
 import { useUI } from '../../context/UIContext';
+import axios from 'axios';
 
 export default function WishlistPage() {
   const dispatch = useDispatch();
-  const { showToast } = useUI();
+  const { showToast, openOptionsModal } = useUI();
   const wishlistItems = useSelector((state) => state.wishlist.items);
   const cartItems = useSelector((state) => state.cart.items);
   const isInCart = (id) => cartItems?.some((item) => item.productId === id);
@@ -37,19 +38,61 @@ export default function WishlistPage() {
     );
   }
 
-  const handleMoveToCart = (item) => {
-    dispatch(addToCart({
-      productId: item.id,
-      name: item.name,
-      price: item.price,
-      image: item.image,
-      size: 'L',
-      color: '#000000',
-      quantity: 1,
-      isCustom: false
-    }));
-    dispatch(removeFromWishlist(item.id));
-    showToast(`${item.name} moved to cart!`, 'success');
+  const handleMoveToCart = async (item) => {
+    try {
+      showToast('Loading product options...', 'info');
+      const res = await axios.get(`${getBackendUrl()}/api/products/${item.id}`);
+      if (res.data.success) {
+        const product = res.data.product;
+        openOptionsModal(product, (selections) => {
+          const existingItem = cartItems?.find(
+            (cItem) =>
+              cItem.productId.toString() === product._id.toString() &&
+              cItem.size === selections.size &&
+              cItem.color === selections.color
+          );
+
+          if (existingItem) {
+            dispatch(updateCartQty({
+              productId: product._id,
+              size: selections.size,
+              color: selections.color,
+              quantity: selections.quantity
+            }));
+          } else {
+            dispatch(addToCart({
+              productId: product._id,
+              name: product.name,
+              price: product.discountPrice > 0 ? product.discountPrice : product.price,
+              image: product.images[0],
+              size: selections.size,
+              color: selections.color,
+              quantity: selections.quantity,
+              isCustom: false
+            }));
+          }
+          dispatch(removeFromWishlist(item.id));
+          showToast(`${product.name} added to cart!`, 'success');
+        });
+      } else {
+        throw new Error('Product not found');
+      }
+    } catch (err) {
+      console.error('Error fetching product variants:', err);
+      showToast('Could not load options. Adding with defaults.', 'error');
+      dispatch(addToCart({
+        productId: item.id,
+        name: item.name,
+        price: item.price,
+        image: item.image,
+        size: 'L',
+        color: '#000000',
+        quantity: 1,
+        isCustom: false
+      }));
+      dispatch(removeFromWishlist(item.id));
+      showToast(`${item.name} added to cart!`, 'success');
+    }
   };
 
   if (wishlistItems.length === 0) {
@@ -68,14 +111,14 @@ export default function WishlistPage() {
   }
 
   return (
-    <Container className="py-5">
+    <Container className="py-5" style={{ minHeight: '75vh' }}>
       <h2 className="fw-bold mb-5" style={{ color: 'var(--primary-navy)' }}>
-        My <span className="text-danger">Wishlist</span>
+        My <span style={{ color: 'var(--accent-red)' }}>Wishlist</span>
       </h2>
 
       <Row className="g-2 g-md-3">
         {wishlistItems.map((item) => (
-          <Col lg={3} md={4} sm={6} xs={6} key={item.id}>
+          <Col lg={3} md={6} xs={6} key={item.id}>
             <div className="custom-card d-flex flex-column h-100">
               <div className="product-image-container position-relative overflow-hidden">
                 <Link href={`/product/${item.id}`}>
@@ -115,7 +158,7 @@ export default function WishlistPage() {
                 <div className="d-flex align-items-center justify-content-between mt-auto pt-1">
                   {/* Price */}
                   <div className="d-flex align-items-baseline gap-1">
-                    <span className="product-card-price text-danger">৳{item.price}</span>
+                    <span className="product-card-price">৳{item.price}</span>
                   </div>
 
                   {/* Actions */}
@@ -125,7 +168,7 @@ export default function WishlistPage() {
                       className={`card-action-btn ${isInCart(item.id) ? 'active' : ''}`}
                       title="Move to Cart"
                     >
-                      <IoCartOutline size={16} />
+                      <IoCart size={20} />
                     </button>
                   </div>
                 </div>

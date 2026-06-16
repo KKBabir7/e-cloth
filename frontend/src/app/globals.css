@@ -1286,3 +1286,144 @@ font-size: 14.5px;
   }
 }
 
+/* Reusable Select Options Modal CSS */
+.select-options-modal .modal-content {
+  border-radius: 16px !important;
+  border: none !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.2) !important;
+  overflow: hidden;
+}
+
+.select-options-modal .modal-header {
+  background-color: #FFFFFF !important;
+  border-bottom: none !important;
+}
+
+.select-options-modal .btn-close {
+  opacity: 0.8;
+}
+
+.size-select-btn {
+  border: 1px solid #CBD5E1 !important;
+  background-color: #FFFFFF !important;
+  color: #334155 !important;
+  transition: all 0.2s;
+}
+
+.size-select-btn:hover {
+  border-color: var(--accent-red) !important;
+  color: var(--accent-red) !important;
+}
+
+.size-select-btn.active {
+  background-color: var(--primary-navy) !important;
+  border-color: var(--primary-navy) !important;
+  color: #FFFFFF !important;
+}
+
+.color-select-btn {
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.color-select-btn:hover {
+  transform: scale(1.1);
+}
+
+.options-modal-submit-btn {
+  background-color: #1e293b !important;
+  transition: all 0.2s;
+}
+
+.options-modal-submit-btn:not(:disabled):hover {
+  background-color: var(--accent-red) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(254, 126, 7, 0.2);
+}
+
+/* Swiper overrides in Select Options Modal */
+.select-options-modal .swiper-button-prev,
+.select-options-modal .swiper-button-next {
+  width: 32px !important;
+  height: 32px !important;
+  background-color: #ffffff3b !important;
+  border: 1px solid #E2E8F0 !important;
+  border-radius: 50% !important;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08) !important;
+  color: #475569 !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-top: 0 !important;
+  transform: translateY(-50%) !important;
+  top: 50% !important;
+  z-index: 10 !important;
+}
+
+.select-options-modal .swiper-button-prev {
+  left: 6px !important;
+}
+
+.select-options-modal .swiper-button-next {
+  right: 6px !important;
+}
+
+.select-options-modal .swiper-button-prev:hover,
+.select-options-modal .swiper-button-next:hover {
+  background-color: var(--accent-red) !important;
+  border-color: var(--accent-red) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 6px 16px rgba(254, 126, 7, 0.3) !important;
+}
+
+.select-options-modal .swiper-button-prev:focus,
+.select-options-modal .swiper-button-next:focus {
+  outline: none !important;
+}
+
+/* Hide default swiper icons (font-based and SVG-based) and use pure CSS Chevrons */
+.select-options-modal .swiper-button-prev::after,
+.select-options-modal .swiper-button-next::after,
+.select-options-modal .swiper-button-prev svg,
+.select-options-modal .swiper-button-next svg {
+  display: none !important;
+}
+
+.select-options-modal .swiper-button-prev::before,
+.select-options-modal .swiper-button-next::before {
+  content: '' !important;
+  display: block !important;
+  width: 8px !important;
+  height: 8px !important;
+  border-top: 2px solid currentColor !important;
+  border-left: 2px solid currentColor !important;
+  transition: border-color 0.2s !important;
+}
+
+.select-options-modal .swiper-button-prev::before {
+  transform: rotate(-45deg) !important;
+  margin-left: 3px !important; /* visually center the arrow */
+}
+
+.select-options-modal .swiper-button-next::before {
+  transform: rotate(135deg) !important;
+  margin-right: 3px !important; /* visually center the arrow */
+}
+
+.select-options-modal .swiper-pagination-bullet {
+  width: 6px !important;
+  height: 6px !important;
+  background: #CBD5E1 !important;
+  opacity: 1 !important;
+}
+
+.select-options-modal .swiper-pagination-bullet-active {
+  background: var(--accent-red) !important;
+  width: 14px !important;
+  border-radius: 4px !important;
+}
+
+
+
+

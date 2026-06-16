@@ -16,7 +16,7 @@ import { FiChevronLeft, FiChevronRight, FiZoomIn } from 'react-icons/fi';
 import { LuPalette } from 'react-icons/lu';
 import { useDispatch, useSelector } from 'react-redux';
 import { toggleWishlist } from '../store/wishlistSlice';
-import { addToCart } from '../store/cartSlice';
+import { addToCart, updateCartQty } from '../store/cartSlice';
 import { useUI } from '../context/UIContext';
 import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
@@ -25,7 +25,7 @@ import { getBackendUrl, getProductImageUrl } from '@/utils/api';
 export default function HomePage() {
   const router = useRouter();
   const dispatch = useDispatch();
-  const { showToast } = useUI();
+  const { showToast, openOptionsModal } = useUI();
   const wishlistItems = useSelector((state) => state.wishlist.items);
   const cartItems = useSelector((state) => state.cart.items);
 
@@ -114,17 +114,35 @@ export default function HomePage() {
   };
 
   const handleQuickAdd = (product) => {
-    dispatch(addToCart({
-      productId: product._id,
-      name: product.name,
-      price: product.discountPrice > 0 ? product.discountPrice : product.price,
-      image: product.images[0],
-      size: 'L', // default size selection
-      color: '#000000', // default black variant
-      quantity: 1,
-      isCustom: false
-    }));
-    showToast(`${product.name} added to cart!`, 'success');
+    openOptionsModal(product, (selections) => {
+      const existingItem = cartItems?.find(
+        (item) =>
+          item.productId.toString() === product._id.toString() &&
+          item.size === selections.size &&
+          item.color === selections.color
+      );
+
+      if (existingItem) {
+        dispatch(updateCartQty({
+          productId: product._id,
+          size: selections.size,
+          color: selections.color,
+          quantity: selections.quantity
+        }));
+      } else {
+        dispatch(addToCart({
+          productId: product._id,
+          name: product.name,
+          price: product.discountPrice > 0 ? product.discountPrice : product.price,
+          image: product.images[0],
+          size: selections.size,
+          color: selections.color,
+          quantity: selections.quantity,
+          isCustom: false
+        }));
+      }
+      showToast(`${product.name} added to cart!`, 'success');
+    });
   };
 
   const isInWishlist = (id) => wishlistItems.some((item) => item.id === id);
