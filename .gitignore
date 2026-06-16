@@ -29,7 +29,3 @@ Thumbs.db
 # Misc
 *.stackdump
 bash.exe.stackdump
-
-# Uploads (local user files — not for git, but keep folder structure)
-backend/uploads/**
-!backend/uploads/**/.gitkeep
