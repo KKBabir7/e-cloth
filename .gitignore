@@ -6,12 +6,12 @@ node_modules/
 frontend/.next/
 frontend/out/
 
-# Environment files (sensitive!)
-.env
-.env.local
-.env.*.local
-**/.env
-**/.env.local
+# # Environment files (sensitive!)
+# .env
+# .env.local
+# .env.*.local
+# **/.env
+# **/.env.local
 
 # Debug logs
 npm-debug.log*
