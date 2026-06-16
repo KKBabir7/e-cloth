@@ -311,15 +311,15 @@ export default function HomePage() {
       )}
 
       {/* 3. featured / TRENDING PRODUCTS */}
-      <section className="pt-3 pb-5 pt-md-5 pb-md-5 bg-white">
+      <section className="pt-3 pb-4 pt-md-5 pb-md-5 bg-white">
         <Container>
           <div className="responsive-section-header mb-4 mb-md-5">
             <div>
               <h2 className="fw-bold" style={{ color: 'var(--primary-navy)' }}>Trending Collection</h2>
               <p className="text-muted mb-0">Hot apparel selling right now in Bangladesh</p>
             </div>
-            <Link href="/shop" passHref legacyBehavior>
-              <Button variant="link" className="text-danger fw-bold text-decoration-none p-0">View All Products →</Button>
+            <Link href="/shop" className="btn-view-all">
+              View All Products &rarr;
             </Link>
           </div>
 
@@ -356,8 +356,8 @@ export default function HomePage() {
               <h2 className="fw-bold" style={{ color: 'var(--primary-navy)' }}>New Arrivals</h2>
               <p className="text-muted mb-0">Discover the latest additions to our collection</p>
             </div>
-            <Link href="/shop?sort=newest" passHref legacyBehavior>
-              <Button variant="link" className="text-danger fw-bold text-decoration-none p-0">View All New →</Button>
+            <Link href="/shop?sort=newest" className="btn-view-all">
+              View All New &rarr;
             </Link>
           </div>
 
