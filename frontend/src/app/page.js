@@ -399,24 +399,22 @@ export default function HomePage() {
       </section>
 
       {/* 4. DESIGN CTA INTERACTIVE BANNER */}
-      <section className="py-5 bg-navy-gradient text-white">
+      <section className="py-5 bg-navy-gradient text-white overflow-hidden position-relative">
         <Container>
-          <div className="glass-panel p-4 p-md-5 bg-dark bg-opacity-20 border-0 rounded-4">
-            <Row className="align-items-center text-md-start text-center">
+          <div className="design-studio-cta-card p-4 p-md-5 rounded-4 overflow-hidden position-relative">
+            <Row className="align-items-center text-md-start text-center position-relative" style={{ zIndex: 2 }}>
               <Col md={8}>
-                <h3 className="fw-bold text-white mb-2 d-flex align-items-center gap-2 justify-content-center justify-content-md-start">
-                  <IoSparkles color="yellow" /> WEAR YOUR CREATIVITY
+                <h3 className="fw-bold text-white mb-2 d-flex align-items-center gap-2 justify-content-center justify-content-md-start" style={{ letterSpacing: '1px' }}>
+                  <IoSparkles color="#FBBF24" /> WEAR YOUR CREATIVITY
                 </h3>
-                <h2 className="display-5 fw-extrabold text-white mb-3">Custom T-Shirt Printing Studio</h2>
-                <p className="text-secondary mb-4 fs-6" style={{ color: '#94A3B8' }}>
+                <h2 className="display-5 fw-extrabold text-white mb-3" style={{ lineHeight: '1.2' }}>Custom T-Shirt Printing Studio</h2>
+                <p className="mb-4 fs-6 design-studio-cta-desc">
                   Upload high-res PNG files, write custom slogans in elegant script typography, align layers, and review pricing in real time inside our HTML5 Canvas designer. Premium cotton 180+ GSM T-Shirts.
                 </p>
               </Col>
               <Col md={4} className="text-md-end text-center">
-                <Link href="/design" passHref legacyBehavior>
-                  <Button variant="danger" className="btn-premium-accent btn-lg px-5 py-3">
-                    Launch Canvas Editor
-                  </Button>
+                <Link href="/design" className="btn-launch-canvas">
+                  Launch Canvas Editor
                 </Link>
               </Col>
             </Row>
