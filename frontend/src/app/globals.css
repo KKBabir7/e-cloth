@@ -1126,5 +1126,40 @@ font-size: 14.5px;
   .display-5 {
     font-size: 24px !important;
   }
+
+  /* Compact Floating Widgets on mobile viewports (< 472px) */
+  .floating-cart-trigger {
+    width: 42px !important;
+    height: 42px !important;
+    bottom: 16px !important;
+    right: 16px !important;
+    box-shadow: 0 6px 15px rgba(220, 38, 38, 0.25) !important;
+  }
+  
+  .floating-cart-trigger svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  .floating-cart-badge {
+    font-size: 8px !important;
+    padding: 1px 4px !important;
+    top: -3px !important;
+    right: -3px !important;
+    border-width: 1px !important;
+  }
+
+  .floating-whatsapp-trigger {
+    width: 42px !important;
+    height: 42px !important;
+    bottom: 66px !important; /* 16px bottom + 42px height + 8px gap = 66px */
+    right: 16px !important;
+    box-shadow: 0 6px 15px rgba(37, 211, 102, 0.25) !important;
+  }
+
+  .floating-whatsapp-trigger svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
 }
 
