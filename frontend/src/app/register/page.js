@@ -2,6 +2,7 @@
 
 import React, { useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import BrandLoader from '../../components/BrandLoader';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
 import { useForm } from 'react-hook-form';
@@ -14,12 +15,7 @@ import { validateBdPhone } from '../../../../shared/utils';
 
 export default function RegisterPage() {
   return (
-    <Suspense fallback={
-      <Container className="py-5 text-center">
-        <div className="spinner-border text-danger" role="status"></div>
-        <p className="mt-3">Loading Register...</p>
-      </Container>
-    }>
+    <Suspense fallback={<BrandLoader fullPage={true} transparent={false} />}>
       <RegisterContent />
     </Suspense>
   );

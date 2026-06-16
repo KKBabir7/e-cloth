@@ -1,9 +1,9 @@
 'use client';
 
-export const dynamic = 'force-dynamic';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import BrandLoader from '../../components/BrandLoader';
 import { Container, Row, Col, Card, Button, Modal } from 'react-bootstrap';
 import { IoHeart, IoTrashOutline, IoCart, IoHeartOutline } from 'react-icons/io5';
 import { FiZoomIn } from 'react-icons/fi';
@@ -28,14 +28,7 @@ export default function WishlistPage() {
   }, []);
 
   if (!mounted) {
-    return (
-      <Container className="py-5 text-center" style={{ minHeight: '60vh' }}>
-        <div className="py-5">
-          <div className="spinner-border text-danger" role="status"></div>
-          <p className="mt-3 text-muted">Loading your premium wishlist...</p>
-        </div>
-      </Container>
-    );
+    return <BrandLoader fullPage={true} transparent={false} />;
   }
 
   const handleMoveToCart = async (item) => {

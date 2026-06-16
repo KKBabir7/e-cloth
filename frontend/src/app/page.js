@@ -1,10 +1,9 @@
 'use client';
 
-export const dynamic = 'force-dynamic';
-
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import BrandLoader from '../components/BrandLoader';
 import { Container, Row, Col, Card, Button, Badge, Modal } from 'react-bootstrap';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Autoplay, A11y } from 'swiper/modules';
@@ -241,12 +240,7 @@ export default function HomePage() {
   };
 
   if (!mounted) {
-    return (
-      <Container className="py-5 text-center">
-        <div className="spinner-border text-danger" role="status"></div>
-        <p className="mt-3">Loading Home page...</p>
-      </Container>
-    );
+    return <BrandLoader fullPage={true} transparent={false} />;
   }
 
   return (

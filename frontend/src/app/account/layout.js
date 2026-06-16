@@ -2,6 +2,7 @@
 
 import React, { useEffect } from 'react';
 import Link from 'next/link';
+import BrandLoader from '../../components/BrandLoader';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';
 import { Container, Row, Col, Card, ListGroup, Button, Badge } from 'react-bootstrap';
@@ -23,12 +24,7 @@ export default function AccountLayout({ children }) {
   }, [isAuthenticated, loading]);
 
   if (loading) {
-    return (
-      <Container className="py-5 text-center">
-        <div className="spinner-border text-danger" role="status"></div>
-        <p className="mt-3">Loading Dashboard...</p>
-      </Container>
-    );
+    return <BrandLoader fullPage={true} transparent={false} />;
   }
 
   if (!user) return null;

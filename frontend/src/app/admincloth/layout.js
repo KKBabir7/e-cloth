@@ -2,6 +2,7 @@
 
 import React, { useEffect } from 'react';
 import Link from 'next/link';
+import BrandLoader from '../../components/BrandLoader';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSelector, useDispatch } from 'react-redux';
 import { Container, Row, Col, Card, ListGroup, Badge, Button, Navbar, Nav, NavDropdown } from 'react-bootstrap';
@@ -50,12 +51,7 @@ export default function AdminLayout({ children }) {
   }
 
   if (loading) {
-    return (
-      <Container className="py-5 text-center">
-        <div className="spinner-border text-danger" role="status"></div>
-        <p className="mt-3">Loading Administrative Panel...</p>
-      </Container>
-    );
+    return <BrandLoader fullPage={true} transparent={false} />;
   }
 
   if (!user || (user.role !== 'admin' && user.role !== 'superAdmin')) return null;

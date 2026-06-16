@@ -4,6 +4,7 @@ import AppNavbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import FloatingCart from "../components/FloatingCart";
 import FloatingWhatsApp from "../components/FloatingWhatsApp";
+import PageTransitionLoader from "../components/PageTransitionLoader";
 
 export const metadata = {
   title: "CustomWear BD | Premium Custom T-Shirts & Fashion Ecommerce",
@@ -20,6 +21,9 @@ export default function RootLayout({ children }) {
       </head>
       <body className="d-flex flex-column min-vh-100 bg-white">
         <Providers>
+          {/* Global Page Transition Loader */}
+          <PageTransitionLoader />
+
           {/* Global Sticky Navigation */}
           <AppNavbar />
           

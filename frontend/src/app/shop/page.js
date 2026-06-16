@@ -1,10 +1,10 @@
 'use client';
 
-export const dynamic = 'force-dynamic';
 
 import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import BrandLoader from '../../components/BrandLoader';
 import { Container, Row, Col, Card, Button, Form, Badge, Pagination, Alert, Modal } from 'react-bootstrap';
 import { IoCart, IoHeartOutline, IoHeart, IoFilterOutline, IoSearch } from 'react-icons/io5';
 import { FiZoomIn } from 'react-icons/fi';
@@ -19,12 +19,7 @@ import { getBackendUrl, getProductImageUrl } from '@/utils/api';
 // Main component with Suspense boundary wrapping Client filters
 export default function ShopPage() {
   return (
-    <Suspense fallback={
-      <Container className="py-5 text-center">
-        <div className="spinner-border text-danger" role="status"></div>
-        <p className="mt-3">Loading Shop catalog...</p>
-      </Container>
-    }>
+    <Suspense fallback={<BrandLoader fullPage={true} transparent={false} />}>
       <ShopContent />
     </Suspense>
   );
@@ -187,12 +182,7 @@ function ShopContent() {
   const isInCart = (id) => cartItems?.some((item) => item.productId === id);
 
   if (!mounted) {
-    return (
-      <Container className="py-5 text-center">
-        <div className="spinner-border text-danger" role="status"></div>
-        <p className="mt-3">Loading Shop catalog...</p>
-      </Container>
-    );
+    return <BrandLoader fullPage={true} transparent={false} />;
   }
 
   return (

@@ -1,9 +1,9 @@
 'use client';
 
-export const dynamic = 'force-dynamic';
 
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import BrandLoader from '../../components/BrandLoader';
 import { Card, Row, Col, Form, Button, ListGroup, Badge } from 'react-bootstrap';
 import {
   IoPersonOutline, IoLocationOutline, IoMailOutline, IoCallOutline,
@@ -88,12 +88,7 @@ export default function AccountProfilePage() {
   }, [user]);
 
   if (!user) {
-    return (
-      <div className="text-center py-5">
-        <div className="spinner-border text-danger" role="status"></div>
-        <p className="mt-3">Loading profile data...</p>
-      </div>
-    );
+    return <BrandLoader fullPage={false} />;
   }
 
   const handleUpdateProfile = async (e) => {

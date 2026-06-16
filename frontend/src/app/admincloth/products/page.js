@@ -1,6 +1,5 @@
 'use client';
 
-export const dynamic = 'force-dynamic';
 
 import React, { useEffect, useState } from 'react';
 import { Card, Table, Button, Badge } from 'react-bootstrap';

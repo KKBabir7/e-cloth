@@ -1,9 +1,9 @@
 'use client';
 
-export const dynamic = 'force-dynamic';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import BrandLoader from '../../components/BrandLoader';
 import { useRouter } from 'next/navigation';
 import { useSelector, useDispatch } from 'react-redux';
 import { Container, Row, Col, Card, Table, Button, Form, Badge, InputGroup } from 'react-bootstrap';
@@ -28,14 +28,7 @@ export default function CartPage() {
   }, []);
 
   if (!mounted) {
-    return (
-      <Container className="py-5 text-center" style={{ minHeight: '60vh' }}>
-        <div className="py-5">
-          <div className="spinner-border text-danger" role="status"></div>
-          <p className="mt-3 text-muted">Loading your premium shopping bag...</p>
-        </div>
-      </Container>
-    );
+    return <BrandLoader fullPage={true} transparent={false} />;
   }
 
   const handleQtyChange = (item, newQty) => {

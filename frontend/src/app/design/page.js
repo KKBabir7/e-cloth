@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useRef, Suspense } from 'react';
+import BrandLoader from '../../components/BrandLoader';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Container, Row, Col, Card, Button, Form, Tabs, Tab, Modal, InputGroup } from 'react-bootstrap';
 import {
@@ -16,12 +17,7 @@ import { getBackendUrl } from '@/utils/api';
 // Main exported design customizer with Suspense boundary
 export default function DesignStudio() {
   return (
-    <Suspense fallback={
-      <Container className="py-5 text-center">
-        <div className="spinner-border text-danger" role="status"></div>
-        <p className="mt-3">Loading Design Studio...</p>
-      </Container>
-    }>
+    <Suspense fallback={<BrandLoader fullPage={true} transparent={false} />}>
       <DesignContent />
     </Suspense>
   );

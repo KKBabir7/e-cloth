@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
+import BrandLoader from '../../components/BrandLoader';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
 import { useForm } from 'react-hook-form';
@@ -13,12 +14,7 @@ import { useUI } from '../../context/UIContext';
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      <Container className="py-5 text-center">
-        <div className="spinner-border text-danger" role="status"></div>
-        <p className="mt-3">Loading Login...</p>
-      </Container>
-    }>
+    <Suspense fallback={<BrandLoader fullPage={true} transparent={false} />}>
       <LoginContent />
     </Suspense>
   );
