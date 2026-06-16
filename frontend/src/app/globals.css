@@ -972,6 +972,14 @@ font-size: 14.5px;
   margin-left: 0px;
 }
 
+.shop-now-tab ,.category-text-item{
+  
+    padding: 10px 8px 10px 8px;
+  }
+.category-text-item span,.shop-now-tab span{
+  font-size: 10px;
+}
+
 
 }
 

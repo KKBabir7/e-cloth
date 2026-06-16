@@ -383,7 +383,7 @@ function ShopContent() {
               </div>
             ) : (
               <>
-                <Row className="g-4">
+                <Row className="g-2 g-md-3">
                   {products.map((product) => {
                     const isDiscounted = product.discountPrice > 0;
                     const discountPercent = isDiscounted ? Math.round(((product.price - product.discountPrice) / product.price) * 100) : 0;

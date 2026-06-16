@@ -324,7 +324,7 @@ export default function HomePage() {
           </div>
 
           {isLoading ? (
-            <Row className="g-4">
+            <Row className="g-2 g-md-3">
               {[1, 2, 3, 4].map((i) => (
                 <Col key={i} lg={3} md={6} xs={6}>
                   <Card className="border-0 shadow-sm rounded-4 p-3" style={{ height: '380px' }}>
@@ -337,7 +337,7 @@ export default function HomePage() {
               ))}
             </Row>
           ) : (
-            <Row className="g-4">
+            <Row className="g-2 g-md-3">
               {products.map((product) => (
                 <Col key={product._id} lg={3} md={6} xs={6}>
                   {renderProductCard(product)}
@@ -362,7 +362,7 @@ export default function HomePage() {
           </div>
 
           {newArrivalsLoading ? (
-            <Row className="g-4">
+            <Row className="g-2 g-md-3">
               {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
                 <Col key={i} lg={3} md={6} xs={6}>
                   <Card className="border-0 shadow-sm rounded-4 p-3" style={{ height: '380px' }}>
@@ -375,7 +375,7 @@ export default function HomePage() {
               ))}
             </Row>
           ) : (
-            <Row className="g-4">
+            <Row className="g-2 g-md-3">
               {newArrivals.map((product) => (
                 <Col key={product._id} lg={3} md={6} xs={6}>
                   {renderProductCard(product)}

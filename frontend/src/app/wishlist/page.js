@@ -73,7 +73,7 @@ export default function WishlistPage() {
         My <span className="text-danger">Wishlist</span>
       </h2>
 
-      <Row className="g-4">
+      <Row className="g-2 g-md-3">
         {wishlistItems.map((item) => (
           <Col lg={3} md={4} sm={6} xs={6} key={item.id}>
             <div className="custom-card d-flex flex-column h-100">
