@@ -15,7 +15,7 @@ export default function Footer() {
   }
 
   return (
-    <footer className="bg-white text-dark py-5 mt-auto" style={{ borderTop: '4px solid var(--accent-red)', boxShadow: '0 -10px 30px -10px rgba(28, 30, 35, 0.05)' }}>
+    <footer className="bg-white text-dark py-5 mt-auto" style={{ borderTop: 'none', boxShadow: '0 -10px 30px -10px rgba(28, 30, 35, 0.05)' }}>
       <Container>
         <Row className="gy-4">
           

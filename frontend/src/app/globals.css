@@ -1016,11 +1016,9 @@ font-size: 14.5px;
 
 /* Premium Design Studio CTA Banner Card */
 .design-studio-cta-card {
-  background: rgba(30, 41, 59, 0.4) !important;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25) !important;
+  background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%) !important;
+  border: 1px solid #E2E8F0 !important;
+  box-shadow: 0 15px 35px rgba(28, 30, 35, 0.05) !important;
   position: relative;
 }
 
@@ -1031,7 +1029,7 @@ font-size: 14.5px;
   right: -80px;
   width: 260px;
   height: 260px;
-  background: radial-gradient(circle, rgba(254, 126, 7, 0.15) 0%, rgba(254, 126, 7, 0) 70%);
+  background: radial-gradient(circle, rgba(254, 126, 7, 0.08) 0%, rgba(254, 126, 7, 0) 70%);
   z-index: 1;
   pointer-events: none;
 }
@@ -1043,13 +1041,13 @@ font-size: 14.5px;
   left: -100px;
   width: 300px;
   height: 300px;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, rgba(99, 102, 241, 0) 70%);
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.05) 0%, rgba(99, 102, 241, 0) 70%);
   z-index: 1;
   pointer-events: none;
 }
 
 .design-studio-cta-desc {
-  color: rgba(241, 245, 249, 0.8) !important; /* Soft, highly readable silver text */
+  color: #475569 !important; /* Premium slate gray for high contrast on light bg */
   line-height: 1.6;
   font-weight: 400;
 }
@@ -1072,16 +1070,60 @@ font-size: 14.5px;
   text-decoration: none !important;
   cursor: pointer;
   white-space: nowrap !important;
+  position: relative !important;
+  overflow: hidden !important;
+  animation: pulse-glow-infinite 2.5s infinite ease-in-out !important;
+}
+
+/* Shimmer shine effect overlay */
+.btn-launch-canvas::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -150%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  transform: skewX(-25deg);
+  animation: shimmer-infinite 3.5s infinite ease-in-out;
+  pointer-events: none;
+  z-index: 1;
 }
 
 .btn-launch-canvas:hover {
-  transform: translateY(-2.5px) scale(1.02) !important;
-  box-shadow: 0 10px 25px rgba(254, 126, 7, 0.5) !important;
+  transform: translateY(-2.5px) scale(1.04) !important;
+  box-shadow: 0 12px 28px rgba(254, 126, 7, 0.65) !important;
   color: #FFFFFF !important;
+  animation: none !important; /* static hover focus state */
 }
 
 .btn-launch-canvas:active {
   transform: translateY(0) scale(1) !important;
+}
+
+@keyframes pulse-glow-infinite {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 6px 20px rgba(254, 126, 7, 0.35) !important;
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow: 0 12px 28px rgba(254, 126, 7, 0.6) !important;
+  }
+}
+
+@keyframes shimmer-infinite {
+  0% {
+    left: -150%;
+  }
+  20%, 100% {
+    left: 150%;
+  }
 }
 
 @media (max-width: 472px) {
@@ -1135,11 +1177,11 @@ font-size: 14.5px;
   }
   
   .hero-swiper .swiper-button-prev {
-    left: 8px !important;
+    left: 2px !important;
   }
   
   .hero-swiper .swiper-button-next {
-    right: 8px !important;
+    right: 2px !important;
   }
 
   /* Category Slider Navigation Arrows sizing on small mobile viewports */
@@ -1167,7 +1209,7 @@ font-size: 14.5px;
   }
   
   .responsive-section-header h2 {
-    font-size: 20px !important;
+    font-size: 18px !important;
     margin-bottom: 2px !important;
   }
   

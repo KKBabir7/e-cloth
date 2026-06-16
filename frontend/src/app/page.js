@@ -13,6 +13,7 @@ import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import { IoShirtOutline, IoSparkles, IoCart, IoHeartOutline, IoHeart, IoCheckmarkCircle } from 'react-icons/io5';
 import { FiChevronLeft, FiChevronRight, FiZoomIn } from 'react-icons/fi';
+import { LuPalette } from 'react-icons/lu';
 import { useDispatch, useSelector } from 'react-redux';
 import { toggleWishlist } from '../store/wishlistSlice';
 import { addToCart } from '../store/cartSlice';
@@ -123,7 +124,7 @@ export default function HomePage() {
       quantity: 1,
       isCustom: false
     }));
-    showToast(`${product.name} (Size: L) added to cart!`, 'success');
+    showToast(`${product.name} added to cart!`, 'success');
   };
 
   const isInWishlist = (id) => wishlistItems.some((item) => item.id === id);
@@ -266,7 +267,7 @@ export default function HomePage() {
       {!categoriesLoading && categories.length > 0 && (
         <section className="border-bottom border-top py-0 position-relative" style={{ zIndex: 10, backgroundColor: '#F8FAFC' }}>
           <Container>
-            <div className="position-relative px-5 px-md-5">
+            <div className="position-relative px-3 px-md-5">
               <Swiper
                 modules={[Navigation, A11y]}
                 navigation={{
@@ -399,15 +400,15 @@ export default function HomePage() {
       </section>
 
       {/* 4. DESIGN CTA INTERACTIVE BANNER */}
-      <section className="py-5 bg-navy-gradient text-white overflow-hidden position-relative">
+      <section className="py-5 bg-white overflow-hidden position-relative">
         <Container>
           <div className="design-studio-cta-card p-4 p-md-5 rounded-4 overflow-hidden position-relative">
             <Row className="align-items-center text-md-start text-center position-relative" style={{ zIndex: 2 }}>
               <Col md={8}>
-                <h3 className="fw-bold text-white mb-2 d-flex align-items-center gap-2 justify-content-center justify-content-md-start" style={{ letterSpacing: '1px' }}>
-                  <IoSparkles color="#FBBF24" /> WEAR YOUR CREATIVITY
+                <h3 className="fw-bold mb-2 d-flex align-items-center gap-2 justify-content-center justify-content-md-start" style={{ color: 'var(--primary-navy)', letterSpacing: '1px' }}>
+                  <LuPalette color="#fe7e07" size={20} className="me-2" /> WEAR YOUR CREATIVITY
                 </h3>
-                <h2 className="display-5 fw-extrabold text-white mb-3" style={{ lineHeight: '1.2' }}>Custom T-Shirt Printing Studio</h2>
+                <h2 className="display-5 fw-extrabold mb-3" style={{ color: 'var(--primary-navy)', lineHeight: '1.2' }}>Custom T-Shirt Printing Studio</h2>
                 <p className="mb-4 fs-6 design-studio-cta-desc">
                   Upload high-res PNG files, write custom slogans in elegant script typography, align layers, and review pricing in real time inside our HTML5 Canvas designer. Premium cotton 180+ GSM T-Shirts.
                 </p>
