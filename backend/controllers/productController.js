@@ -236,6 +236,10 @@ const updateProduct = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
 
+    // Safeguard to ensure timestamps are not overwritten by incoming body payloads
+    delete req.body.createdAt;
+    delete req.body.updatedAt;
+
     const slugify = (text) => {
       return text
         .toString()

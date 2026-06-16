@@ -56,7 +56,7 @@ export default function HomePage() {
     queryKey: ['products', 'newArrivals'],
     queryFn: async () => {
       try {
-        const res = await axios.get(`${getBackendUrl()}/api/products?limit=8&sort=newest`);
+        const res = await axios.get(`${getBackendUrl()}/api/products?limit=10&sort=newest`);
         if (res.data.success) {
           return res.data.products;
         }
@@ -212,7 +212,7 @@ export default function HomePage() {
                 className={`card-action-btn ${isInCart(product._id) ? 'active' : ''}`}
                 title="Add to Cart"
               >
-                <IoCart size={16} />
+                <IoCart size={20} />
               </button>
             </div>
           </div>
@@ -363,7 +363,7 @@ export default function HomePage() {
 
           {newArrivalsLoading ? (
             <Row className="g-4">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
                 <Col key={i} lg={3} md={6} xs={6}>
                   <Card className="border-0 shadow-sm rounded-4 p-3" style={{ height: '380px' }}>
                     <div className="skeleton rounded-4 mb-3" style={{ height: '220px' }}></div>

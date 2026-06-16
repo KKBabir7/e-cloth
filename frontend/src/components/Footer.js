@@ -105,7 +105,7 @@ export default function Footer() {
               © {new Date().getFullYear()} CustomWear BD. All Rights Reserved. Crafted for premium retail commerce in Bangladesh.
             </p>
           </Col>
-          <Col md={6} className="d-flex justify-content-md-end gap-3 align-items-center">
+          <Col md={6} className="d-flex justify-content-md-end gap-3 align-items-center flex-wrap">
             <span className="text-secondary" style={{ fontSize: '12px', fontWeight: '500' }}>Secured Payments via:</span>
             <div className="d-flex gap-2">
               <span className="badge bg-light text-dark border px-2 py-1" style={{ fontSize: '11px', cursor: 'default' }}>bKash Verified</span>
