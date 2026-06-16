@@ -266,7 +266,7 @@ export default function HomePage() {
       {!categoriesLoading && categories.length > 0 && (
         <section className="border-bottom border-top py-0 position-relative" style={{ zIndex: 10, backgroundColor: '#F8FAFC' }}>
           <Container>
-            <div className="position-relative px-md-5">
+            <div className="position-relative px-5 px-md-5">
               <Swiper
                 modules={[Navigation, A11y]}
                 navigation={{
@@ -311,15 +311,15 @@ export default function HomePage() {
       )}
 
       {/* 3. featured / TRENDING PRODUCTS */}
-      <section className="py-5 bg-white">
+      <section className="pt-3 pb-5 pt-md-5 pb-md-5 bg-white">
         <Container>
-          <div className="d-flex justify-content-between align-items-end mb-5">
+          <div className="responsive-section-header mb-4 mb-md-5">
             <div>
               <h2 className="fw-bold" style={{ color: 'var(--primary-navy)' }}>Trending Collection</h2>
               <p className="text-muted mb-0">Hot apparel selling right now in Bangladesh</p>
             </div>
             <Link href="/shop" passHref legacyBehavior>
-              <Button variant="link" className="text-danger fw-bold text-decoration-none">View All Products →</Button>
+              <Button variant="link" className="text-danger fw-bold text-decoration-none p-0">View All Products →</Button>
             </Link>
           </div>
 
@@ -349,15 +349,15 @@ export default function HomePage() {
       </section>
 
       {/* New Arrivals Section */}
-      <section className="py-5 bg-light border-top">
+      <section className="py-4 py-md-5 bg-light border-top">
         <Container>
-          <div className="d-flex justify-content-between align-items-end mb-5">
+          <div className="responsive-section-header mb-4 mb-md-5">
             <div>
               <h2 className="fw-bold" style={{ color: 'var(--primary-navy)' }}>New Arrivals</h2>
               <p className="text-muted mb-0">Discover the latest additions to our collection</p>
             </div>
             <Link href="/shop?sort=newest" passHref legacyBehavior>
-              <Button variant="link" className="text-danger fw-bold text-decoration-none">View All New →</Button>
+              <Button variant="link" className="text-danger fw-bold text-decoration-none p-0">View All New →</Button>
             </Link>
           </div>
 
@@ -389,7 +389,7 @@ export default function HomePage() {
       {/* 4. DESIGN CTA INTERACTIVE BANNER */}
       <section className="py-5 bg-navy-gradient text-white">
         <Container>
-          <div className="glass-panel p-5 bg-dark bg-opacity-20 border-0 rounded-4">
+          <div className="glass-panel p-4 p-md-5 bg-dark bg-opacity-20 border-0 rounded-4">
             <Row className="align-items-center text-md-start text-center">
               <Col md={8}>
                 <h3 className="fw-bold text-white mb-2 d-flex align-items-center gap-2 justify-content-center justify-content-md-start">

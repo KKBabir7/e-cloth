@@ -294,7 +294,7 @@ h1, h2, h3, h4, h5, h6 {
 .hero-swiper .swiper-button-prev {
   width: 48px;
   height: 48px;
-  background-color: rgba(255, 255, 255, 0.85);
+  background-color: rgba(255, 255, 255, 0.5) !important;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.45);
@@ -304,8 +304,9 @@ h1, h2, h3, h4, h5, h6 {
   background-repeat: no-repeat;
   background-position: center;
   background-size: 20px;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  margin-top: 0 !important;
   color: transparent !important;
 }
 
@@ -371,7 +372,8 @@ h1, h2, h3, h4, h5, h6 {
     width: 38px;
     height: 38px;
     background-size: 16px;
-    transform: translateY(-50%);
+    transform: translateY(-50%) !important;
+    margin-top: 0 !important;
   }
 
   .hero-swiper .swiper-button-prev {
@@ -384,7 +386,7 @@ h1, h2, h3, h4, h5, h6 {
 
   .hero-swiper .swiper-button-prev:hover,
   .hero-swiper .swiper-button-next:hover {
-    transform: translateY(-50%) scale(1.05);
+    transform: translateY(-50%) scale(1.05) !important;
   }
 }
 
@@ -943,6 +945,39 @@ font-size: 14.5px;
 }
 
 /* Move discount badge to top-left of product image wrapper when screen is mobile sized */
+/* Category Slider Navigation Arrows */
+.cat-prev, .cat-next {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 50% !important;
+  border: 1px solid #E2E8F0 !important;
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #475569 !important;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  cursor: pointer;
+  padding: 0 !important;
+  outline: none !important;
+}
+
+.cat-prev:hover, .cat-next:hover {
+  background-color: var(--accent-red) !important;
+  color: #FFFFFF !important;
+  border-color: var(--accent-red) !important;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25) !important;
+}
+
+/* Responsive Section Header default layout */
+.responsive-section-header {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
 @media (max-width: 472px) {
   .discount-badge-inline {
         position: absolute !important;
@@ -958,28 +993,91 @@ font-size: 14.5px;
         padding: 4px;
   }
 
-.product-card-title {
+  .product-card-title {
     font-size: 13px;
-   margin: 2px 0 4px 0;
+    margin: 2px 0 4px 0;
   }
-.product-details {
+
+  .product-details {
     padding: 8px 4px 4px 4px !important;
   }
-  .product-card-price{
+
+  .product-card-price {
     font-size: 15px;
   }
-.product-card-price-original{
-  margin-left: 0px;
-}
 
-.shop-now-tab ,.category-text-item{
-  
+  .product-card-price-original {
+    margin-left: 0px;
+  }
+
+  .shop-now-tab, .category-text-item {
     padding: 10px 8px 10px 8px;
   }
-.category-text-item span,.shop-now-tab span{
-  font-size: 10px;
-}
 
+  .category-text-item span, .shop-now-tab span {
+    font-size: 10px;
+  }
 
+  /* Hero Swiper navigation buttons adjustments on extra-small mobile viewports */
+  .hero-swiper .swiper-button-next,
+  .hero-swiper .swiper-button-prev {
+    width: 28px !important;
+    height: 28px !important;
+    background-size: 12px !important;
+    transform: translateY(-50%) !important;
+    margin-top: 0 !important;
+  }
+  
+  .hero-swiper .swiper-button-prev {
+    left: 8px !important;
+  }
+  
+  .hero-swiper .swiper-button-next {
+    right: 8px !important;
+  }
+
+  /* Category Slider Navigation Arrows sizing on small mobile viewports */
+  .cat-prev, .cat-next {
+    width: 24px !important;
+    height: 24px !important;
+  }
+  .cat-prev svg, .cat-next svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+  .cat-prev {
+    left: 4px !important;
+  }
+  .cat-next {
+    right: 4px !important;
+  }
+
+  /* Responsive Section Headers stacking layout for < 472px viewports */
+  .responsive-section-header {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+  }
+  
+  .responsive-section-header h2 {
+    font-size: 20px !important;
+    margin-bottom: 2px !important;
+  }
+  
+  .responsive-section-header p {
+    font-size: 12.5px !important;
+  }
+  
+  .responsive-section-header button,
+  .responsive-section-header a {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    font-size: 13px !important;
+  }
+
+  .display-5 {
+    font-size: 24px !important;
+  }
 }
 
