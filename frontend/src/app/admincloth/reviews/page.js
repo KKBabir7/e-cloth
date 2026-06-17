@@ -116,13 +116,9 @@ export default function AdminReviewsPage() {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      const token = JSON.parse(localStorage.getItem('persist:root') || '{}');
-      const authState = JSON.parse(token.auth || '{}');
-      const jwt = authState?.user?.token;
-
       await axios.delete(
         `${getBackendUrl()}/api/products/${deleteTarget.productId}/reviews/${deleteTarget.reviewId}`,
-        { headers: { Authorization: `Bearer ${jwt}` } }
+        { withCredentials: true }
       );
       showToast(`Review by "${deleteTarget.name}" deleted successfully.`, 'success');
       setDeleteModal(false);
@@ -144,14 +140,10 @@ export default function AdminReviewsPage() {
     }
     setSaving(true);
     try {
-      const token = JSON.parse(localStorage.getItem('persist:root') || '{}');
-      const authState = JSON.parse(token.auth || '{}');
-      const jwt = authState?.user?.token;
-
       await axios.put(
         `${getBackendUrl()}/api/products/${editData.productId}/reviews/${editData.reviewId}`,
         { name: editData.name, rating: editData.rating, comment: editData.comment },
-        { headers: { Authorization: `Bearer ${jwt}` } }
+        { withCredentials: true }
       );
       showToast('Review updated successfully!', 'success');
       setEditModal(false);

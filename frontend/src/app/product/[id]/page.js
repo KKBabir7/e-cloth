@@ -1,15 +1,18 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter, useParams } from 'next/navigation';
-import { Container, Row, Col, Button, Badge, Form } from 'react-bootstrap';
+import { Container, Row, Col, Button, Badge, Form, Accordion } from 'react-bootstrap';
 import {
-  IoCart, IoHeartOutline, IoHeart, IoShirtOutline, IoCarOutline,
-  IoShieldCheckmarkOutline, IoLogoFacebook, IoLogoWhatsapp,
+  IoCart, IoHeartOutline, IoHeart, IoCarOutline,
+  IoShieldCheckmarkOutline, IoLogoFacebook, IoLogoInstagram,
   IoChevronForward, IoStarSharp, IoShareSocialOutline,
-  IoCheckmarkCircle, IoReturnDownBack, IoTimeOutline
+  IoCheckmarkCircle, IoReturnDownBack, IoTimeOutline,
+  IoScanOutline, IoColorPaletteOutline
 } from 'react-icons/io5';
+import { FaXTwitter, FaPinterest } from 'react-icons/fa6';
 import { useDispatch, useSelector } from 'react-redux';
 import { toggleWishlist } from '../../../store/wishlistSlice';
 import { addToCart } from '../../../store/cartSlice';
@@ -37,7 +40,19 @@ export default function ProductDetailsPage() {
   const [quantity, setQuantity] = useState(1);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [zoomStyle, setZoomStyle] = useState({ display: 'none' });
-  const [activeTab, setActiveTab] = useState('description');
+  const [activeTab, setActiveTab] = useState('reviews');
+  const [shareOpen, setShareOpen] = useState(false);
+  const shareRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (shareRef.current && !shareRef.current.contains(e.target)) {
+        setShareOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Reviews
   const [reviewSort, setReviewSort] = useState('newest');
@@ -150,12 +165,57 @@ export default function ProductDetailsPage() {
 
   const isInWishlist = () => wishlistItems.some((item) => item.id === product?._id);
   const displayPrice = product ? (product.discountPrice > 0 ? product.discountPrice : product.price) : 0;
-  const discountPct = product?.discountPrice > 0
-    ? Math.round(((product.price - product.discountPrice) / product.price) * 100)
-    : 0;
+
+  const handleTryOn = () => {
+    if (!product?._id) return;
+    router.push(`/design?productId=${product._id}`);
+  };
+
+  const getShareUrl = () => shareUrl || (typeof window !== 'undefined' ? window.location.href : '');
+
+  const handleInstagramShare = async () => {
+    try {
+      await navigator.clipboard.writeText(getShareUrl());
+      showToast('Link copied! Paste it in your Instagram post or story.', 'success');
+    } catch {
+      showToast('Could not copy link', 'error');
+    }
+    setShareOpen(false);
+  };
+
+  const shareLinks = [
+    {
+      key: 'facebook',
+      label: 'Facebook',
+      icon: <IoLogoFacebook size={17} />,
+      className: 'product-share-item--facebook',
+      href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(getShareUrl())}`,
+    },
+    {
+      key: 'x',
+      label: 'X',
+      icon: <FaXTwitter size={15} />,
+      className: 'product-share-item--x',
+      href: `https://twitter.com/intent/tweet?url=${encodeURIComponent(getShareUrl())}&text=${encodeURIComponent(product?.name || '')}`,
+    },
+    {
+      key: 'instagram',
+      label: 'Instagram',
+      icon: <IoLogoInstagram size={17} />,
+      className: 'product-share-item--instagram',
+      onClick: handleInstagramShare,
+    },
+    {
+      key: 'pinterest',
+      label: 'Pinterest',
+      icon: <FaPinterest size={15} />,
+      className: 'product-share-item--pinterest',
+      href: `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(getShareUrl())}&description=${encodeURIComponent(product?.name || '')}`,
+    },
+  ];
 
   /* ── SKELETON LOADER ── */
-  if (!mounted || isLoading) {
+  if (isLoading) {
     return (
       <Container className="py-5">
         {/* Breadcrumb skeleton */}
@@ -196,7 +256,6 @@ export default function ProductDetailsPage() {
   );
 
   const TABS = [
-    { key: 'description', label: 'Description' },
     { key: 'reviews', label: `Reviews (${product.ratings?.count || 0})` },
     { key: 'shipping', label: 'Shipping & Returns' },
     { key: 'size-guide', label: 'Size Guide' },
@@ -234,10 +293,14 @@ export default function ProductDetailsPage() {
                 onMouseMove={handleZoomMove}
                 onMouseLeave={handleZoomLeave}
               >
-                <img
+                <Image
                   src={getProductImageUrl(product.images[activeImageIdx])}
                   alt={product.name}
                   className="w-100 h-100"
+                  width={900}
+                  height={900}
+                  sizes="(max-width: 992px) 100vw, 50vw"
+                  unoptimized
                   style={{ objectFit: 'contain', transition: 'opacity 0.3s' }}
                 />
 
@@ -246,46 +309,6 @@ export default function ProductDetailsPage() {
                   className="position-absolute w-100 h-100"
                   style={{ top: 0, left: 0, pointerEvents: 'none', ...zoomStyle, backgroundColor: '#fff', zIndex: 5 }}
                 />
-
-                {/* Discount badge floating */}
-                {discountPct > 0 && (
-                  <div
-                    className="position-absolute fw-bold text-white d-flex align-items-center justify-content-center"
-                    style={{
-                      top: '16px', left: '16px',
-                      width: '52px', height: '52px',
-                      borderRadius: '50%',
-                      background: 'linear-gradient(135deg, #EF4444, #DC2626)',
-                      fontSize: '13px',
-                      boxShadow: '0 4px 12px rgba(239,68,68,0.35)',
-                      zIndex: 6
-                    }}
-                  >
-                    -{discountPct}%
-                  </div>
-                )}
-
-                {/* Wishlist floating button */}
-                <button
-                  onClick={handleToggleWishlist}
-                  className="position-absolute d-flex align-items-center justify-content-center border-0"
-                  style={{
-                    top: '16px', right: '16px',
-                    width: '42px', height: '42px',
-                    borderRadius: '50%',
-                    backgroundColor: isInWishlist() ? '#FEE2E2' : '#FFFFFF',
-                    boxShadow: '0 2px 12px rgba(0,0,0,0.10)',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    zIndex: 6
-                  }}
-                  title={isInWishlist() ? 'Remove from wishlist' : 'Add to wishlist'}
-                >
-                  {isInWishlist()
-                    ? <IoHeart size={20} color="#EF4444" />
-                    : <IoHeartOutline size={20} color="#64748B" />
-                  }
-                </button>
 
                 {/* Out of stock overlay */}
                 {product.stock === 0 && (
@@ -318,7 +341,7 @@ export default function ProductDetailsPage() {
                       boxShadow: activeImageIdx === idx ? '0 4px 12px rgba(239,68,68,0.18)' : 'none'
                     }}
                   >
-                    <img src={getProductImageUrl(img)} alt="" className="w-100 h-100" style={{ objectFit: 'cover' }} />
+                    <Image src={getProductImageUrl(img)} alt="" className="w-100 h-100" width={160} height={160} sizes="80px" unoptimized style={{ objectFit: 'cover' }} />
                   </div>
                 ))}
               </div>
@@ -328,30 +351,76 @@ export default function ProductDetailsPage() {
 
           {/* ── RIGHT: PRODUCT INFO ── */}
           <Col lg={6}>
-            <div className="d-flex flex-column gap-4">
+            <div className="d-flex flex-column gap-3">
 
-              {/* Category + Title */}
+              {/* Title + Wishlist */}
               <div>
-                <span
-                  className="d-inline-block mb-2 text-uppercase fw-bold"
-                  style={{
-                    fontSize: '11px',
-                    letterSpacing: '1.5px',
-                    color: 'var(--accent-red)',
-                    backgroundColor: '#FEF2F2',
-                    padding: '4px 12px',
-                    borderRadius: '20px',
-                    border: '1px solid #FECACA'
-                  }}
-                >
-                  {product.category}
-                </span>
-                <h1 className="fw-extrabold mb-2" style={{ color: 'var(--primary-navy)', fontSize: '26px', lineHeight: '1.3', letterSpacing: '-0.3px' }}>
-                  {product.name}
-                </h1>
+                <div className="product-title-row">
+                  <h1 className="product-title-text fw-extrabold mb-0">
+                    {product.name}
+                  </h1>
+                  <div className="product-title-actions">
+                    <div
+                      className="product-share-wrap"
+                      ref={shareRef}
+                      onMouseEnter={() => setShareOpen(true)}
+                      onMouseLeave={() => setShareOpen(false)}
+                    >
+                      <button
+                        type="button"
+                        className={`product-share-btn${shareOpen ? ' active' : ''}`}
+                        title="Share product"
+                        aria-expanded={shareOpen}
+                        onClick={() => setShareOpen((open) => !open)}
+                      >
+                        <IoShareSocialOutline size={18} color="#64748B" />
+                      </button>
+                      <div className={`product-share-menu${shareOpen ? ' show' : ''}`} role="menu">
+                        {shareLinks.map((item) => (
+                          item.href ? (
+                            <a
+                              key={item.key}
+                              href={item.href}
+                              target="_blank"
+                              rel="noreferrer"
+                              className={`product-share-item ${item.className}`}
+                              title={`Share on ${item.label}`}
+                              role="menuitem"
+                              onClick={() => setShareOpen(false)}
+                            >
+                              {item.icon}
+                            </a>
+                          ) : (
+                            <button
+                              key={item.key}
+                              type="button"
+                              className={`product-share-item ${item.className}`}
+                              title={`Share on ${item.label}`}
+                              role="menuitem"
+                              onClick={item.onClick}
+                            >
+                              {item.icon}
+                            </button>
+                          )
+                        ))}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleToggleWishlist}
+                      className={`product-wishlist-btn${isInWishlist() ? ' active' : ''}`}
+                      title={isInWishlist() ? 'Remove from wishlist' : 'Add to wishlist'}
+                    >
+                      {isInWishlist()
+                        ? <IoHeart size={18} color="#EF4444" />
+                        : <IoHeartOutline size={18} color="#64748B" />
+                      }
+                    </button>
+                  </div>
+                </div>
 
                 {/* Ratings row */}
-                <div className="d-flex align-items-center gap-3 flex-wrap" style={{ fontSize: '13.5px' }}>
+                <div className="d-flex align-items-center gap-3 flex-wrap mt-0" style={{ fontSize: '13.5px' }}>
                   <div className="d-flex align-items-center gap-1">
                     {[1,2,3,4,5].map(s => (
                       <IoStarSharp key={s} size={14} color={s <= Math.round(product.ratings?.average || 0) ? '#F59E0B' : '#E2E8F0'} />
@@ -359,48 +428,18 @@ export default function ProductDetailsPage() {
                     <span className="fw-bold ms-1" style={{ color: '#F59E0B' }}>{product.ratings?.average || 0}</span>
                   </div>
                   <span className="text-muted">({product.ratings?.count || 0} reviews)</span>
-                  <span style={{ color: '#E2E8F0' }}>|</span>
-                  <span
-                    className="fw-semibold"
-                    style={{
-                      fontSize: '12px',
-                      color: product.stock > 0 ? '#15803D' : '#DC2626',
-                      backgroundColor: product.stock > 0 ? '#F0FDF4' : '#FEF2F2',
-                      padding: '3px 10px',
-                      borderRadius: '20px',
-                      border: `1px solid ${product.stock > 0 ? '#BBF7D0' : '#FECACA'}`
-                    }}
-                  >
-                    {product.stock > 0 ? `✓ In Stock (${product.stock} left)` : '✕ Out of Stock'}
-                  </span>
                 </div>
               </div>
 
-              {/* Pricing */}
-              <div
-                className="p-4 d-flex align-items-center gap-3 flex-wrap"
-                style={{
-                  borderRadius: '16px',
-                  background: 'linear-gradient(135deg, #F8FAFC 0%, #EFF6FF 100%)',
-                  border: '1px solid #E2E8F0',
-                  borderLeft: '4px solid var(--accent-red)'
-                }}
-              >
+              {/* Pricing — flat, no box */}
+              <div className="d-flex align-items-center gap-3 flex-wrap">
                 <span className="fw-extrabold" style={{ fontSize: '34px', color: 'var(--primary-navy)', lineHeight: 1 }}>
                   ৳{displayPrice}
                 </span>
                 {product.discountPrice > 0 && (
                   <>
-                    <span className="text-decoration-line-through text-muted" style={{ fontSize: '20px' }}>৳{product.price}</span>
-                    <span
-                      className="fw-bold text-white"
-                      style={{
-                        fontSize: '12px',
-                        background: 'linear-gradient(135deg, #EF4444, #DC2626)',
-                        padding: '5px 12px',
-                        borderRadius: '20px'
-                      }}
-                    >
+                    <span className="text-decoration-line-through text-muted" style={{ fontSize: '18px' }}>৳{product.price}</span>
+                    <span className="product-save-badge">
                       Save ৳{product.price - product.discountPrice}
                     </span>
                   </>
@@ -408,16 +447,15 @@ export default function ProductDetailsPage() {
               </div>
 
               {/* Variants */}
-              <div className="d-flex flex-column gap-4">
+              <div className="d-flex flex-column gap-3">
 
                 {/* Color Selector */}
                 {product.variants?.colors?.length > 0 && (
                   <div>
-                    <div className="d-flex align-items-center justify-content-between mb-2">
+                    <div className="mb-2">
                       <span className="fw-bold" style={{ fontSize: '13.5px', color: 'var(--primary-navy)' }}>Color</span>
-                      {selectedColor && <span className="text-muted" style={{ fontSize: '12.5px' }}>{selectedColor}</span>}
                     </div>
-                    <div className="d-flex gap-2 flex-wrap">
+                    <div className="product-color-swatches">
                       {product.variants.colors.map((color) => (
                         <button
                           key={color}
@@ -434,16 +472,16 @@ export default function ProductDetailsPage() {
                           }}
                           style={{
                             backgroundColor: color,
-                            width: '34px',
-                            height: '34px',
+                            width: '26px',
+                            height: '26px',
                             borderRadius: '50%',
                             border: 'none',
-                            outline: selectedColor === color ? '3px solid var(--accent-red)' : '2px solid #E2E8F0',
-                            outlineOffset: '3px',
+                            outline: selectedColor === color ? '2px solid var(--accent-red)' : '1.5px solid #E2E8F0',
+                            outlineOffset: '2px',
                             cursor: 'pointer',
                             transition: 'outline 0.15s, transform 0.15s',
-                            transform: selectedColor === color ? 'scale(1.15)' : 'scale(1)',
-                            boxShadow: '0 2px 6px rgba(0,0,0,0.12)'
+                            transform: selectedColor === color ? 'scale(1.1)' : 'scale(1)',
+                            boxShadow: '0 1px 4px rgba(0,0,0,0.10)'
                           }}
                         />
                       ))}
@@ -534,90 +572,75 @@ export default function ProductDetailsPage() {
                       +
                     </button>
                   </div>
-                  {product.stock > 0 && product.stock <= 10 && (
-                    <span style={{ fontSize: '12px', color: '#F59E0B', fontWeight: 600 }}>Only {product.stock} left!</span>
-                  )}
                 </div>
 
               </div>
 
               {/* CTA Buttons */}
-              <div className="d-flex gap-3">
+              <div className="product-cta-group">
                 <button
                   onClick={() => handleAddToCart(false)}
                   disabled={product.stock === 0}
-                  className="d-flex align-items-center justify-content-center gap-2 fw-bold text-white border-0"
-                  style={{
-                    flex: 1, height: '54px',
-                    borderRadius: '14px',
-                    backgroundColor: 'var(--primary-navy)',
-                    fontSize: '14.5px',
-                    cursor: product.stock === 0 ? 'not-allowed' : 'pointer',
-                    opacity: product.stock === 0 ? 0.5 : 1,
-                    transition: 'all 0.25s cubic-bezier(0.4,0,0.2,1)',
-                    boxShadow: '0 4px 16px rgba(15,23,42,0.18)'
-                  }}
-                  onMouseEnter={e => { if (product.stock > 0) e.currentTarget.style.transform = 'translateY(-2px)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}
+                  className="product-cta-btn product-cta-cart"
                 >
-                  <IoCart size={20} /> Add to Cart
+                  <IoCart size={15} />
+                  <span>Add to Cart</span>
                 </button>
 
                 <button
-                  onClick={() => handleAddToCart(true)}
+                  onClick={handleTryOn}
                   disabled={product.stock === 0}
-                  className="d-flex align-items-center justify-content-center gap-2 fw-bold text-white border-0"
-                  style={{
-                    flex: 1, height: '54px',
-                    borderRadius: '14px',
-                    background: 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)',
-                    fontSize: '14.5px',
-                    cursor: product.stock === 0 ? 'not-allowed' : 'pointer',
-                    opacity: product.stock === 0 ? 0.5 : 1,
-                    transition: 'all 0.25s cubic-bezier(0.4,0,0.2,1)',
-                    boxShadow: '0 4px 16px rgba(239,68,68,0.30)'
-                  }}
-                  onMouseEnter={e => { if (product.stock > 0) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(239,68,68,0.40)'; } }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(239,68,68,0.30)'; }}
+                  className="product-cta-btn product-cta-tryon"
                 >
-                  ⚡ Buy It Now
+                  <IoScanOutline size={15} />
+                  <span>Try On</span>
                 </button>
               </div>
 
-              {/* Custom T-Shirt Banner */}
-              {product.category === 'T-shirt' && (
-                <div
-                  className="p-4 d-flex align-items-center gap-3"
-                  style={{
-                    borderRadius: '16px',
-                    background: 'linear-gradient(135deg, #FFF7ED 0%, #FEF2F2 100%)',
-                    border: '1px solid #FECACA'
-                  }}
-                >
-                  <div
-                    className="d-flex align-items-center justify-content-center flex-shrink-0"
-                    style={{ width: '44px', height: '44px', borderRadius: '12px', backgroundColor: '#FEE2E2' }}
-                  >
-                    <IoShirtOutline size={22} color="#EF4444" />
-                  </div>
-                  <div className="flex-grow-1">
-                    <h6 className="fw-bold mb-1" style={{ color: 'var(--primary-navy)', fontSize: '14px' }}>Want a personalized print?</h6>
-                    <p className="text-muted mb-0" style={{ fontSize: '12.5px', lineHeight: '1.4' }}>Add custom text, logos or designs on this T-shirt.</p>
-                  </div>
-                  <button
-                    onClick={() => router.push(`/design?productId=${product._id}`)}
-                    className="fw-bold border-0 text-white flex-shrink-0"
-                    style={{
-                      padding: '8px 16px',
-                      borderRadius: '10px',
-                      background: 'linear-gradient(135deg, #EF4444, #DC2626)',
-                      fontSize: '12.5px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Design Now →
-                  </button>
+              {/* Custom Design Banner */}
+              <div className="product-design-banner">
+                <div className="product-design-banner-icon">
+                  <IoColorPaletteOutline size={22} />
                 </div>
+                <div className="flex-grow-1">
+                  <h6 className="fw-bold mb-1" style={{ color: 'var(--primary-navy)', fontSize: '14px' }}>Want a personalized print?</h6>
+                  <p className="text-muted mb-0" style={{ fontSize: '12.5px', lineHeight: '1.4' }}>Add custom text, logos or designs on this product.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => router.push(`/design?productId=${product._id}`)}
+                  className="product-design-banner-btn"
+                >
+                  Design Now →
+                </button>
+              </div>
+
+              {/* Product Info Accordion */}
+              {(product.description || product.specifications) && (
+                <Accordion className="product-info-accordion">
+                  {product.description && (
+                    <Accordion.Item eventKey="description">
+                      <Accordion.Header>Description</Accordion.Header>
+                      <Accordion.Body>
+                        <div
+                          className="product-description-wysiwyg"
+                          dangerouslySetInnerHTML={{ __html: product.description }}
+                        />
+                      </Accordion.Body>
+                    </Accordion.Item>
+                  )}
+                  {product.specifications && (
+                    <Accordion.Item eventKey="specifications">
+                      <Accordion.Header>Specifications &amp; Details</Accordion.Header>
+                      <Accordion.Body>
+                        <div
+                          className="product-description-wysiwyg"
+                          dangerouslySetInnerHTML={{ __html: product.specifications }}
+                        />
+                      </Accordion.Body>
+                    </Accordion.Item>
+                  )}
+                </Accordion>
               )}
 
               {/* Trust Signal Grid */}
@@ -649,27 +672,6 @@ export default function ProductDetailsPage() {
                     </div>
                   ))}
                 </div>
-              </div>
-
-              {/* Social Share */}
-              <div className="d-flex align-items-center gap-3 pt-1">
-                <span className="fw-semibold text-muted" style={{ fontSize: '13px' }}>Share:</span>
-                <a
-                  href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`}
-                  target="_blank" rel="noreferrer"
-                  className="d-inline-flex align-items-center gap-2 text-decoration-none fw-semibold"
-                  style={{ fontSize: '12.5px', color: '#1877F2', backgroundColor: '#EBF0FF', padding: '6px 14px', borderRadius: '20px', transition: 'all 0.2s' }}
-                >
-                  <IoLogoFacebook size={15} /> Facebook
-                </a>
-                <a
-                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(product.name + ' - ' + shareUrl)}`}
-                  target="_blank" rel="noreferrer"
-                  className="d-inline-flex align-items-center gap-2 text-decoration-none fw-semibold"
-                  style={{ fontSize: '12.5px', color: '#25D366', backgroundColor: '#F0FDF4', padding: '6px 14px', borderRadius: '20px', transition: 'all 0.2s' }}
-                >
-                  <IoLogoWhatsapp size={15} /> WhatsApp
-                </a>
               </div>
 
             </div>
@@ -706,19 +708,6 @@ export default function ProductDetailsPage() {
 
           {/* Tab Content */}
           <div className="bg-white p-4 p-md-5" style={{ borderRadius: '0 0 20px 20px', border: '1px solid #E2E8F0', borderTop: 'none', boxShadow: '0 4px 24px rgba(15,23,42,0.04)' }}>
-
-            {/* Description Tab */}
-            {activeTab === 'description' && (
-              <div className="product-description-wysiwyg" style={{ fontSize: '15px', lineHeight: '1.8', color: '#374151' }}>
-                <div dangerouslySetInnerHTML={{ __html: product.description }} />
-                {product.specifications && (
-                  <div className="mt-5 pt-4 border-top">
-                    <h6 className="fw-bold mb-3" style={{ color: 'var(--primary-navy)', fontSize: '16px' }}>Specifications & Product Details</h6>
-                    <div dangerouslySetInnerHTML={{ __html: product.specifications }} />
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* Reviews Tab */}
             {activeTab === 'reviews' && (
@@ -967,55 +956,6 @@ export default function ProductDetailsPage() {
         </div>
 
       </Container>
-
-      <style>{`
-        .cursor-zoom { cursor: zoom-in; }
-        .pointer-events-none { pointer-events: none; }
-        .product-description-wysiwyg ul, .product-description-wysiwyg ol {
-          padding-left: 20px;
-          margin-bottom: 16px;
-        }
-        .product-description-wysiwyg ul { list-style-type: disc; }
-        .product-description-wysiwyg ol { list-style-type: decimal; }
-        .product-description-wysiwyg li { margin-bottom: 6px; }
-        .product-description-wysiwyg table {
-          width: 100%;
-          border-collapse: collapse;
-          margin-bottom: 1.5rem;
-          font-size: 14.5px;
-        }
-        .product-description-wysiwyg th, .product-description-wysiwyg td {
-          border: 1px solid #E2E8F0 !important;
-          padding: 10px 14px !important;
-        }
-        .product-description-wysiwyg th {
-          background-color: #F8FAFC;
-          font-weight: 700;
-          color: var(--primary-navy);
-        }
-        .product-description-wysiwyg tr:nth-child(even) {
-          background-color: #FAFBFC;
-        }
-        .form-control-premium {
-          border: 1.5px solid #E2E8F0 !important;
-          border-radius: 10px !important;
-          outline: none !important;
-          transition: border-color 0.2s !important;
-        }
-        .form-control-premium:focus {
-          border-color: var(--accent-red) !important;
-          box-shadow: 0 0 0 3px rgba(239,68,68,0.08) !important;
-        }
-        .form-select-premium {
-          border: 1.5px solid #E2E8F0 !important;
-          border-radius: 8px !important;
-          outline: none !important;
-        }
-        .form-select-premium:focus {
-          border-color: var(--accent-red) !important;
-          box-shadow: 0 0 0 3px rgba(239,68,68,0.08) !important;
-        }
-      `}</style>
     </div>
   );
 }

@@ -2,17 +2,17 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import BrandLoader from '../components/BrandLoader';
 import { Container, Row, Col, Card, Button, Badge, Modal } from 'react-bootstrap';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Autoplay, A11y } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
-import { IoShirtOutline, IoSparkles, IoCart, IoHeartOutline, IoHeart, IoCheckmarkCircle } from 'react-icons/io5';
+import { IoShirtOutline, IoCart, IoHeartOutline, IoHeart, IoCheckmarkCircle, IoArrowForward, IoImageOutline, IoLayersOutline } from 'react-icons/io5';
 import { FiChevronLeft, FiChevronRight, FiZoomIn } from 'react-icons/fi';
-import { LuPalette } from 'react-icons/lu';
+import { LuPalette, LuType } from 'react-icons/lu';
 import { useDispatch, useSelector } from 'react-redux';
 import { toggleWishlist } from '../store/wishlistSlice';
 import { addToCart, updateCartQty } from '../store/cartSlice';
@@ -28,25 +28,17 @@ export default function HomePage() {
   const wishlistItems = useSelector((state) => state.wishlist.items);
   const cartItems = useSelector((state) => state.cart.items);
 
-  const [mounted, setMounted] = useState(false);
   const [zoomImage, setZoomImage] = useState(null);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const { data: productsData, isLoading } = useQuery({
     queryKey: ['products', 'trending'],
     queryFn: async () => {
-      try {
-        const res = await axios.get(`${getBackendUrl()}/api/products?limit=4&sort=popular`);
-        if (res.data.success) {
-          return res.data.products;
-        }
-        throw new Error('Not successful');
-      } catch (err) {
-        console.warn('Backend server unseeded or offline');
-        return [];
+      const res = await axios.get(`${getBackendUrl()}/api/products?limit=8&sort=popular`);
+      if (res.data.success) {
+        return res.data.products;
       }
+      // Throw so a failed/empty fetch is NOT cached & persisted as a successful empty result
+      throw new Error('Failed to load trending products');
     }
   });
 
@@ -55,16 +47,12 @@ export default function HomePage() {
   const { data: newArrivalsData, isLoading: newArrivalsLoading } = useQuery({
     queryKey: ['products', 'newArrivals'],
     queryFn: async () => {
-      try {
-        const res = await axios.get(`${getBackendUrl()}/api/products?limit=10&sort=newest`);
-        if (res.data.success) {
-          return res.data.products;
-        }
-        throw new Error('Not successful');
-      } catch (err) {
-        console.warn('Backend server offline');
-        return [];
+      const res = await axios.get(`${getBackendUrl()}/api/products?limit=8&sort=newest`);
+      if (res.data.success) {
+        return res.data.products;
       }
+      // Throw so a failed/empty fetch is NOT cached & persisted as a successful empty result
+      throw new Error('Failed to load new arrivals');
     }
   });
 
@@ -156,18 +144,24 @@ export default function HomePage() {
         {/* Image wrapper */}
         <div className="product-image-container position-relative overflow-hidden">
           <Link href={`/product/${product.slug || product._id}`}>
-            <Card.Img
-              variant="top"
+            <Image
               src={getProductImageUrl(product.images[0])}
               alt={product.name}
               className="primary-img"
+              width={520}
+              height={520}
+              sizes="(max-width: 576px) 45vw, (max-width: 992px) 30vw, 20vw"
+              unoptimized
             />
             {product.images && product.images.length > 1 && (
-              <Card.Img
-                variant="top"
+              <Image
                 src={getProductImageUrl(product.images[1])}
                 alt={product.name}
                 className="secondary-img"
+                width={520}
+                height={520}
+                sizes="(max-width: 576px) 45vw, (max-width: 992px) 30vw, 20vw"
+                unoptimized
               />
             )}
           </Link>
@@ -239,10 +233,6 @@ export default function HomePage() {
     );
   };
 
-  if (!mounted) {
-    return <BrandLoader fullPage={true} transparent={false} />;
-  }
-
   return (
     <div>
       {/* 1. HERO SLIDER — Swiper.js: touch/drag/swipe + autoplay */}
@@ -262,10 +252,15 @@ export default function HomePage() {
             {slides.map((slide) => (
               <SwiperSlide key={slide._id}>
                 <Link href={slide.link || '/shop'} className="d-block">
-                  <img
+                  <Image
                     src={slide.image && (slide.image.startsWith('http') ? slide.image : `${getBackendUrl()}${slide.image}`)}
                     alt={slide.title || 'Promotional Banner'}
                     className="hero-swiper-img"
+                    width={1920}
+                    height={700}
+                    sizes="100vw"
+                    priority
+                    unoptimized
                     draggable={false}
                   />
                 </Link>
@@ -411,26 +406,45 @@ export default function HomePage() {
         </Container>
       </section>
 
-      {/* 4. DESIGN CTA INTERACTIVE BANNER */}
-      <section className="py-5 bg-white overflow-hidden position-relative">
+      {/* 4. DESIGN CTA BANNER */}
+      <section className="design-cta-section">
         <Container>
-          <div className="design-studio-cta-card p-4 p-md-5 rounded-4 overflow-hidden position-relative">
-            <Row className="align-items-center text-md-start text-center position-relative" style={{ zIndex: 2 }}>
-              <Col md={8}>
-                <h3 className="fw-bold mb-2 d-flex align-items-center gap-2 justify-content-center justify-content-md-start" style={{ color: 'var(--primary-navy)', letterSpacing: '1px' }}>
-                  <LuPalette color="#fe7e07" size={20} className="me-2" /> WEAR YOUR CREATIVITY
-                </h3>
-                <h2 className="display-5 fw-extrabold mb-3" style={{ color: 'var(--primary-navy)', lineHeight: '1.2' }}>Custom T-Shirt Printing Studio</h2>
-                <p className="mb-4 fs-6 design-studio-cta-desc">
-                  Upload high-res PNG files, write custom slogans in elegant script typography, align layers, and review pricing in real time inside our HTML5 Canvas designer. Premium cotton 180+ GSM T-Shirts.
+          <div className="design-studio-cta-card">
+            <div className="design-studio-cta-top">
+              <div className="design-studio-cta-copy">
+                <span className="design-studio-cta-eyebrow">
+                  <LuPalette size={16} />
+                  Wear Your Creativity
+                </span>
+                <h2 className="design-studio-cta-title">Custom T-Shirt Printing Studio</h2>
+                <p className="design-studio-cta-desc">
+                  Upload PNGs, add custom text, align layers, and see live pricing in our HTML5 canvas designer.
                 </p>
-              </Col>
-              <Col md={4} className="text-md-end text-center">
+              </div>
+              <div className="design-studio-cta-action">
                 <Link href="/design" className="btn-launch-canvas">
                   Launch Canvas Editor
+                  <IoArrowForward size={16} className="btn-launch-canvas-icon" />
                 </Link>
-              </Col>
-            </Row>
+                <span className="design-studio-cta-hint">Free to design · No card needed</span>
+              </div>
+            </div>
+
+            <div className="design-studio-cta-divider" aria-hidden="true" />
+
+            <div className="design-studio-cta-stats">
+              {[
+                { icon: <IoImageOutline size={18} />, label: 'HD Uploads' },
+                { icon: <LuType size={18} />, label: 'Custom Text' },
+                { icon: <IoLayersOutline size={18} />, label: 'Layer Control' },
+                { icon: <IoShirtOutline size={18} />, label: '180+ GSM Cotton' },
+              ].map((item) => (
+                <div key={item.label} className="design-studio-cta-stat">
+                  <span className="design-studio-cta-stat-icon">{item.icon}</span>
+                  <span className="design-studio-cta-stat-label">{item.label}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </Container>
       </section>

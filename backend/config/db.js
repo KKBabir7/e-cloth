@@ -1,6 +1,11 @@
+const dns = require('dns');
 const mongoose = require('mongoose');
 const redis = require('redis');
 const { Queue } = require('bullmq');
+
+// Some local/ISP DNS resolvers refuse MongoDB Atlas SRV (mongodb+srv://) lookups,
+// causing "querySrv ECONNREFUSED". Use reliable public DNS resolvers for SRV.
+dns.setServers(['8.8.8.8', '1.1.1.1']);
 
 const redisClient = redis.createClient({
   url: process.env.REDIS_URL || 'redis://127.0.0.1:6379',

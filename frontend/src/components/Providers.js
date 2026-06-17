@@ -9,28 +9,19 @@ import { fetchCart } from '../store/cartSlice';
 import { fetchWishlist } from '../store/wishlistSlice';
 import { getBackendUrl } from '../utils/api';
 
-import { QueryClient, useQueryClient } from '@tanstack/react-query';
-import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
-import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
+import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      gcTime: 1000 * 60 * 60 * 24, // 24h
-      staleTime: 1000 * 60 * 10,   // 10 min fresh
+      gcTime: 1000 * 60 * 30, // 30 min in-memory cache
+      staleTime: 1000 * 60 * 2, // 2 min fresh
       refetchOnWindowFocus: false,
       refetchOnReconnect: true,
       retry: 1,
     },
   },
 });
-
-const persister = typeof window !== 'undefined'
-  ? createSyncStoragePersister({
-      storage: window.localStorage,
-      key: 'REACT_QUERY_OFFLINE_CACHE',
-    })
-  : undefined;
 
 /**
  * GlobalRealtimeSync — must be rendered INSIDE PersistQueryClientProvider.
@@ -45,28 +36,23 @@ function GlobalRealtimeSync() {
   useEffect(() => {
     // EventSource is browser-only — safe because useEffect never runs on server
     const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || getBackendUrl();
-    console.log(`[SSE] Connecting to real-time events at: ${BACKEND}/api/events`);
 
     let es;
     try {
       es = new EventSource(`${BACKEND}/api/events`);
     } catch (err) {
-      console.error('[SSE] Failed to initialize EventSource:', err);
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('[SSE] Failed to initialize EventSource:', err);
+      }
       return; // SSR or non-browser env — bail silently
     }
 
-    es.addEventListener('connected', (e) => {
-      try {
-        console.log('[SSE] Connection established successfully:', JSON.parse(e.data));
-      } catch (_) {
-        console.log('[SSE] Connection established successfully');
-      }
-    });
+    const connectedHandler = () => {};
+    es.addEventListener('connected', connectedHandler);
 
     const handler = (e) => {
       try {
         const { type } = JSON.parse(e.data);
-        console.log(`[SSE] Received real-time update event: ${type}`);
         switch (type) {
           case 'categories':
             qc.invalidateQueries({ queryKey: ['categories'] });
@@ -76,7 +62,6 @@ function GlobalRealtimeSync() {
             break;
           case 'products':
             qc.invalidateQueries({ queryKey: ['products'] });
-            qc.invalidateQueries({ queryKey: ['trending'] });
             qc.invalidateQueries({ queryKey: ['product'] });
             break;
           case 'orders':
@@ -86,19 +71,19 @@ function GlobalRealtimeSync() {
             break;
         }
       } catch (err) {
-        console.error('[SSE] Error handling update event:', err);
+        if (process.env.NODE_ENV !== 'production') {
+          console.error('[SSE] Error handling update event:', err);
+        }
       }
     };
 
     es.addEventListener('update', handler);
-    es.onerror = (err) => {
-      console.warn('[SSE] EventSource encountered an error or disconnected. Reconnecting...', err);
-    };
+    es.onerror = () => {};
 
     return () => {
+      es.removeEventListener('connected', connectedHandler);
       es.removeEventListener('update', handler);
       es.close();
-      console.log('[SSE] Closed EventSource connection');
     };
   }, [qc]);
 
@@ -108,21 +93,29 @@ function GlobalRealtimeSync() {
 export default function Providers({ children }) {
   useEffect(() => {
     store.dispatch(loadUser());
-    store.dispatch(fetchCart());
-    store.dispatch(fetchWishlist());
+
+    const scheduleDeferredPrefetch = () => {
+      store.dispatch(fetchCart());
+      store.dispatch(fetchWishlist());
+    };
+
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      const idleId = window.requestIdleCallback(scheduleDeferredPrefetch, { timeout: 1500 });
+      return () => window.cancelIdleCallback(idleId);
+    }
+
+    const timer = setTimeout(scheduleDeferredPrefetch, 400);
+    return () => clearTimeout(timer);
   }, []);
 
   return (
     <Provider store={store}>
-      <PersistQueryClientProvider
-        client={queryClient}
-        persistOptions={persister ? { persister } : { persister: { persist: () => {}, restore: () => {} } }}
-      >
+      <QueryClientProvider client={queryClient}>
         <UIProvider>
           <GlobalRealtimeSync />
           {children}
         </UIProvider>
-      </PersistQueryClientProvider>
+      </QueryClientProvider>
     </Provider>
   );
 }

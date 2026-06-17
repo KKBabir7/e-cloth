@@ -20,9 +20,15 @@ const createOrder = async (req, res) => {
     }
 
     // 1. Calculate and Verify Amount from DB (Avoid client pricing hacks)
+    const requestedProductIds = products.map((item) => item.productId);
+    const dbProducts = await Product.find({ _id: { $in: requestedProductIds } })
+      .select('_id price discountPrice stock')
+      .lean();
+    const dbProductMap = new Map(dbProducts.map((p) => [p._id.toString(), p]));
+
     let subtotal = 0;
     for (const item of products) {
-      const dbProduct = await Product.findById(item.productId);
+      const dbProduct = dbProductMap.get(item.productId.toString());
       if (!dbProduct) {
         return res.status(404).json({ success: false, message: `Product not found: ${item.productId}` });
       }
@@ -90,12 +96,20 @@ const createOrder = async (req, res) => {
       try {
         const orderRecord = await Order.findById(order._id);
         if (orderRecord) {
+          const stockBulkOps = [];
           for (const item of products) {
-            const product = await Product.findById(item.productId);
-            if (product) {
-              product.stock = Math.max(0, product.stock - item.quantity);
-              await product.save();
+            const dbProduct = dbProductMap.get(item.productId.toString());
+            if (dbProduct) {
+              stockBulkOps.push({
+                updateOne: {
+                  filter: { _id: item.productId },
+                  update: { $set: { stock: Math.max(0, dbProduct.stock - item.quantity) } }
+                }
+              });
             }
+          }
+          if (stockBulkOps.length > 0) {
+            await Product.bulkWrite(stockBulkOps);
           }
           if (paymentMethod === 'bKash' || paymentMethod === 'Nagad') {
             orderRecord.paymentStatus = 'Paid';
@@ -263,21 +277,26 @@ const getAdminStats = async (req, res) => {
       { $limit: 5 }
     ]);
 
-    // Populate top product names
-    const topSoldProducts = [];
-    for (const item of topProducts) {
-      const prod = await Product.findById(item._id).select('name price category images');
-      if (prod) {
-        topSoldProducts.push({
+    // Populate top product names in one query (avoid N+1 lookups)
+    const topProductIds = topProducts.map((item) => item._id).filter(Boolean);
+    const topProductDocs = await Product.find({ _id: { $in: topProductIds } })
+      .select('name category images')
+      .lean();
+    const topProductMap = new Map(topProductDocs.map((p) => [p._id.toString(), p]));
+    const topSoldProducts = topProducts
+      .map((item) => {
+        const productDoc = topProductMap.get(item._id.toString());
+        if (!productDoc) return null;
+        return {
           productId: item._id,
-          name: prod.name,
-          category: prod.category,
-          image: prod.images[0],
+          name: productDoc.name,
+          category: productDoc.category,
+          image: productDoc.images?.[0],
           quantitySold: item.quantitySold,
           totalSales: item.totalSalesValue
-        });
-      }
-    }
+        };
+      })
+      .filter(Boolean);
 
     res.status(200).json({
       success: true,

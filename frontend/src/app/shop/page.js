@@ -4,6 +4,7 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import BrandLoader from '../../components/BrandLoader';
 import { Container, Row, Col, Card, Button, Form, Badge, Pagination, Alert, Modal } from 'react-bootstrap';
 import { IoCart, IoHeartOutline, IoHeart, IoFilterOutline, IoSearch } from 'react-icons/io5';
@@ -39,30 +40,34 @@ function ShopContent() {
   const searchParam = searchParams.get('search') || '';
   const sortParam = searchParams.get('sort') || 'newest';
   const pageParam = searchParams.get('page') || '1';
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
   // Filter States
-  const [selectedCategory, setSelectedCategory] = useState(categoryParam);
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [priceRange, setPriceRange] = useState(3000);
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
   const [selectedRating, setSelectedRating] = useState('');
   const [availability, setAvailability] = useState('');
-  const [localSearch, setLocalSearch] = useState(searchParam);
+  const [localSearch, setLocalSearch] = useState('');
 
   // Products and Pagination States
-  const [currentPage, setCurrentPage] = useState(parseInt(pageParam));
-
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Sync state with URL updates
   useEffect(() => {
     setSelectedCategory(categoryParam);
     setLocalSearch(searchParam);
+    setDebouncedSearch(searchParam);
     setCurrentPage(parseInt(pageParam));
   }, [categoryParam, searchParam, pageParam]);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearch(localSearch);
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [localSearch]);
 
   // ── Categories via React Query (Dynamic and Real-time synced) ───────────
   const { data: categoriesData } = useQuery({
@@ -80,11 +85,11 @@ function ShopContent() {
   const categoriesList = categoriesData || [];
 
   const { data: productsData, isLoading, error } = useQuery({
-    queryKey: ['products', selectedCategory, localSearch, priceRange, selectedSize, selectedColor, selectedRating, availability, sortParam, currentPage],
+    queryKey: ['products', selectedCategory, debouncedSearch, priceRange, selectedSize, selectedColor, selectedRating, availability, sortParam, currentPage],
     queryFn: async () => {
       let query = `${getBackendUrl()}/api/products?page=${currentPage}&limit=9&sort=${sortParam}`;
       if (selectedCategory) query += `&category=${selectedCategory}`;
-      if (localSearch) query += `&search=${encodeURIComponent(localSearch)}`;
+      if (debouncedSearch) query += `&search=${encodeURIComponent(debouncedSearch)}`;
       if (priceRange) query += `&maxPrice=${priceRange}`;
       if (selectedSize) query += `&size=${selectedSize}`;
       if (selectedColor) query += `&color=${encodeURIComponent(selectedColor)}`;
@@ -100,7 +105,8 @@ function ShopContent() {
         };
       }
       throw new Error('Not successful');
-    }
+    },
+    keepPreviousData: true
   });
 
   const products = productsData?.products || [];
@@ -180,10 +186,6 @@ function ShopContent() {
 
   const isInWishlist = (id) => wishlistItems.some((item) => item.id === id);
   const isInCart = (id) => cartItems?.some((item) => item.productId === id);
-
-  if (!mounted) {
-    return <BrandLoader fullPage={true} transparent={false} />;
-  }
 
   return (
     <Container className="py-5">
@@ -402,18 +404,24 @@ function ShopContent() {
                           {/* Image wrapper */}
                           <div className="product-image-container position-relative overflow-hidden">
                             <Link href={`/product/${product.slug || product._id}`}>
-                              <Card.Img
-                                variant="top"
+                              <Image
                                 src={getProductImageUrl(product.images[0])}
                                 alt={product.name}
                                 className="primary-img"
+                                width={520}
+                                height={520}
+                                sizes="(max-width: 576px) 45vw, (max-width: 992px) 30vw, 20vw"
+                                unoptimized
                               />
                               {product.images && product.images.length > 1 && (
-                                <Card.Img
-                                  variant="top"
+                                <Image
                                   src={getProductImageUrl(product.images[1])}
                                   alt={product.name}
                                   className="secondary-img"
+                                  width={520}
+                                  height={520}
+                                  sizes="(max-width: 576px) 45vw, (max-width: 992px) 30vw, 20vw"
+                                  unoptimized
                                 />
                               )}
                             </Link>

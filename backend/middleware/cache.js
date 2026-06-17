@@ -46,10 +46,24 @@ const invalidateProductCache = async () => {
   }
 
   try {
-    const keys = await redisClient.keys('products_cache:*');
-    if (keys && keys.length > 0) {
-      await redisClient.del(keys);
-      console.log(`Redis Cache Invalidated: Removed ${keys.length} cached list queries`);
+    let cursor = '0';
+    let deletedCount = 0;
+
+    do {
+      const reply = await redisClient.scan(cursor, {
+        MATCH: 'products_cache:*',
+        COUNT: 100
+      });
+      cursor = reply.cursor;
+      const keys = reply.keys || [];
+      if (keys.length > 0) {
+        deletedCount += keys.length;
+        await redisClient.del(keys);
+      }
+    } while (cursor !== '0');
+
+    if (deletedCount > 0) {
+      console.log(`Redis Cache Invalidated: Removed ${deletedCount} cached list queries`);
     }
   } catch (error) {
     console.error('Redis cache invalidation error:', error.message);

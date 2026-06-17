@@ -428,7 +428,6 @@ export default function EditProductPage() {
       return;
     }
     try {
-      const token = localStorage.getItem('token') || '';
       const res = await axios.put(
         `${getBackendUrl()}/api/products/${id}/reviews/${reviewId}`,
         {
@@ -437,7 +436,7 @@ export default function EditProductPage() {
           comment: editingReviewComment
         },
         {
-          headers: { Authorization: `Bearer ${token}` }
+          withCredentials: true
         }
       );
       if (res.data.success) {
@@ -867,9 +866,8 @@ export default function EditProductPage() {
                                 onClick={async () => {
                                   if (window.confirm(`Are you sure you want to delete the review by ${rev.name}?`)) {
                                     try {
-                                      const token = localStorage.getItem('token') || '';
                                       const res = await axios.delete(`${getBackendUrl()}/api/products/${id}/reviews/${rev._id}`, {
-                                        headers: { Authorization: `Bearer ${token}` }
+                                        withCredentials: true
                                       });
                                       if (res.data.success) {
                                         showToast('Review deleted successfully!', 'success');

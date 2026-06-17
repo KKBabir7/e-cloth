@@ -9,27 +9,6 @@ if (typeof window !== 'undefined') {
   axios.defaults.withCredentials = true;
 }
 
-// Helper to load wishlist from localStorage in offline fallback
-const loadLocalWishlist = () => {
-  try {
-    if (typeof window === 'undefined') return [];
-    const serialized = localStorage.getItem('cwbd_wishlist');
-    return serialized ? JSON.parse(serialized) : [];
-  } catch (err) {
-    return [];
-  }
-};
-
-// Helper to save wishlist to localStorage in offline fallback
-const saveLocalWishlist = (products) => {
-  try {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem('cwbd_wishlist', JSON.stringify(products));
-  } catch (err) {
-    console.error('Error saving local wishlist:', err);
-  }
-};
-
 // Adapter helper to map database items to expected frontend format
 const mapWishlistItems = (products) => {
   if (!products) return [];
@@ -48,9 +27,7 @@ export const fetchWishlist = createAsyncThunk('wishlist/fetchWishlist', async (_
     const res = await axios.get(getApiUrl());
     return res.data.wishlist;
   } catch (err) {
-    console.warn('Backend server offline, falling back to local storage wishlist.');
-    const local = loadLocalWishlist();
-    return { products: local };
+    return rejectWithValue(err.response?.data?.message || 'Failed to fetch wishlist');
   }
 });
 
@@ -68,25 +45,7 @@ export const toggleWishlist = createAsyncThunk('wishlist/toggleWishlist', async 
     }
     return res.data.wishlist;
   } catch (err) {
-    console.warn('Backend server offline, toggling wishlist in local storage fallback.');
-    const local = loadLocalWishlist();
-    const existsIndex = local.findIndex(p => (p._id || p.id) === prodId);
-    
-    let updated;
-    if (existsIndex > -1) {
-      updated = local.filter(p => (p._id || p.id) !== prodId);
-    } else {
-      // Create a database-compatible product document format
-      updated = [...local, {
-        _id: prodId,
-        id: prodId,
-        name: product.name,
-        price: product.price,
-        images: [product.image || product.images?.[0] || '/images/placeholder-shirt.png']
-      }];
-    }
-    saveLocalWishlist(updated);
-    return { products: updated };
+    return rejectWithValue(err.response?.data?.message || 'Failed to update wishlist');
   }
 });
 
@@ -95,11 +54,7 @@ export const removeFromWishlist = createAsyncThunk('wishlist/removeFromWishlist'
     const res = await axios.delete(`${getApiUrl()}/${productId}`);
     return res.data.wishlist;
   } catch (err) {
-    console.warn('Backend server offline, removing item from local storage fallback.');
-    const local = loadLocalWishlist();
-    const updated = local.filter(p => (p._id || p.id) !== productId);
-    saveLocalWishlist(updated);
-    return { products: updated };
+    return rejectWithValue(err.response?.data?.message || 'Failed to remove wishlist item');
   }
 });
 

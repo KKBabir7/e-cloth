@@ -2,6 +2,21 @@ const Product = require('../models/Product');
 const { invalidateProductCache } = require('../middleware/cache');
 const { broadcast } = require('../utils/sseManager');
 
+const LIST_FIELDS = [
+  'name',
+  'slug',
+  'category',
+  'price',
+  'discountPrice',
+  'images',
+  'stock',
+  'variants',
+  'ratings',
+  'featured',
+  'trending',
+  'createdAt'
+].join(' ');
+
 /**
  * @desc    Get all products (with pagination, filters, sorting)
  * @route   GET /api/products
@@ -83,16 +98,18 @@ const getProducts = async (req, res) => {
     }
 
     // 8. Pagination Setup
-    const pageNum = Math.max(1, parseInt(page));
-    const limitNum = Math.max(1, parseInt(limit));
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(48, Math.max(1, parseInt(limit, 10) || 12));
     const skip = (pageNum - 1) * limitNum;
 
     // Execute queries
     const total = await Product.countDocuments(queryObj);
     const products = await Product.find(queryObj)
+      .select(LIST_FIELDS)
       .sort(sortObj)
       .skip(skip)
-      .limit(limitNum);
+      .limit(limitNum)
+      .lean();
 
     res.status(200).json({
       success: true,
@@ -120,11 +137,11 @@ const getProductById = async (req, res) => {
     
     const mongoose = require('mongoose');
     if (mongoose.Types.ObjectId.isValid(id)) {
-      product = await Product.findById(id);
+      product = await Product.findById(id).lean();
     }
     
     if (!product) {
-      product = await Product.findOne({ slug: id });
+      product = await Product.findOne({ slug: id }).lean();
     }
 
     if (!product) {

@@ -4,6 +4,21 @@ const { validateBdPhone, normalizePhone } = require('../../shared/utils');
 const Cart = require('../models/Cart');
 const { mergeGuestWishlist } = require('./wishlistController');
 
+const getCookieBaseOptions = () => {
+  const sameSite = (process.env.COOKIE_SAMESITE || 'lax').toLowerCase();
+  const secureByConfig = process.env.COOKIE_SECURE === 'true';
+  const secure = secureByConfig || sameSite === 'none' || process.env.NODE_ENV === 'production';
+  const domain = process.env.COOKIE_DOMAIN || undefined;
+
+  return {
+    httpOnly: true,
+    secure,
+    sameSite,
+    path: '/',
+    ...(domain ? { domain } : {})
+  };
+};
+
 // Server-side helper to recalculate totals
 const recalculateTotals = (cart) => {
   cart.subtotal = cart.items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
@@ -87,13 +102,10 @@ const sendTokenResponse = (user, statusCode, res) => {
     { expiresIn: '30d' }
   );
 
-  // Secure HttpOnly cookie settings
+  const tokenMaxAgeDays = Number(process.env.AUTH_COOKIE_DAYS || 30);
   const cookieOptions = {
-    expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/'
+    ...getCookieBaseOptions(),
+    expires: new Date(Date.now() + tokenMaxAgeDays * 24 * 60 * 60 * 1000)
   };
 
   res
@@ -101,7 +113,6 @@ const sendTokenResponse = (user, statusCode, res) => {
     .cookie('token', token, cookieOptions)
     .json({
       success: true,
-      token,
       user: {
         id: user._id,
         name: user.name,
@@ -239,13 +250,7 @@ const getMe = async (req, res) => {
  */
 const logoutUser = async (req, res) => {
   try {
-    res.cookie('token', 'none', {
-      expires: new Date(Date.now() + 5 * 1000), // expires in 5 seconds
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/'
-    });
+    res.clearCookie('token', getCookieBaseOptions());
 
     res.status(200).json({ success: true, message: 'Logged out successfully' });
   } catch (error) {

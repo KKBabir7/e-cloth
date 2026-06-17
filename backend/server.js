@@ -90,8 +90,22 @@ const mediaRoutes = require('./routes/mediaRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const eventRoutes = require('./routes/eventRoutes'); // Global SSE real-time stream
 
-// Disable browser caching for all API endpoints to ensure real-time updates are always fetched
+// Selective API cache policy:
+// - public catalog endpoints: short-lived cache to reduce repeated payload cost
+// - auth/cart/order and other mutable endpoints: no-store for real-time correctness
 app.use('/api', (req, res, next) => {
+  const isReadOnlyCatalogRequest = req.method === 'GET' && (
+    req.path.startsWith('/products') ||
+    req.path.startsWith('/categories') ||
+    req.path.startsWith('/hero-slides') ||
+    req.path.startsWith('/media')
+  );
+
+  if (isReadOnlyCatalogRequest) {
+    res.setHeader('Cache-Control', 'public, max-age=30, s-maxage=60, stale-while-revalidate=120');
+    return next();
+  }
+
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
@@ -135,7 +149,9 @@ const PORT = process.env.PORT || 5000;
 const { seedDefaultCategories } = require('./controllers/categoryController');
 
 connectDB().then(async () => {
-  await seedDefaultCategories();
+  if (process.env.SEED_ON_BOOT === 'true') {
+    await seedDefaultCategories();
+  }
   app.listen(PORT, () => {
     console.log(`CustomWear API Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);
   });

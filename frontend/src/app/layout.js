@@ -1,10 +1,12 @@
 import "./globals.css";
+import dynamic from "next/dynamic";
 import Providers from "../components/Providers";
-import AppNavbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import FloatingCart from "../components/FloatingCart";
-import FloatingWhatsApp from "../components/FloatingWhatsApp";
-import PageTransitionLoader from "../components/PageTransitionLoader";
+
+const AppNavbar = dynamic(() => import("../components/Navbar"), { ssr: false });
+const FloatingCart = dynamic(() => import("../components/FloatingCart"), { ssr: false });
+const FloatingWhatsApp = dynamic(() => import("../components/FloatingWhatsApp"), { ssr: false });
+const PageTransitionLoader = dynamic(() => import("../components/PageTransitionLoader"), { ssr: false });
 
 export const metadata = {
   title: "CustomWear BD | Premium Custom T-Shirts & Fashion Ecommerce",

@@ -1,4 +1,5 @@
 const { Worker } = require('bullmq');
+const dns = require('dns');
 const mongoose = require('mongoose');
 const fs = require('fs');
 const path = require('path');
@@ -7,6 +8,10 @@ const dotenv = require('dotenv');
 
 // Load environment variables
 dotenv.config();
+
+// Some local/ISP DNS resolvers refuse MongoDB Atlas SRV lookups.
+// Use reliable public DNS servers for worker-side Mongoose connections.
+dns.setServers(['8.8.8.8', '1.1.1.1']);
 
 // Mongoose Models
 const Order = require('../backend/models/Order');

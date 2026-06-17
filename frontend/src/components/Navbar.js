@@ -17,6 +17,8 @@ export default function AppNavbar() {
   const router = useRouter();
   const pathname = usePathname();
   const dispatch = useDispatch();
+  const isHomePage = pathname === '/';
+  const designStudioNavClass = `btn-design-studio-nav border-0${isHomePage ? ' btn-design-studio-nav--home-pulse' : ''}`;
   const { showToast } = useUI();
 
   // Hide user navbar in administrative directories
@@ -252,9 +254,9 @@ export default function AppNavbar() {
           {/* Brand Logo */}
           <Link href="/" passHref legacyBehavior>
             <Navbar.Brand className="d-flex align-items-center gap-2" style={{ cursor: 'pointer' }}>
-              <img 
-                src="/logo/udovex.png" 
-                alt="Udovex Logo" 
+              <img
+                src="/logo/udovex.png"
+                alt="Udovex Logo"
                 style={{ width: 'auto', display: 'block', objectFit: 'contain', transition: 'transform 0.2s' }}
                 className="navbar-logo-img"
               />
@@ -265,10 +267,10 @@ export default function AppNavbar() {
           <Nav className="align-items-center ms-auto d-none d-md-flex desktop-nav-container">
             {/* Design Studio CTA */}
             <Link href="/design" passHref legacyBehavior>
-              <Button 
-                variant="danger" size="sm" 
-                className="px-3 fw-bold text-white d-inline-flex align-items-center gap-1 border-0 pulse-btn"
-                style={{ borderRadius: '6px', fontSize: '13px', backgroundColor: '#ff8525', letterSpacing: '0.5px' }}
+              <Button
+                variant="danger"
+                size="sm"
+                className={designStudioNavClass}
               >
                 <IoShirtOutline size={14} /> Design Studio
               </Button>
@@ -422,7 +424,7 @@ export default function AppNavbar() {
           <div className="d-flex d-md-none align-items-center ms-auto" style={{ gap: '14px' }}>
             {/* Design Studio compact button */}
             <Link href="/design" passHref legacyBehavior>
-              <a className="d-inline-flex align-items-center justify-content-center gap-1 fw-bold text-white text-decoration-none pulse-btn px-2" style={{ borderRadius: '6px', fontSize: '12px', letterSpacing: '0.3px', whiteSpace: 'nowrap', height: '28px', lineHeight: 'normal',paddingBottom:'3px' }}>
+              <a className={`btn-design-studio-nav btn-design-studio-nav--compact text-decoration-none${isHomePage ? ' btn-design-studio-nav--home-pulse' : ''}`}>
                 <IoShirtOutline size={12} style={{ display: 'inline-block' }} />
                 <span>Design</span>
               </a>
