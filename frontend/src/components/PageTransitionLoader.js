@@ -58,7 +58,37 @@ export default function PageTransitionLoader() {
   }, [pathname]);
 
   useEffect(() => {
+    const DRAG_THRESHOLD = 10;
+    const dragState = { x: 0, y: 0, dragging: false };
+
+    const onPointerDown = (event) => {
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      dragState.x = event.clientX;
+      dragState.y = event.clientY;
+      dragState.dragging = false;
+    };
+
+    const onPointerMove = (event) => {
+      const dx = Math.abs(event.clientX - dragState.x);
+      const dy = Math.abs(event.clientY - dragState.y);
+      if (dx > DRAG_THRESHOLD || dy > DRAG_THRESHOLD) {
+        dragState.dragging = true;
+      }
+    };
+
+    const resetDragState = () => {
+      dragState.x = 0;
+      dragState.y = 0;
+      dragState.dragging = false;
+    };
+
+    const onPointerUp = () => {
+      window.setTimeout(resetDragState, 80);
+    };
+
     const onClickCapture = (event) => {
+      if (dragState.dragging) return;
+
       if (event.defaultPrevented) return;
       if (event.button !== 0) return;
       if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -81,8 +111,19 @@ export default function PageTransitionLoader() {
       }
     };
 
+    document.addEventListener('pointerdown', onPointerDown, true);
+    document.addEventListener('pointermove', onPointerMove, true);
+    document.addEventListener('pointerup', onPointerUp, true);
+    document.addEventListener('pointercancel', onPointerUp, true);
     document.addEventListener('click', onClickCapture, true);
-    return () => document.removeEventListener('click', onClickCapture, true);
+
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown, true);
+      document.removeEventListener('pointermove', onPointerMove, true);
+      document.removeEventListener('pointerup', onPointerUp, true);
+      document.removeEventListener('pointercancel', onPointerUp, true);
+      document.removeEventListener('click', onClickCapture, true);
+    };
   }, []);
 
   if (!visible) return null;

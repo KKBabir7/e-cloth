@@ -78,6 +78,94 @@ export default function CartPage() {
     router.push('/checkout');
   };
 
+  const renderCartProductCell = (item, compact = false) => (
+    <div className={`d-flex align-items-start gap-3 ${compact ? 'cart-item-card-product' : ''}`}>
+      <Link
+        href={`/product/${item.productId}`}
+        className="cart-image-wrapper rounded-3 overflow-hidden border bg-light shadow-sm text-decoration-none"
+        style={{ width: compact ? '72px' : '80px', height: compact ? '88px' : '100px', flexShrink: 0 }}
+      >
+        <img
+          src={getProductImageUrl(item.image)}
+          alt={item.name}
+          className="w-100 h-100 object-fit-cover"
+        />
+      </Link>
+      <div className="min-w-0">
+        <Link
+          href={`/product/${item.productId}`}
+          className="text-decoration-none text-dark"
+        >
+          <h6 className="fw-bold mb-2 cart-item-title" style={{ fontSize: compact ? '14px' : '15px', lineHeight: '1.4' }}>
+            {item.name}
+          </h6>
+        </Link>
+        <div className="d-flex gap-2 align-items-center flex-wrap">
+          <span className="cart-attribute-badge d-inline-flex align-items-center justify-content-center">
+            Size: <strong className="text-dark ms-1">{item.size}</strong>
+          </span>
+          <span className="cart-attribute-badge d-inline-flex align-items-center gap-1">
+            Color:
+            <span
+              className="rounded-circle border ms-1"
+              style={{ backgroundColor: item.color, width: '12px', height: '12px', display: 'inline-block' }}
+            />
+          </span>
+          {item.isCustom && (
+            <Badge bg="danger" className="bg-red-gradient border-0 py-1.5 px-2.5 rounded-2 text-white" style={{ fontSize: '10px', fontWeight: '600' }}>
+              Custom Print
+            </Badge>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderCartQtyControl = (item) => (
+    <div className="d-flex align-items-center gap-2 border rounded-pill bg-light p-1 cart-qty-control" style={{ width: 'fit-content' }}>
+      <button
+        type="button"
+        className="cart-qty-btn border-0"
+        onClick={() => handleQtyChange(item, Math.max(1, item.quantity - 1))}
+        aria-label="Decrease quantity"
+      >
+        -
+      </button>
+      <span className="px-2 fw-bold text-dark cart-qty-value" style={{ fontSize: '13.5px', minWidth: '20px', textAlign: 'center' }}>
+        {item.quantity}
+      </span>
+      <button
+        type="button"
+        className="cart-qty-btn border-0"
+        onClick={() => handleQtyChange(item, item.quantity + 1)}
+        aria-label="Increase quantity"
+      >
+        +
+      </button>
+    </div>
+  );
+
+  const renderCartSubtotal = (item, mobile = false) => (
+    <div className={mobile ? 'cart-item-card-subtotal' : undefined}>
+      {mobile && <span className="cart-item-card-subtotal-label">Subtotal</span>}
+      <span className="fw-extrabold" style={{ color: 'var(--primary-navy)', fontSize: mobile ? '16px' : '15px' }}>
+        ৳{item.price * item.quantity}
+      </span>
+    </div>
+  );
+
+  const renderCartRemoveBtn = (item) => (
+    <button
+      type="button"
+      className="cart-trash-btn border-0 flex-shrink-0"
+      onClick={() => handleRemove(item)}
+      title="Remove product"
+      aria-label={`Remove ${item.name}`}
+    >
+      <IoTrashOutline size={18} />
+    </button>
+  );
+
   if (items.length === 0) {
     return (
       <Container className="py-5 text-center d-flex align-items-center justify-content-center" style={{ minHeight: '65vh' }}>
@@ -100,9 +188,9 @@ export default function CartPage() {
   }
 
   return (
-    <Container className="py-5">
+    <Container className="py-4 py-md-5 cart-page">
       {/* Funnel Progress Steps */}
-      <div className="checkout-steps-bar d-flex justify-content-center align-items-center mb-5 flex-wrap">
+      <div className="checkout-steps-bar d-flex justify-content-center align-items-center mb-4 mb-md-5 flex-wrap">
         <div className="checkout-step active">
           <span className="checkout-step-num">1</span>
           <span className="checkout-step-text">Shopping Bag</span>
@@ -130,87 +218,48 @@ export default function CartPage() {
         
         {/* LEFT SIDE: ITEMS LIST TABLE */}
         <Col lg={8}>
-          <div className="glass-panel p-4 bg-white shadow-sm overflow-hidden border">
-            <Table responsive borderless className="align-middle mb-0">
-              <thead className="border-bottom text-muted" style={{ fontSize: '12.5px' }}>
-                <tr>
-                  <th className="pb-3">Product Details</th>
-                  <th className="pb-3">Quantity</th>
-                  <th className="pb-3">Subtotal</th>
-                  <th className="pb-3 text-end">Remove</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item, idx) => (
-                  <tr key={idx} className="border-bottom-soft">
-                    <td className="py-3">
-                      <div className="d-flex align-items-center gap-3">
-                        <div className="cart-image-wrapper rounded-3 overflow-hidden border bg-light shadow-sm" style={{ width: '80px', height: '100px', flexShrink: 0 }}>
-                          <img
-                            src={getProductImageUrl(item.image)}
-                            alt={item.name}
-                            className="w-100 h-100 object-fit-cover"
-                          />
-                        </div>
-                        <div>
-                          <h6 className="fw-bold mb-2 text-dark" style={{ fontSize: '15px', lineHeight: '1.4' }}>{item.name}</h6>
-                          <div className="d-flex gap-2 align-items-center flex-wrap">
-                            <span className="cart-attribute-badge d-inline-flex align-items-center justify-content-center">
-                              Size: <strong className="text-dark ms-1">{item.size}</strong>
-                            </span>
-                            <span className="cart-attribute-badge d-inline-flex align-items-center gap-1">
-                              Color: 
-                              <span className="rounded-circle border ms-1" style={{ backgroundColor: item.color, width: '12px', height: '12px', display: 'inline-block' }} />
-                            </span>
-                            {item.isCustom && (
-                              <Badge bg="danger" className="bg-red-gradient border-0 py-1.5 px-2.5 rounded-2 text-white" style={{ fontSize: '10px', fontWeight: '600' }}>
-                                Custom Print
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="d-flex align-items-center gap-2 border rounded-pill bg-light p-1" style={{ width: 'fit-content' }}>
-                        <button
-                          type="button"
-                          className="cart-qty-btn border-0"
-                          onClick={() => handleQtyChange(item, Math.max(1, item.quantity - 1))}
-                        >
-                          -
-                        </button>
-                        <span className="px-2 fw-bold text-dark" style={{ fontSize: '13.5px', minWidth: '20px', textAlign: 'center' }}>
-                          {item.quantity}
-                        </span>
-                        <button
-                          type="button"
-                          className="cart-qty-btn border-0"
-                          onClick={() => handleQtyChange(item, item.quantity + 1)}
-                        >
-                          +
-                        </button>
-                      </div>
-                    </td>
-                    <td>
-                      <span className="fw-extrabold" style={{ color: 'var(--primary-navy)', fontSize: '15px' }}>
-                        ৳{item.price * item.quantity}
-                      </span>
-                    </td>
-                    <td className="text-end">
-                      <button
-                        type="button"
-                        className="cart-trash-btn border-0"
-                        onClick={() => handleRemove(item)}
-                        title="Remove product"
-                      >
-                        <IoTrashOutline size={18} />
-                      </button>
-                    </td>
+          <div className="glass-panel cart-panel bg-white shadow-sm overflow-hidden border">
+            {/* Desktop table */}
+            <div className="d-none d-lg-block p-4">
+              <Table borderless className="align-middle mb-0 cart-items-table">
+                <thead className="border-bottom text-muted" style={{ fontSize: '12.5px' }}>
+                  <tr>
+                    <th className="pb-3">Product Details</th>
+                    <th className="pb-3">Quantity</th>
+                    <th className="pb-3">Subtotal</th>
+                    <th className="pb-3 text-end">Remove</th>
                   </tr>
-                ))}
-              </tbody>
-            </Table>
+                </thead>
+                <tbody>
+                  {items.map((item, idx) => (
+                    <tr key={idx} className="border-bottom-soft">
+                      <td className="py-3">
+                        {renderCartProductCell(item)}
+                      </td>
+                      <td>{renderCartQtyControl(item)}</td>
+                      <td>{renderCartSubtotal(item)}</td>
+                      <td className="text-end">{renderCartRemoveBtn(item)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            </div>
+
+            {/* Mobile cards */}
+            <div className="d-lg-none cart-items-mobile">
+              {items.map((item, idx) => (
+                <div key={idx} className="cart-item-card">
+                  <div className="cart-item-card-main">
+                    {renderCartProductCell(item, true)}
+                    {renderCartRemoveBtn(item)}
+                  </div>
+                  <div className="cart-item-card-footer">
+                    {renderCartQtyControl(item)}
+                    {renderCartSubtotal(item, true)}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </Col>
  
@@ -219,7 +268,7 @@ export default function CartPage() {
           <div className="d-flex flex-column gap-4">
             
             {/* Promo coupon inputs */}
-            <div className="glass-panel p-4 bg-white border">
+            <div className="glass-panel p-3 p-md-4 bg-white border cart-summary-panel">
               <h6 className="fw-bold mb-3 d-flex align-items-center gap-2" style={{ color: 'var(--primary-navy)', fontSize: '14.5px' }}>
                 <IoGiftOutline size={18} /> Apply Promo Code
               </h6>
@@ -258,7 +307,7 @@ export default function CartPage() {
             </div>
  
             {/* Calculations Summary */}
-            <div className="glass-panel p-4 bg-white border">
+            <div className="glass-panel p-3 p-md-4 bg-white border cart-summary-panel">
               <h5 className="fw-bold mb-4" style={{ color: 'var(--primary-navy)', fontSize: '16px', letterSpacing: '0.3px' }}>Order Summary</h5>
               
               <div className="d-flex flex-column gap-3 mb-4" style={{ fontSize: '14px' }}>

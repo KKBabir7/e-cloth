@@ -27,6 +27,7 @@ export default function ProductDetailsPage() {
   const dispatch = useDispatch();
   const { showToast } = useUI();
   const wishlistItems = useSelector((state) => state.wishlist.items);
+  const cartItems = useSelector((state) => state.cart.items);
 
   const [mounted, setMounted] = useState(false);
   const [shareUrl, setShareUrl] = useState('');
@@ -78,10 +79,35 @@ export default function ProductDetailsPage() {
   });
 
   useEffect(() => {
+    if (!product?._id) return;
+
+    const matchingItems = cartItems.filter(
+      (item) =>
+        item.productId?.toString() === product._id.toString() &&
+        !item.isCustom
+    );
+    const cartItem = matchingItems[matchingItems.length - 1];
+
+    if (cartItem) {
+      if (cartItem.size) setSelectedSize(cartItem.size);
+      if (cartItem.color) {
+        setSelectedColor(cartItem.color);
+        const colorImgs = product.colorImages || {};
+        const mappedImg = colorImgs[cartItem.color];
+        if (mappedImg) {
+          const imgIndex = product.images.indexOf(mappedImg);
+          setActiveImageIdx(imgIndex >= 0 ? imgIndex : 0);
+        }
+      }
+      if (cartItem.quantity) setQuantity(cartItem.quantity);
+      return;
+    }
+
     setSelectedSize('');
     setSelectedColor('');
+    setQuantity(1);
     setActiveImageIdx(0);
-  }, [product?._id]);
+  }, [product?._id, cartItems]);
 
   const handleZoomMove = (e) => {
     const { left, top, width, height } = e.target.getBoundingClientRect();

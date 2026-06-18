@@ -24,6 +24,8 @@ export default function AdminCategoriesPage() {
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [image, setImage] = useState('');
+  const [tagline, setTagline] = useState('');
+  const [accentColor, setAccentColor] = useState('#ff8525');
   const [order, setOrder] = useState('0');
   const [isActive, setIsActive] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -142,6 +144,8 @@ export default function AdminCategoriesPage() {
     setName('');
     setSlug('');
     setImage('');
+    setTagline('');
+    setAccentColor('#ff8525');
     setOrder('0');
     setIsActive(true);
     setShowAddModal(true);
@@ -152,6 +156,8 @@ export default function AdminCategoriesPage() {
     setName(category.name);
     setSlug(category.slug);
     setImage(category.image);
+    setTagline(category.tagline || '');
+    setAccentColor(category.accentColor || '#ff8525');
     setOrder(category.order !== undefined ? String(category.order) : '0');
     setIsActive(category.isActive !== undefined ? category.isActive : true);
     setShowEditModal(true);
@@ -171,6 +177,8 @@ export default function AdminCategoriesPage() {
         name,
         slug: slug || undefined,
         image,
+        tagline,
+        accentColor,
         order: Number(order || 0),
         isActive
       });
@@ -201,6 +209,8 @@ export default function AdminCategoriesPage() {
         name,
         slug,
         image,
+        tagline,
+        accentColor,
         order: Number(order || 0),
         isActive
       });
@@ -331,6 +341,7 @@ export default function AdminCategoriesPage() {
                 <tr>
                   <th>Preview</th>
                   <th>Category Name</th>
+                  <th>Tagline</th>
                   <th>Slug (Filter Key)</th>
                   <th>Sort Order</th>
                   <th>Status</th>
@@ -349,6 +360,7 @@ export default function AdminCategoriesPage() {
                       />
                     </td>
                     <td className="fw-bold">{c.name}</td>
+                    <td className="text-muted small">{c.tagline || '—'}</td>
                     <td className="font-monospace text-muted">{c.slug}</td>
                     <td className="fw-extrabold text-danger">
                       <IoArrowUpOutline size={12} className="me-1 text-muted" />{c.order}
@@ -439,6 +451,37 @@ export default function AdminCategoriesPage() {
             </Form.Group>
 
             <Form.Group>
+              <Form.Label className="small fw-semibold">Tagline (subtitle on homepage card)</Form.Label>
+              <Form.Control
+                type="text"
+                value={tagline}
+                onChange={(e) => setTagline(e.target.value)}
+                placeholder="e.g. Comfort Wear"
+                className="form-control-premium"
+              />
+            </Form.Group>
+
+            <Form.Group>
+              <Form.Label className="small fw-semibold">Accent Color (icon glow)</Form.Label>
+              <div className="d-flex gap-2 align-items-center">
+                <Form.Control
+                  type="color"
+                  value={accentColor}
+                  onChange={(e) => setAccentColor(e.target.value)}
+                  title="Pick accent color"
+                  style={{ width: '48px', height: '38px', padding: '2px', cursor: 'pointer' }}
+                />
+                <Form.Control
+                  type="text"
+                  value={accentColor}
+                  onChange={(e) => setAccentColor(e.target.value)}
+                  placeholder="#ff8525"
+                  className="form-control-premium"
+                />
+              </div>
+            </Form.Group>
+
+            <Form.Group>
               <Form.Label className="small fw-semibold">Sort Order Weight</Form.Label>
               <Form.Control
                 type="number"
@@ -515,6 +558,37 @@ export default function AdminCategoriesPage() {
                 >
                   <IoFolderOpenOutline size={16} /> Library
                 </Button>
+              </div>
+            </Form.Group>
+
+            <Form.Group>
+              <Form.Label className="small fw-semibold">Tagline (subtitle on homepage card)</Form.Label>
+              <Form.Control
+                type="text"
+                value={tagline}
+                onChange={(e) => setTagline(e.target.value)}
+                placeholder="e.g. Smart Casual"
+                className="form-control-premium"
+              />
+            </Form.Group>
+
+            <Form.Group>
+              <Form.Label className="small fw-semibold">Accent Color (icon glow)</Form.Label>
+              <div className="d-flex gap-2 align-items-center">
+                <Form.Control
+                  type="color"
+                  value={accentColor}
+                  onChange={(e) => setAccentColor(e.target.value)}
+                  title="Pick accent color"
+                  style={{ width: '48px', height: '38px', padding: '2px', cursor: 'pointer' }}
+                />
+                <Form.Control
+                  type="text"
+                  value={accentColor}
+                  onChange={(e) => setAccentColor(e.target.value)}
+                  placeholder="#ff8525"
+                  className="form-control-premium"
+                />
               </div>
             </Form.Group>
 

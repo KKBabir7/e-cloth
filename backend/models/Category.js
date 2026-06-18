@@ -17,6 +17,16 @@ const categorySchema = new mongoose.Schema({
     type: String,
     required: [true, 'Please provide category thumbnail image']
   },
+  tagline: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  accentColor: {
+    type: String,
+    trim: true,
+    default: '#ff8525'
+  },
   order: {
     type: Number,
     default: 0

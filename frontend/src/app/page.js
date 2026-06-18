@@ -10,9 +10,8 @@ import { Navigation, Pagination, Autoplay, A11y } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
-import { IoShirtOutline, IoCart, IoHeartOutline, IoHeart, IoCheckmarkCircle, IoArrowForward, IoImageOutline, IoLayersOutline } from 'react-icons/io5';
+import { IoShirtOutline, IoCartOutline, IoHeartOutline, IoHeart, IoCheckmarkCircle, IoArrowForward, IoImageOutline, IoLayersOutline, IoFlashOutline, IoLockClosedOutline, IoRefreshOutline, IoStar, IoShieldCheckmarkOutline } from 'react-icons/io5';
 import { FiChevronLeft, FiChevronRight, FiZoomIn } from 'react-icons/fi';
-import { LuPalette, LuType } from 'react-icons/lu';
 import { useDispatch, useSelector } from 'react-redux';
 import { toggleWishlist } from '../store/wishlistSlice';
 import { addToCart, updateCartQty } from '../store/cartSlice';
@@ -20,6 +19,8 @@ import { useUI } from '../context/UIContext';
 import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
 import { getBackendUrl, getProductImageUrl } from '@/utils/api';
+import { getCategoryAccentFallback } from '@/utils/imageColor';
+import CategoryShowcaseIcon from '../components/CategoryShowcaseIcon';
 
 export default function HomePage() {
   const router = useRouter();
@@ -224,7 +225,7 @@ export default function HomePage() {
                 className={`card-action-btn ${isInCart(product._id) ? 'active' : ''}`}
                 title="Add to Cart"
               >
-                <IoCart size={20} />
+                <IoCartOutline size={22} />
               </button>
             </div>
           </div>
@@ -247,6 +248,9 @@ export default function HomePage() {
             grabCursor={true}
             speed={650}
             a11y={{ prevSlideMessage: 'Previous banner', nextSlideMessage: 'Next banner' }}
+            preventClicks={true}
+            preventClicksPropagation={true}
+            threshold={8}
             className="hero-swiper"
           >
             {slides.map((slide) => (
@@ -270,49 +274,50 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* 2. CATEGORY TEXT SLIDER */}
+      {/* 2. CATEGORY SHOWCASE CARDS */}
       {!categoriesLoading && categories.length > 0 && (
-        <section className="border-bottom border-top py-0 position-relative" style={{ zIndex: 10, backgroundColor: '#F8FAFC' }}>
+        <section className="category-showcase-section">
           <Container>
-            <div className="position-relative px-3 px-md-5">
-              <Swiper
-                modules={[Navigation, A11y]}
-                navigation={{
-                  prevEl: '.cat-prev',
-                  nextEl: '.cat-next',
-                }}
-                spaceBetween={0}
-                slidesPerView="auto"
-                className="category-text-swiper"
-                style={{ width: '100%' }}
-              >
-                {/* SHOP NOW / ALL link with slanted background */}
-                <SwiperSlide style={{ width: 'auto' }}>
-                  <Link href="/shop" className="text-decoration-none">
-                    <div className="shop-now-tab">
-                      <span>SHOP NOW</span>
+            <div className="category-showcase-track">
+              <Link href="/shop" className="category-showcase-card-wrap text-decoration-none">
+                <div className="category-showcase-card">
+                  <div
+                    className="category-showcase-icon-wrap category-showcase-icon-wrap--icon"
+                    style={{ '--cat-accent': '#1e293b' }}
+                  >
+                    <IoLayersOutline size={22} color="#1e293b" />
+                  </div>
+                  <div className="category-showcase-text">
+                    <span className="category-showcase-title">Shop</span>
+                    <span className="category-showcase-tagline">View All Products</span>
+                  </div>
+                </div>
+              </Link>
+
+              {categories.map((cat, idx) => {
+                const accent = getCategoryAccentFallback(cat, idx);
+                return (
+                  <Link
+                    key={cat._id || cat.slug}
+                    href={`/shop?category=${cat.slug}`}
+                    className="category-showcase-card-wrap text-decoration-none"
+                  >
+                    <div className="category-showcase-card">
+                      <CategoryShowcaseIcon
+                        src={getProductImageUrl(cat.image)}
+                        alt={cat.name}
+                        fallbackAccent={accent}
+                      />
+                      <div className="category-showcase-text">
+                        <span className="category-showcase-title">{cat.name}</span>
+                        <span className="category-showcase-tagline">
+                          {cat.tagline || 'Explore Collection'}
+                        </span>
+                      </div>
                     </div>
                   </Link>
-                </SwiperSlide>
-
-                {categories.map((cat) => (
-                  <SwiperSlide key={cat._id || cat.slug} style={{ width: 'auto' }}>
-                    <Link href={`/shop?category=${cat.slug}`} className="text-decoration-none">
-                      <div className="category-text-item" style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                        <span>{cat.name}</span>
-                      </div>
-                    </Link>
-                  </SwiperSlide>
-                ))}
-              </Swiper>
-              
-              {/* Navigation Arrows (Mobile Only) */}
-              <button className="cat-prev position-absolute start-0 top-50 translate-middle-y d-md-none" style={{ zIndex: 12, left: '5px' }}>
-                <FiChevronLeft size={18} />
-              </button>
-              <button className="cat-next position-absolute end-0 top-50 translate-middle-y d-md-none" style={{ zIndex: 12, right: '5px' }}>
-                <FiChevronRight size={18} />
-              </button>
+                );
+              })}
             </div>
           </Container>
         </section>
@@ -363,7 +368,7 @@ export default function HomePage() {
       </section>
 
       {/* New Arrivals Section */}
-      <section className="py-4 py-md-5 bg-light border-top">
+      <section className="py-4 py-md-5 bg-white">
         <Container>
           <div className="responsive-section-header mb-4 mb-md-5">
             <div>
@@ -406,45 +411,78 @@ export default function HomePage() {
         </Container>
       </section>
 
-      {/* 4. DESIGN CTA BANNER */}
+      {/* 4. DESIGN STUDIO CTA — 3 column layout */}
       <section className="design-cta-section">
         <Container>
           <div className="design-studio-cta-card">
-            <div className="design-studio-cta-top">
-              <div className="design-studio-cta-copy">
-                <span className="design-studio-cta-eyebrow">
-                  <LuPalette size={16} />
-                  Wear Your Creativity
-                </span>
-                <h2 className="design-studio-cta-title">Custom T-Shirt Printing Studio</h2>
-                <p className="design-studio-cta-desc">
-                  Upload PNGs, add custom text, align layers, and see live pricing in our HTML5 canvas designer.
-                </p>
-              </div>
-              <div className="design-studio-cta-action">
-                <Link href="/design" className="btn-launch-canvas">
-                  Launch Canvas Editor
-                  <IoArrowForward size={16} className="btn-launch-canvas-icon" />
-                </Link>
-                <span className="design-studio-cta-hint">Free to design · No card needed</span>
-              </div>
-            </div>
-
-            <div className="design-studio-cta-divider" aria-hidden="true" />
-
-            <div className="design-studio-cta-stats">
-              {[
-                { icon: <IoImageOutline size={18} />, label: 'HD Uploads' },
-                { icon: <LuType size={18} />, label: 'Custom Text' },
-                { icon: <IoLayersOutline size={18} />, label: 'Layer Control' },
-                { icon: <IoShirtOutline size={18} />, label: '180+ GSM Cotton' },
-              ].map((item) => (
-                <div key={item.label} className="design-studio-cta-stat">
-                  <span className="design-studio-cta-stat-icon">{item.icon}</span>
-                  <span className="design-studio-cta-stat-label">{item.label}</span>
+            <Row className="g-4 g-lg-3 align-items-center">
+              <Col lg={4} md={12}>
+                <div className="design-studio-cta-copy">
+                  <span className="design-studio-cta-eyebrow">Unleash Your Creativity</span>
+                  <h2 className="design-studio-cta-title">Custom T-Shirt Printing Studio</h2>
+                  <p className="design-studio-cta-desc">
+                    Upload your design, add text, choose colors and see live preview in our advanced design studio.
+                  </p>
+                  <Link href="/design" className="btn-launch-canvas design-studio-cta-btn">
+                    Start Designing Now
+                    <IoArrowForward size={16} className="btn-launch-canvas-icon" />
+                  </Link>
                 </div>
-              ))}
-            </div>
+              </Col>
+
+              <Col lg={4} md={12}>
+                <div className="design-studio-cover-wrap">
+                  <Image
+                    src="/custom-design/design-cover.webp"
+                    alt="Custom T-Shirt design studio preview"
+                    width={560}
+                    height={400}
+                    className="design-studio-cover-img"
+                    unoptimized
+                  />
+                </div>
+              </Col>
+
+              <Col lg={4} md={12}>
+                <div className="design-studio-feature-list">
+                  {[
+                    { icon: <IoImageOutline size={20} />, title: 'HD Quality', desc: 'High resolution prints' },
+                    { icon: <IoShirtOutline size={20} />, title: '180+ GSM Cotton', desc: 'Premium fabric' },
+                    { icon: <IoFlashOutline size={20} />, title: 'Fast Production', desc: 'Quick turnaround' },
+                  ].map((item) => (
+                    <div key={item.title} className="design-studio-feature-card">
+                      <span className="design-studio-feature-icon">{item.icon}</span>
+                      <div>
+                        <span className="design-studio-feature-title">{item.title}</span>
+                        <span className="design-studio-feature-desc">{item.desc}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Col>
+            </Row>
+          </div>
+        </Container>
+      </section>
+
+      {/* 5. TRUST BAR */}
+      <section className="home-trust-bar-section">
+        <Container>
+          <div className="home-trust-bar">
+            {[
+              { icon: <IoLockClosedOutline size={22} />, title: '100% Secure Payment', desc: 'Your payment info is safe with us' },
+              { icon: <IoRefreshOutline size={22} />, title: '7-Day Easy Return', desc: 'Hassle-free return policy' },
+              { icon: <IoStar size={22} />, title: 'Premium Quality', desc: 'Top grade fabrics only' },
+              { icon: <IoShieldCheckmarkOutline size={22} />, title: 'Customer Satisfaction', desc: 'We care about you' },
+            ].map((item) => (
+              <div key={item.title} className="home-trust-item">
+                <span className="home-trust-icon">{item.icon}</span>
+                <div className="home-trust-text">
+                  <span className="home-trust-title">{item.title}</span>
+                  <span className="home-trust-desc">{item.desc}</span>
+                </div>
+              </div>
+            ))}
           </div>
         </Container>
       </section>

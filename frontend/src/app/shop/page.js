@@ -7,7 +7,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import BrandLoader from '../../components/BrandLoader';
 import { Container, Row, Col, Card, Button, Form, Badge, Pagination, Alert, Modal } from 'react-bootstrap';
-import { IoCart, IoHeartOutline, IoHeart, IoFilterOutline, IoSearch } from 'react-icons/io5';
+import { IoCartOutline, IoHeartOutline, IoHeart, IoFilterOutline, IoSearch } from 'react-icons/io5';
 import { FiZoomIn } from 'react-icons/fi';
 import { useDispatch, useSelector } from 'react-redux';
 import { toggleWishlist } from '../../store/wishlistSlice';
@@ -487,7 +487,7 @@ function ShopContent() {
                                   className={`card-action-btn ${isInCart(product._id) ? 'active' : ''}`}
                                   title="Add to Cart"
                                 >
-                                  <IoCart size={16} />
+                                  <IoCartOutline size={18} />
                                 </button>
                               </div>
                             </div>

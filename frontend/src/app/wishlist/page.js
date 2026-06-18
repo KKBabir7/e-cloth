@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import BrandLoader from '../../components/BrandLoader';
 import { Container, Row, Col, Card, Button, Modal } from 'react-bootstrap';
-import { IoHeart, IoTrashOutline, IoCart, IoHeartOutline } from 'react-icons/io5';
+import { IoHeart, IoTrashOutline, IoCartOutline, IoHeartOutline } from 'react-icons/io5';
 import { FiZoomIn } from 'react-icons/fi';
 import { useSelector, useDispatch } from 'react-redux';
 import { getBackendUrl, getProductImageUrl } from '../../utils/api';
@@ -161,7 +161,7 @@ export default function WishlistPage() {
                       className={`card-action-btn ${isInCart(item.id) ? 'active' : ''}`}
                       title="Move to Cart"
                     >
-                      <IoCart size={20} />
+                      <IoCartOutline size={18} />
                     </button>
                   </div>
                 </div>
