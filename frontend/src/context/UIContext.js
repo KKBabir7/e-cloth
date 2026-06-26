@@ -94,6 +94,7 @@ const SelectOptionsModal = ({ product, onConfirm, onClose }) => {
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
   const [quantity, setQuantity] = useState(1);
+  const [fieldErrors, setFieldErrors] = useState({ size: '', color: '' });
 
   const cartItems = useSelector((state) => state.cart.items || []);
 
@@ -120,9 +121,33 @@ const SelectOptionsModal = ({ product, onConfirm, onClose }) => {
     }
   }, [selectedSize, selectedColor, cartItems, product._id, sizes, colors]);
 
-  const isAddToCartDisabled =
-    (sizes.length > 0 && !selectedSize) ||
-    (colors.length > 0 && !selectedColor);
+  const handleSelectSize = (size) => {
+    setSelectedSize(size);
+    setFieldErrors((prev) => ({ ...prev, size: '' }));
+  };
+
+  const handleSelectColor = (color) => {
+    setSelectedColor(color);
+    setFieldErrors((prev) => ({ ...prev, color: '' }));
+  };
+
+  const handleAddToCart = () => {
+    const errors = { size: '', color: '' };
+
+    if (sizes.length > 0 && !selectedSize) {
+      errors.size = 'Please select a size';
+    }
+    if (colors.length > 0 && !selectedColor) {
+      errors.color = 'Please select a color';
+    }
+
+    if (errors.size || errors.color) {
+      setFieldErrors(errors);
+      return;
+    }
+
+    onConfirm({ size: selectedSize, color: selectedColor, quantity });
+  };
 
   return (
     <Modal show={true} onHide={onClose} centered size="md" className="select-options-modal">
@@ -152,7 +177,7 @@ const SelectOptionsModal = ({ product, onConfirm, onClose }) => {
                       src={getProductImageUrl(img)}
                       alt={`${product.name} - image ${idx + 1}`}
                       className="w-100 h-100"
-                      style={{ objectFit: 'cover' }}
+                      style={{ objectFit: 'contain' }}
                     />
                   </SwiperSlide>
                 ))}
@@ -162,7 +187,7 @@ const SelectOptionsModal = ({ product, onConfirm, onClose }) => {
                 src={getProductImageUrl(images[0] || product.image)}
                 alt={product.name}
                 className="w-100 h-100"
-                style={{ objectFit: 'cover' }}
+                style={{ objectFit: 'contain' }}
               />
             )}
           </div>
@@ -185,11 +210,12 @@ const SelectOptionsModal = ({ product, onConfirm, onClose }) => {
             <span className="fw-semibold text-secondary d-block mb-2" style={{ fontSize: '13.5px' }}>
               Choose Size
             </span>
-            <div className="d-flex justify-content-center gap-2 flex-wrap">
+            <div className={`d-flex justify-content-center gap-2 flex-wrap options-modal-field${fieldErrors.size ? ' has-error' : ''}`}>
               {sizes.map((size) => (
                 <button
                   key={size}
-                  onClick={() => setSelectedSize(size)}
+                  type="button"
+                  onClick={() => handleSelectSize(size)}
                   className={`size-select-btn px-3 py-2 border rounded-2 font-weight-bold transition-smooth ${selectedSize === size ? 'active' : ''}`}
                   style={{
                     minWidth: '55px',
@@ -201,6 +227,9 @@ const SelectOptionsModal = ({ product, onConfirm, onClose }) => {
                 </button>
               ))}
             </div>
+            {fieldErrors.size && (
+              <p className="options-modal-field-error mb-0 mt-2">{fieldErrors.size}</p>
+            )}
           </div>
         )}
 
@@ -210,11 +239,12 @@ const SelectOptionsModal = ({ product, onConfirm, onClose }) => {
             <span className="fw-semibold text-secondary d-block mb-2" style={{ fontSize: '13.5px' }}>
               Choose Color
             </span>
-            <div className="d-flex justify-content-center gap-2 flex-wrap">
+            <div className={`d-flex justify-content-center gap-2 flex-wrap options-modal-field${fieldErrors.color ? ' has-error' : ''}`}>
               {colors.map((color) => (
                 <button
                   key={color}
-                  onClick={() => setSelectedColor(color)}
+                  type="button"
+                  onClick={() => handleSelectColor(color)}
                   className="rounded-circle border-0 shadow-sm transition-smooth color-select-btn"
                   style={{
                     backgroundColor: color,
@@ -224,9 +254,13 @@ const SelectOptionsModal = ({ product, onConfirm, onClose }) => {
                     outline: selectedColor === color ? '2px solid var(--accent-red)' : 'none',
                     outlineOffset: '2px'
                   }}
+                  aria-label={`Select color ${color}`}
                 />
               ))}
             </div>
+            {fieldErrors.color && (
+              <p className="options-modal-field-error mb-0 mt-2">{fieldErrors.color}</p>
+            )}
           </div>
         )}
 
@@ -252,15 +286,12 @@ const SelectOptionsModal = ({ product, onConfirm, onClose }) => {
 
         {/* Confirm Add to Cart */}
         <Button
-          onClick={() => onConfirm({ size: selectedSize, color: selectedColor, quantity })}
-          disabled={isAddToCartDisabled}
+          type="button"
+          onClick={handleAddToCart}
           className="w-100 py-2.5 rounded-3 fw-bold border-0 text-white options-modal-submit-btn"
           style={{
-            background: isAddToCartDisabled ? '#94A3B8' : 'var(--primary-navy) !important',
-            cursor: isAddToCartDisabled ? 'not-allowed' : 'pointer',
-            transition: 'all 0.2s',
             fontSize: '15px',
-            boxShadow: isAddToCartDisabled ? 'none' : '0 4px 14px rgba(239, 68, 68, 0.35)'
+            boxShadow: '0 4px 14px rgba(30, 41, 59, 0.2)',
           }}
         >
           Add to Cart

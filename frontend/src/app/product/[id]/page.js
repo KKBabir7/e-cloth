@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, usePathname } from 'next/navigation';
 import { Container, Row, Col, Button, Badge, Form, Accordion } from 'react-bootstrap';
 import {
   IoCart, IoHeartOutline, IoHeart, IoCarOutline,
@@ -20,14 +20,21 @@ import { useUI } from '../../../context/UIContext';
 import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
 import { getBackendUrl, getProductImageUrl } from '@/utils/api';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { FreeMode, Navigation, A11y } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/navigation';
+import 'swiper/css/free-mode';
 
 export default function ProductDetailsPage() {
   const router = useRouter();
   const params = useParams();
+  const pathname = usePathname();
   const dispatch = useDispatch();
   const { showToast } = useUI();
   const wishlistItems = useSelector((state) => state.wishlist.items);
   const cartItems = useSelector((state) => state.cart.items);
+  const { isAuthenticated, user } = useSelector((state) => state.auth);
 
   const [mounted, setMounted] = useState(false);
   const [shareUrl, setShareUrl] = useState('');
@@ -40,6 +47,9 @@ export default function ProductDetailsPage() {
   const [selectedColor, setSelectedColor] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
+  const [thumbSwiper, setThumbSwiper] = useState(null);
+  const [thumbsOverflow, setThumbsOverflow] = useState(false);
+  const thumbsWrapRef = useRef(null);
   const [zoomStyle, setZoomStyle] = useState({ display: 'none' });
   const [activeTab, setActiveTab] = useState('reviews');
   const [shareOpen, setShareOpen] = useState(false);
@@ -79,6 +89,11 @@ export default function ProductDetailsPage() {
   });
 
   useEffect(() => {
+    if (!thumbSwiper || thumbSwiper.destroyed) return;
+    thumbSwiper.slideTo(activeImageIdx);
+  }, [activeImageIdx, thumbSwiper]);
+
+  useEffect(() => {
     if (!product?._id) return;
 
     const matchingItems = cartItems.filter(
@@ -109,6 +124,14 @@ export default function ProductDetailsPage() {
     setActiveImageIdx(0);
   }, [product?._id, cartItems]);
 
+  useEffect(() => {
+    if (isAuthenticated && user?.name) {
+      setNewReviewName(user.name);
+    }
+  }, [isAuthenticated, user?.name]);
+
+  const loginRedirect = `/login?redirect=${encodeURIComponent(pathname || '/')}`;
+
   const handleZoomMove = (e) => {
     const { left, top, width, height } = e.target.getBoundingClientRect();
     const x = ((e.pageX - left - window.scrollX) / width) * 100;
@@ -135,20 +158,21 @@ export default function ProductDetailsPage() {
 
   const handleReviewSubmit = async (e) => {
     e.preventDefault();
-    if (!newReviewName.trim() || !newReviewComment.trim()) {
-      showToast('Please fill out all review fields!', 'error');
+    const reviewerName = (isAuthenticated && user?.name) ? user.name : newReviewName.trim();
+    if (!reviewerName || !newReviewComment.trim()) {
+      showToast('Please fill out your name and review comment!', 'error');
       return;
     }
     setSubmittingReview(true);
     try {
       const res = await axios.post(`${getBackendUrl()}/api/products/${product._id}/reviews`, {
-        name: newReviewName,
+        name: reviewerName,
         rating: newReviewRating,
-        comment: newReviewComment
+        comment: newReviewComment.trim()
       });
       if (res.data.success) {
         showToast('Thank you! Your review has been published.', 'success');
-        setNewReviewName('');
+        if (!isAuthenticated) setNewReviewName('');
         setNewReviewComment('');
         setNewReviewRating(5);
         refetch();
@@ -159,12 +183,6 @@ export default function ProductDetailsPage() {
       setSubmittingReview(false);
     }
   };
-
-  const sortedReviews = [...(product?.reviews || [])].sort((a, b) => {
-    if (reviewSort === 'highest') return b.rating - a.rating;
-    if (reviewSort === 'lowest') return a.rating - b.rating;
-    return new Date(b.createdAt) - new Date(a.createdAt);
-  });
 
   const handleAddToCart = (redirectCheckout = false) => {
     if (product.variants?.colors?.length > 0 && !selectedColor) {
@@ -248,9 +266,9 @@ export default function ProductDetailsPage() {
         <div className="skeleton mb-4" style={{ height: '16px', width: '260px', borderRadius: '6px' }} />
         <Row className="gy-5">
           <Col lg={6}>
-            <div className="skeleton rounded-4 mb-3" style={{ height: '500px' }} />
-            <div className="d-flex gap-3">
-              {[1,2,3,4].map(i => <div key={i} className="skeleton rounded-3" style={{ height: '86px', width: '86px' }} />)}
+            <div className="skeleton product-detail-main-image rounded-4 mb-3" />
+            <div className="product-detail-thumbs d-flex">
+              {[1,2,3,4].map(i => <div key={i} className="skeleton product-detail-thumb rounded-3" />)}
             </div>
           </Col>
           <Col lg={6}>
@@ -281,11 +299,46 @@ export default function ProductDetailsPage() {
     </Container>
   );
 
+  const productReviews = product.reviews || [];
+  const reviewCount = productReviews.length;
+  const reviewAverage = reviewCount > 0
+    ? Number((productReviews.reduce((sum, r) => sum + Number(r.rating || 0), 0) / reviewCount).toFixed(1))
+    : Number(product.ratings?.average || 0);
+
+  const sortedReviews = [...productReviews].sort((a, b) => {
+    if (reviewSort === 'highest') return Number(b.rating) - Number(a.rating);
+    if (reviewSort === 'lowest') return Number(a.rating) - Number(b.rating);
+    return new Date(b.createdAt) - new Date(a.createdAt);
+  });
+
   const TABS = [
-    { key: 'reviews', label: `Reviews (${product.ratings?.count || 0})` },
+    { key: 'reviews', label: `Reviews (${reviewCount})` },
     { key: 'shipping', label: 'Shipping & Returns' },
     { key: 'size-guide', label: 'Size Guide' },
   ];
+
+  const imageCount = product.images?.length || 0;
+
+  const renderThumbButton = (img, idx) => (
+    <button
+      type="button"
+      onClick={() => setActiveImageIdx(idx)}
+      className={`product-detail-thumb${activeImageIdx === idx ? ' active' : ''}`}
+      aria-label={`View product image ${idx + 1}`}
+      aria-pressed={activeImageIdx === idx}
+    >
+      <Image
+        src={getProductImageUrl(img)}
+        alt=""
+        className="w-100 h-100"
+        width={160}
+        height={160}
+        sizes="80px"
+        unoptimized
+        style={{ objectFit: 'cover' }}
+      />
+    </button>
+  );
 
   return (
     <div style={{ backgroundColor: '#FAFBFC', minHeight: '100vh' }}>
@@ -304,18 +357,11 @@ export default function ProductDetailsPage() {
 
           {/* ── LEFT: IMAGE GALLERY ── */}
           <Col lg={6}>
-            <div className="d-flex flex-column gap-3" style={{ position: 'sticky', top: '90px' }}>
+            <div className="product-detail-gallery d-flex flex-column gap-3">
 
               {/* Main Image + Zoom */}
               <div
-                className="position-relative overflow-hidden bg-white"
-                style={{
-                  height: '500px',
-                  borderRadius: '20px',
-                  border: '1px solid #E8EDF2',
-                  boxShadow: '0 8px 40px rgba(15,23,42,0.06)',
-                  cursor: 'zoom-in'
-                }}
+                className="product-detail-main-image position-relative overflow-hidden bg-white"
                 onMouseMove={handleZoomMove}
                 onMouseLeave={handleZoomLeave}
               >
@@ -348,29 +394,40 @@ export default function ProductDetailsPage() {
               </div>
 
               {/* Thumbnails */}
-              <div className="d-flex gap-2 overflow-x-auto pb-1">
-                {product.images.map((img, idx) => (
-                  <div
-                    key={idx}
-                    onClick={() => setActiveImageIdx(idx)}
-                    style={{
-                      width: '80px',
-                      height: '80px',
-                      flexShrink: 0,
-                      borderRadius: '12px',
-                      overflow: 'hidden',
-                      border: activeImageIdx === idx ? '2.5px solid var(--accent-red)' : '1.5px solid #E2E8F0',
-                      cursor: 'pointer',
-                      backgroundColor: '#fff',
-                      transition: 'border-color 0.2s, transform 0.15s',
-                      transform: activeImageIdx === idx ? 'scale(1.05)' : 'scale(1)',
-                      boxShadow: activeImageIdx === idx ? '0 4px 12px rgba(239,68,68,0.18)' : 'none'
+              {imageCount > 1 && (
+                <div
+                  ref={thumbsWrapRef}
+                  className={`product-detail-thumbs-wrap${thumbsOverflow ? ' is-overflow' : ''}`}
+                >
+                  <Swiper
+                    modules={[FreeMode, Navigation, A11y]}
+                    onSwiper={(s) => {
+                      setThumbSwiper(s);
+                      setThumbsOverflow(!s.isLocked);
+                    }}
+                    onLock={() => setThumbsOverflow(false)}
+                    onUnlock={() => setThumbsOverflow(true)}
+                    slidesPerView="auto"
+                    spaceBetween={8}
+                    freeMode={{ enabled: true }}
+                    navigation
+                    watchOverflow
+                    observer
+                    observeParents
+                    className="product-detail-thumbs-swiper"
+                    breakpoints={{
+                      0: { spaceBetween: 6 },
+                      572: { spaceBetween: 8 },
                     }}
                   >
-                    <Image src={getProductImageUrl(img)} alt="" className="w-100 h-100" width={160} height={160} sizes="80px" unoptimized style={{ objectFit: 'cover' }} />
-                  </div>
-                ))}
-              </div>
+                    {product.images.map((img, idx) => (
+                      <SwiperSlide key={idx} className="product-detail-thumb-slide">
+                        {renderThumbButton(img, idx)}
+                      </SwiperSlide>
+                    ))}
+                  </Swiper>
+                </div>
+              )}
 
             </div>
           </Col>
@@ -449,11 +506,11 @@ export default function ProductDetailsPage() {
                 <div className="d-flex align-items-center gap-3 flex-wrap mt-0" style={{ fontSize: '13.5px' }}>
                   <div className="d-flex align-items-center gap-1">
                     {[1,2,3,4,5].map(s => (
-                      <IoStarSharp key={s} size={14} color={s <= Math.round(product.ratings?.average || 0) ? '#F59E0B' : '#E2E8F0'} />
+                      <IoStarSharp key={s} size={14} color={s <= Math.round(reviewAverage) ? '#F59E0B' : '#E2E8F0'} />
                     ))}
-                    <span className="fw-bold ms-1" style={{ color: '#F59E0B' }}>{product.ratings?.average || 0}</span>
+                    <span className="fw-bold ms-1" style={{ color: '#F59E0B' }}>{reviewAverage}</span>
                   </div>
-                  <span className="text-muted">({product.ratings?.count || 0} reviews)</span>
+                  <span className="text-muted">({reviewCount} reviews)</span>
                 </div>
               </div>
 
@@ -706,205 +763,200 @@ export default function ProductDetailsPage() {
         </Row>
 
         {/* ── TABS SECTION ── */}
-        <div className="mt-5 pt-4">
+        <div className="product-tabs-section mt-1 mt-sm-5 pt-4">
 
-          {/* Custom Tab Bar */}
-          <div className="d-flex gap-1 mb-0" style={{ borderBottom: '2px solid #E2E8F0', overflowX: 'auto', paddingBottom: '0' }}>
+          <div className="product-tabs-bar">
             {TABS.map(tab => (
               <button
                 key={tab.key}
+                type="button"
                 onClick={() => setActiveTab(tab.key)}
-                className="border-0 fw-semibold bg-transparent"
-                style={{
-                  padding: '12px 20px',
-                  fontSize: '14px',
-                  color: activeTab === tab.key ? 'var(--accent-red)' : '#64748B',
-                  borderBottom: activeTab === tab.key ? '3px solid var(--accent-red)' : '3px solid transparent',
-                  marginBottom: '-2px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  whiteSpace: 'nowrap',
-                  letterSpacing: '0.2px'
-                }}
+                className={`product-tab-btn${activeTab === tab.key ? ' active' : ''}`}
               >
                 {tab.label}
               </button>
             ))}
           </div>
 
-          {/* Tab Content */}
-          <div className="bg-white p-4 p-md-5" style={{ borderRadius: '0 0 20px 20px', border: '1px solid #E2E8F0', borderTop: 'none', boxShadow: '0 4px 24px rgba(15,23,42,0.04)' }}>
+          <div className="product-tabs-panel">
 
             {/* Reviews Tab */}
             {activeTab === 'reviews' && (
-              <Row className="gy-5">
+              <Row className="gy-4 gy-lg-5">
 
-                {/* Left: Rating Overview + Write Review */}
-                <Col md={5}>
-                  <h5 className="fw-bold mb-4" style={{ color: 'var(--primary-navy)', fontSize: '16px' }}>Rating Overview</h5>
+                <Col lg={5}>
+                  <div className="product-rating-overview">
+                    <h5 className="product-reviews-heading">Rating Overview</h5>
 
-                  <div className="d-flex align-items-center gap-4 mb-4">
-                    <div className="text-center">
-                      <div className="fw-extrabold" style={{ fontSize: '52px', lineHeight: 1, color: 'var(--primary-navy)' }}>
-                        {product.ratings?.average || 0}
+                    <div className="product-rating-summary">
+                      <div className="product-rating-score-block">
+                        <div className="product-rating-score">{reviewAverage}</div>
+                        <div className="product-rating-stars">
+                          {[1, 2, 3, 4, 5].map(s => (
+                            <IoStarSharp
+                              key={s}
+                              size={15}
+                              color={s <= Math.round(reviewAverage) ? '#F59E0B' : '#E2E8F0'}
+                            />
+                          ))}
+                        </div>
+                        <div className="product-rating-count">
+                          {reviewCount} {reviewCount === 1 ? 'review' : 'reviews'}
+                        </div>
                       </div>
-                      <div className="d-flex gap-0 justify-content-center mt-1">
-                        {[1,2,3,4,5].map(s => (
-                          <IoStarSharp key={s} size={16} color={s <= Math.round(product.ratings?.average || 0) ? '#F59E0B' : '#E2E8F0'} />
-                        ))}
-                      </div>
-                      <div className="text-muted mt-1" style={{ fontSize: '12px' }}>{product.ratings?.count || 0} reviews</div>
-                    </div>
-                    <div className="flex-grow-1 d-flex flex-column gap-1">
-                      {[5,4,3,2,1].map((stars) => {
-                        const count = (product.reviews || []).filter(r => r.rating === stars).length;
-                        const pct = product.reviews?.length > 0 ? (count / product.reviews.length) * 100 : 0;
-                        return (
-                          <div key={stars} className="d-flex align-items-center gap-2" style={{ fontSize: '12px' }}>
-                            <span style={{ minWidth: '32px', color: '#64748B' }}>{stars}★</span>
-                            <div style={{ flexGrow: 1, height: '6px', backgroundColor: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
-                              <div style={{ width: `${pct}%`, height: '100%', backgroundColor: '#F59E0B', borderRadius: '3px', transition: 'width 0.6s' }} />
+
+                      <div className="product-rating-bars">
+                        {[5, 4, 3, 2, 1].map((stars) => {
+                          const count = productReviews.filter(r => Math.round(Number(r.rating)) === stars).length;
+                          const pct = reviewCount > 0 ? (count / reviewCount) * 100 : 0;
+                          return (
+                            <div key={stars} className="product-rating-bar-row">
+                              <span className="product-rating-bar-label">{stars}</span>
+                              <IoStarSharp size={11} color="#F59E0B" className="product-rating-bar-star" />
+                              <div className="product-rating-bar-track">
+                                <div className="product-rating-bar-fill" style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="product-rating-bar-pct">{Math.round(pct)}%</span>
                             </div>
-                            <span style={{ minWidth: '28px', textAlign: 'right', color: '#64748B' }}>{Math.round(pct)}%</span>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Write Review Form */}
-                  <div className="p-4" style={{ borderRadius: '16px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-                    <h6 className="fw-bold mb-1" style={{ color: 'var(--primary-navy)', fontSize: '15px' }}>Write a Review</h6>
-                    <p className="text-muted mb-3" style={{ fontSize: '12.5px' }}>Share your experience to help others.</p>
+                  <div className="product-review-form">
+                    <div className="product-review-form-header">
+                      <h6 className="product-review-form-title">Write a Review</h6>
+                      <p className="product-review-form-sub">
+                        {isAuthenticated
+                          ? <>Sharing as <strong>{user?.name}</strong></>
+                          : 'Share your experience to help others. No login required.'}
+                      </p>
+                    </div>
 
                     <form onSubmit={handleReviewSubmit}>
                       <div className="mb-3">
-                        <label className="small fw-bold d-block mb-1" style={{ color: '#374151' }}>Your Rating *</label>
-                        <div className="d-flex gap-1">
-                          {[1,2,3,4,5].map((star) => (
-                            <IoStarSharp
+                        <label className="product-review-label">Your Rating *</label>
+                        <div className="product-review-star-input">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
                               key={star}
-                              size={28}
-                              color={star <= (hoverRating || newReviewRating) ? '#F59E0B' : '#E2E8F0'}
-                              style={{ cursor: 'pointer', transition: 'color 0.1s, transform 0.1s', transform: star <= (hoverRating || newReviewRating) ? 'scale(1.1)' : 'scale(1)' }}
+                              type="button"
+                              className={`product-review-star-btn${star <= (hoverRating || newReviewRating) ? ' active' : ''}`}
                               onClick={() => setNewReviewRating(star)}
                               onMouseEnter={() => setHoverRating(star)}
                               onMouseLeave={() => setHoverRating(0)}
-                            />
+                              aria-label={`Rate ${star} stars`}
+                            >
+                              <IoStarSharp size={26} />
+                            </button>
                           ))}
                         </div>
                       </div>
 
-                      <div className="mb-3">
-                        <label className="small fw-bold d-block mb-1" style={{ color: '#374151' }}>Your Name *</label>
-                        <input
-                          type="text" required
-                          placeholder="e.g. Tanvir Rahman"
-                          value={newReviewName}
-                          onChange={e => setNewReviewName(e.target.value)}
-                          className="form-control-premium w-100"
-                          style={{ borderRadius: '10px', padding: '10px 14px', fontSize: '14px' }}
-                        />
-                      </div>
+                      {!isAuthenticated && (
+                        <div className="mb-3">
+                          <label className="product-review-label">Your Name *</label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="e.g. Tanvir Rahman"
+                            value={newReviewName}
+                            onChange={(e) => setNewReviewName(e.target.value)}
+                            className="form-control-premium product-review-input"
+                          />
+                        </div>
+                      )}
 
                       <div className="mb-4">
-                        <label className="small fw-bold d-block mb-1" style={{ color: '#374151' }}>Review Comment *</label>
+                        <label className="product-review-label">Review Comment *</label>
                         <textarea
-                          rows={3} required
+                          rows={3}
+                          required
                           placeholder="What did you like or dislike about this product?"
                           value={newReviewComment}
-                          onChange={e => setNewReviewComment(e.target.value)}
-                          className="form-control-premium w-100"
-                          style={{ borderRadius: '10px', padding: '10px 14px', fontSize: '14px', resize: 'vertical' }}
+                          onChange={(e) => setNewReviewComment(e.target.value)}
+                          className="form-control-premium product-review-input product-review-textarea"
                         />
                       </div>
 
                       <button
                         type="submit"
                         disabled={submittingReview}
-                        className="w-100 border-0 fw-bold text-white d-flex align-items-center justify-content-center gap-2"
-                        style={{
-                          height: '46px', borderRadius: '12px',
-                          background: 'linear-gradient(135deg, #EF4444, #DC2626)',
-                          fontSize: '14px', cursor: submittingReview ? 'not-allowed' : 'pointer',
-                          opacity: submittingReview ? 0.7 : 1
-                        }}
+                        className="product-review-submit"
                       >
-                        {submittingReview ? 'Submitting...' : '✓ Submit Review'}
+                        {submittingReview ? 'Submitting...' : 'Submit Review'}
                       </button>
+
+                      {!isAuthenticated && (
+                        <p className="product-review-login-hint">
+                          Have an account?{' '}
+                          <Link href={loginRedirect}>Login</Link>
+                        </p>
+                      )}
                     </form>
                   </div>
                 </Col>
 
-                {/* Right: Reviews List */}
-                <Col md={7}>
-                  <div className="d-flex align-items-center justify-content-between mb-4">
-                    <h5 className="fw-bold mb-0" style={{ color: 'var(--primary-navy)', fontSize: '16px' }}>Customer Reviews</h5>
-                    <select
-                      value={reviewSort}
-                      onChange={e => setReviewSort(e.target.value)}
-                      className="form-select-premium"
-                      style={{ width: '150px', fontSize: '12.5px', padding: '6px 10px', borderRadius: '8px' }}
-                    >
-                      <option value="newest">Newest First</option>
-                      <option value="highest">Highest Rating</option>
-                      <option value="lowest">Lowest Rating</option>
-                    </select>
+                <Col lg={7}>
+                  <div className="product-reviews-list-header">
+                    <h5 className="product-reviews-heading mb-0">Customer Reviews</h5>
+                    {reviewCount > 0 && (
+                      <select
+                        value={reviewSort}
+                        onChange={e => setReviewSort(e.target.value)}
+                        className="form-select-premium product-review-sort"
+                      >
+                        <option value="newest">Newest First</option>
+                        <option value="highest">Highest Rating</option>
+                        <option value="lowest">Lowest Rating</option>
+                      </select>
+                    )}
                   </div>
 
-                  {(!product.reviews || product.reviews.length === 0) ? (
-                    <div
-                      className="text-center py-5"
-                      style={{ borderRadius: '16px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0' }}
-                    >
-                      <div style={{ fontSize: '40px' }}>✍️</div>
-                      <h6 className="fw-bold mt-3 mb-1" style={{ color: 'var(--primary-navy)' }}>No Reviews Yet</h6>
-                      <p className="text-muted small mb-0">Be the first to share your experience!</p>
+                  {reviewCount === 0 ? (
+                    <div className="product-review-empty">
+                      <div className="product-review-empty-icon">
+                        <IoStarSharp size={28} color="#F59E0B" />
+                      </div>
+                      <h6 className="product-review-empty-title">No Reviews Yet</h6>
+                      <p className="product-review-empty-text">Be the first to share your experience with this product.</p>
                     </div>
                   ) : (
-                    <div className="d-flex flex-column gap-3" style={{ maxHeight: '620px', overflowY: 'auto', paddingRight: '4px' }}>
-                      {sortedReviews.map((rev) => (
-                        <div
-                          key={rev._id}
-                          className="p-4"
-                          style={{
-                            borderRadius: '14px',
-                            backgroundColor: '#FFFFFF',
-                            border: '1px solid #E8EDF2',
-                            boxShadow: '0 2px 8px rgba(15,23,42,0.04)',
-                            transition: 'box-shadow 0.2s'
-                          }}
+                    <div className="product-reviews-list">
+                      {sortedReviews.map((rev, idx) => (
+                        <article
+                          key={rev._id || `${rev.createdAt}-${idx}`}
+                          className="product-review-card"
                         >
-                          <div className="d-flex justify-content-between align-items-center mb-2">
-                            <div className="d-flex align-items-center gap-2">
-                              <div
-                                className="fw-extrabold text-white d-flex align-items-center justify-content-center"
-                                style={{
-                                  width: '36px', height: '36px',
-                                  borderRadius: '50%',
-                                  backgroundColor: 'var(--primary-navy)',
-                                  fontSize: '14px', flexShrink: 0
-                                }}
-                              >
-                                {rev.name.charAt(0).toUpperCase()}
+                          <div className="product-review-card-top">
+                            <div className="product-review-author">
+                              <div className="product-review-avatar" aria-hidden="true">
+                                {(rev.name || 'A').charAt(0).toUpperCase()}
                               </div>
                               <div>
-                                <span className="fw-bold d-block" style={{ fontSize: '14px', color: 'var(--primary-navy)' }}>{rev.name}</span>
-                                <span className="text-muted" style={{ fontSize: '11px' }}>
-                                  {new Date(rev.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                                <span className="product-review-author-name">{rev.name}</span>
+                                <span className="product-review-date">
+                                  {new Date(rev.createdAt).toLocaleDateString('en-US', {
+                                    year: 'numeric',
+                                    month: 'short',
+                                    day: 'numeric',
+                                  })}
                                 </span>
                               </div>
                             </div>
-                            <div className="d-flex gap-0">
-                              {[1,2,3,4,5].map(s => (
-                                <IoStarSharp key={s} size={13} color={s <= rev.rating ? '#F59E0B' : '#E2E8F0'} />
+                            <div className="product-review-card-stars">
+                              {[1, 2, 3, 4, 5].map(s => (
+                                <IoStarSharp
+                                  key={s}
+                                  size={13}
+                                  color={s <= Number(rev.rating) ? '#F59E0B' : '#E2E8F0'}
+                                />
                               ))}
                             </div>
                           </div>
-                          <p className="mb-0" style={{ fontSize: '13.5px', lineHeight: '1.6', color: '#4B5563' }}>
-                            "{rev.comment}"
-                          </p>
-                        </div>
+                          <p className="product-review-comment">{rev.comment}</p>
+                        </article>
                       ))}
                     </div>
                   )}

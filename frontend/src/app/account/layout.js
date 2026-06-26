@@ -5,8 +5,8 @@ import Link from 'next/link';
 import BrandLoader from '../../components/BrandLoader';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSelector } from 'react-redux';
-import { Container, Row, Col, Card, ListGroup, Button, Badge } from 'react-bootstrap';
-import { IoPersonOutline, IoReceiptOutline, IoColorPaletteOutline, IoLockClosedOutline } from 'react-icons/io5';
+import { Container, Row, Col } from 'react-bootstrap';
+import { IoPersonOutline, IoReceiptOutline, IoColorPaletteOutline, IoChevronForward } from 'react-icons/io5';
 import { useUI } from '../../context/UIContext';
 
 export default function AccountLayout({ children }) {
@@ -30,49 +30,58 @@ export default function AccountLayout({ children }) {
   if (!user) return null;
 
   const sidebarLinks = [
-    { name: 'My Profile', path: '/account', icon: <IoPersonOutline size={18} /> },
-    { name: 'My Orders', path: '/account/orders', icon: <IoReceiptOutline size={18} /> },
-    { name: 'Saved Designs', path: '/account/designs', icon: <IoColorPaletteOutline size={18} /> }
+    { name: 'My Profile', desc: 'Personal details & address', path: '/account', icon: <IoPersonOutline size={19} /> },
+    { name: 'My Orders', desc: 'Order history & invoices', path: '/account/orders', icon: <IoReceiptOutline size={19} /> },
+    { name: 'Saved Designs', desc: 'Your custom creations', path: '/account/designs', icon: <IoColorPaletteOutline size={19} /> }
   ];
 
+  const initials = user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+
   return (
-    <Container className="py-5">
-      <h2 className="fw-bold mb-4" style={{ color: 'var(--primary-navy)' }}>
-        User <span className="text-danger">Dashboard</span>
-      </h2>
+    <Container className="py-4 py-lg-5 account-page">
+      {/* Page Heading */}
+      <div className="account-header">
+        <span className="account-header-eyebrow">
+          <IoPersonOutline size={14} /> My Account
+        </span>
+        <h1 className="account-header-title">User Dashboard</h1>
+        <p className="account-header-sub">
+          Manage your profile, track your orders, and revisit your saved designs.
+        </p>
+      </div>
 
       <Row className="gy-4">
-        
-        {/* LEFT SIDE: ACCOUNT SIDEBAR */}
-        <Col lg={3}>
-          <Card className="custom-card border-0 p-3 shadow-sm bg-white">
-            <div className="text-center py-4 border-bottom">
-              <div className="rounded-circle bg-danger bg-opacity-10 text-danger fw-bold d-flex align-items-center justify-content-center mx-auto mb-3" style={{ width: '64px', height: '64px', fontSize: '24px' }}>
-                {user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-              </div>
-              <h5 className="fw-bold mb-1">{user.name}</h5>
-              <span className="text-muted small d-block">{user.email}</span>
-              <Badge bg="danger" className="mt-2 bg-red-gradient uppercase" style={{ fontSize: '10px' }}>{user.role}</Badge>
-            </div>
 
-            <ListGroup variant="flush" className="pt-3 gap-1">
-              {sidebarLinks.map((link) => {
-                const isActive = pathname === link.path;
-                return (
-                  <Link key={link.path} href={link.path} passHref legacyBehavior>
-                    <ListGroup.Item
-                      action
-                      className={`d-flex align-items-center gap-3 border-0 rounded-3 py-3 px-3 fw-medium ${isActive ? 'bg-danger bg-opacity-10 text-danger fw-bold' : 'text-dark'}`}
-                      style={{ cursor: 'pointer', fontSize: '14.5px', transition: '0.2s' }}
-                    >
-                      {link.icon}
-                      {link.name}
-                    </ListGroup.Item>
-                  </Link>
-                );
-              })}
-            </ListGroup>
-          </Card>
+        {/* LEFT SIDE: ACCOUNT SIDEBAR */}
+        <Col lg={3} className="account-sidebar-col">
+          <div className="account-profile-card">
+            <div className="account-avatar">{initials}</div>
+            <div className="account-profile-meta">
+              <h5 className="account-profile-name">{user.name}</h5>
+              <span className="account-profile-email">{user.email}</span>
+              <span className="account-role-badge">{user.role}</span>
+            </div>
+          </div>
+
+          <nav className="account-nav">
+            {sidebarLinks.map((link) => {
+              const isActive = pathname === link.path;
+              return (
+                <Link
+                  key={link.path}
+                  href={link.path}
+                  className={`account-nav-item${isActive ? ' active' : ''}`}
+                >
+                  <span className="account-nav-icon">{link.icon}</span>
+                  <span className="account-nav-text">
+                    <span className="account-nav-name">{link.name}</span>
+                    <span className="account-nav-desc">{link.desc}</span>
+                  </span>
+                  <IoChevronForward size={16} className="account-nav-chevron" />
+                </Link>
+              );
+            })}
+          </nav>
         </Col>
 
         {/* RIGHT SIDE: VIEWPORT CHILD PAGE */}

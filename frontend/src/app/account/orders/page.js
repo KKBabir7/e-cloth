@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Card, Table, Badge, Button, Row, Col, Container } from 'react-bootstrap';
-import { IoReceiptOutline, IoDownloadOutline, IoTimeOutline } from 'react-icons/io5';
+import { Row, Col } from 'react-bootstrap';
+import { IoReceiptOutline, IoDownloadOutline } from 'react-icons/io5';
 import { useUI } from '../../../context/UIContext';
 import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
@@ -71,53 +71,34 @@ export default function AccountOrdersPage() {
 
   if (isLoading) {
     return (
-      <Card className="border-0 shadow-sm p-4 bg-white">
-        {[1, 2].map(i => <div key={i} className="skeleton mb-3" style={{ height: '80px' }}></div>)}
-      </Card>
+      <div className="account-panel p-4">
+        {[1, 2].map(i => <div key={i} className="skeleton mb-3" style={{ height: '80px', borderRadius: '12px' }}></div>)}
+      </div>
     );
   }
 
   return (
-    <div>
-      {/* Funnel Progress Steps */}
-      <div className="checkout-steps-bar d-flex justify-content-center align-items-center mb-5 flex-wrap">
-        <div className="checkout-step completed">
-          <span className="checkout-step-num">1</span>
-          <span className="checkout-step-text">Shopping Bag</span>
-        </div>
-        <div className="checkout-step-line active" />
-        <div className="checkout-step completed">
-          <span className="checkout-step-num">2</span>
-          <span className="checkout-step-text">Checkout</span>
-        </div>
-        <div className="checkout-step-line active" />
-        <div className="checkout-step active">
-          <span className="checkout-step-num">3</span>
-          <span className="checkout-step-text">Confirmation</span>
-        </div>
-      </div>
-
-      <Card className="custom-card border-0 p-4 shadow-sm bg-white border">
-      <Card.Body>
-        <h5 className="fw-bold mb-4 d-flex align-items-center gap-2" style={{ color: 'var(--primary-navy)', fontSize: '16px' }}>
+    <div className="account-panel">
+      <div className="account-panel-body">
+        <h5 className="account-panel-title">
           <IoReceiptOutline size={18} /> My Order History
         </h5>
 
         {orders.length === 0 ? (
-          <div className="text-center py-5">
-            <div className="d-inline-flex align-items-center justify-content-center rounded-circle mb-4 bg-light shadow-sm" style={{ width: '80px', height: '80px', border: '1px solid #E2E8F0' }}>
-              <IoReceiptOutline size={36} style={{ color: 'var(--primary-navy)' }} />
-            </div>
-            <h6 className="fw-bold text-dark mb-2">No Orders Found</h6>
-            <p className="text-muted small mb-4">You haven't placed any orders yet.</p>
-            <Link href="/shop" passHref legacyBehavior>
-              <Button className="btn-premium-accent border-0 text-white rounded-3 fw-bold px-4">Start Shopping</Button>
+          <div className="account-empty">
+            <span className="account-empty-icon">
+              <IoReceiptOutline size={34} />
+            </span>
+            <h6 className="account-empty-title">No Orders Found</h6>
+            <p className="account-empty-text">You haven't placed any orders yet.</p>
+            <Link href="/shop" className="account-btn-primary">
+              Start Shopping
             </Link>
           </div>
         ) : (
           <div className="d-flex flex-column gap-4">
             {orders.map((order) => (
-              <div key={order._id} className="p-4 border rounded-3 bg-white" style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.04)' }}>
+              <div key={order._id} className="account-order-card">
                 
                 {/* Header */}
                 <Row className="gy-2 align-items-center border-bottom pb-2 mb-3">
@@ -185,8 +166,7 @@ export default function AccountOrdersPage() {
             ))}
           </div>
         )}
-      </Card.Body>
-    </Card>
+      </div>
     </div>
   );
 }

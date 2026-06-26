@@ -1,20 +1,20 @@
 'use client';
 
 
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useEffect, useState, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import BrandLoader from '../../components/BrandLoader';
-import { Container, Row, Col, Card, Button, Form, Badge, Pagination, Alert, Modal } from 'react-bootstrap';
-import { IoCartOutline, IoHeartOutline, IoHeart, IoFilterOutline, IoSearch } from 'react-icons/io5';
+import { Container, Row, Col, Form, Badge, Modal } from 'react-bootstrap';
+import { IoCartOutline, IoHeartOutline, IoHeart, IoFilterOutline, IoSearch, IoCloseOutline, IoStorefrontOutline } from 'react-icons/io5';
 import { FiZoomIn } from 'react-icons/fi';
 import { useDispatch, useSelector } from 'react-redux';
 import { toggleWishlist } from '../../store/wishlistSlice';
 import { addToCart, updateCartQty } from '../../store/cartSlice';
 import { useUI } from '../../context/UIContext';
 import axios from 'axios';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { getBackendUrl, getProductImageUrl } from '@/utils/api';
 
 // Main component with Suspense boundary wrapping Client filters
@@ -39,28 +39,26 @@ function ShopContent() {
   const categoryParam = searchParams.get('category') || '';
   const searchParam = searchParams.get('search') || '';
   const sortParam = searchParams.get('sort') || 'newest';
-  const pageParam = searchParams.get('page') || '1';
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
   // Filter States
   const [selectedCategory, setSelectedCategory] = useState('');
-  const [priceRange, setPriceRange] = useState(3000);
+  const [priceRange, setPriceRange] = useState(null);
   const [selectedSize, setSelectedSize] = useState('');
-  const [selectedColor, setSelectedColor] = useState('');
-  const [selectedRating, setSelectedRating] = useState('');
   const [availability, setAvailability] = useState('');
   const [localSearch, setLocalSearch] = useState('');
 
-  // Products and Pagination States
-  const [currentPage, setCurrentPage] = useState(1);
+  // Products infinite scroll
+  const loadMoreRef = useRef(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const prevCategoryRef = useRef(selectedCategory);
 
   // Sync state with URL updates
   useEffect(() => {
     setSelectedCategory(categoryParam);
     setLocalSearch(searchParam);
     setDebouncedSearch(searchParam);
-    setCurrentPage(parseInt(pageParam));
-  }, [categoryParam, searchParam, pageParam]);
+  }, [categoryParam, searchParam]);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -84,16 +82,21 @@ function ShopContent() {
   });
   const categoriesList = categoriesData || [];
 
-  const { data: productsData, isLoading, error } = useQuery({
-    queryKey: ['products', selectedCategory, debouncedSearch, priceRange, selectedSize, selectedColor, selectedRating, availability, sortParam, currentPage],
-    queryFn: async () => {
-      let query = `${getBackendUrl()}/api/products?page=${currentPage}&limit=9&sort=${sortParam}`;
+  const {
+    data: productsData,
+    isLoading,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ['products', 'shop', selectedCategory, debouncedSearch, priceRange, selectedSize, availability, sortParam],
+    queryFn: async ({ pageParam = 1 }) => {
+      let query = `${getBackendUrl()}/api/products?page=${pageParam}&limit=6&sort=${sortParam}`;
       if (selectedCategory) query += `&category=${selectedCategory}`;
       if (debouncedSearch) query += `&search=${encodeURIComponent(debouncedSearch)}`;
-      if (priceRange) query += `&maxPrice=${priceRange}`;
+      if (priceRange != null) query += `&maxPrice=${priceRange}`;
       if (selectedSize) query += `&size=${selectedSize}`;
-      if (selectedColor) query += `&color=${encodeURIComponent(selectedColor)}`;
-      if (selectedRating) query += `&rating=${selectedRating}`;
       if (availability) query += `&availability=${availability}`;
 
       const res = await axios.get(query);
@@ -101,32 +104,71 @@ function ShopContent() {
         return {
           products: res.data.products,
           totalPages: res.data.pages,
-          totalProducts: res.data.total
+          totalProducts: res.data.total,
+          priceBounds: res.data.priceBounds || { min: 0, max: 5000 },
+          page: pageParam,
         };
       }
       throw new Error('Not successful');
     },
-    keepPreviousData: true
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => (
+      lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined
+    ),
   });
 
-  const products = productsData?.products || [];
-  const totalPages = productsData?.totalPages || 1;
-  const totalProducts = productsData?.totalProducts || 0;
+  const products = productsData?.pages.flatMap((page) => page.products) ?? [];
+  const totalProducts = productsData?.pages[0]?.totalProducts ?? 0;
+  const firstPageBounds = productsData?.pages[0]?.priceBounds;
+
+  const catalogMin = Math.max(0, Math.floor((firstPageBounds?.min ?? 0) / 50) * 50);
+  const catalogMax = Math.max(
+    catalogMin + 50,
+    Math.ceil((firstPageBounds?.max ?? 5000) / 50) * 50
+  );
+  const sliderValue = priceRange ?? catalogMax;
+
+  // Sync slider to catalog max on load & when category changes
+  useEffect(() => {
+    if (!firstPageBounds) return;
+
+    const max = Math.max(
+      catalogMin + 50,
+      Math.ceil((firstPageBounds.max || 5000) / 50) * 50
+    );
+    const categoryChanged = prevCategoryRef.current !== selectedCategory;
+    prevCategoryRef.current = selectedCategory;
+
+    setPriceRange((prev) => {
+      if (prev == null || categoryChanged) return max;
+      return Math.min(prev, max);
+    });
+  }, [selectedCategory, firstPageBounds, catalogMin]);
+
+  // Infinite scroll — load next page when sentinel enters viewport
+  useEffect(() => {
+    const node = loadMoreRef.current;
+    if (!node || !hasNextPage || isFetchingNextPage) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) fetchNextPage();
+      },
+      { rootMargin: '240px' }
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage, products.length]);
 
   const updateUrlParam = (key, value) => {
     const params = new URLSearchParams(searchParams.toString());
-    if (value && !(key === 'page' && value === '1')) {
+    if (value) {
       params.set(key, value);
     } else {
       params.delete(key);
     }
-    // Reset to page 1 (removing 'page' parameter) if changing a non-pagination filter
-    if (key !== 'page') {
-      params.delete('page');
-      setCurrentPage(1);
-    } else {
-      setCurrentPage(Number(value));
-    }
+    params.delete('page');
     const queryString = params.toString();
     router.push(queryString ? `/shop?${queryString}` : '/shop');
   };
@@ -175,10 +217,8 @@ function ShopContent() {
 
   const clearAllFilters = () => {
     setSelectedCategory('');
-    setPriceRange(5000);
+    setPriceRange(catalogMax);
     setSelectedSize('');
-    setSelectedColor('');
-    setSelectedRating('');
     setAvailability('');
     setLocalSearch('');
     router.push('/shop');
@@ -187,173 +227,165 @@ function ShopContent() {
   const isInWishlist = (id) => wishlistItems.some((item) => item.id === id);
   const isInCart = (id) => cartItems?.some((item) => item.productId === id);
 
+  const activeCategoryName = selectedCategory
+    ? (categoriesList.find(c => c.slug === selectedCategory)?.name || selectedCategory)
+    : '';
+
+  const filterPanel = (
+    <div className="shop-filter-panel">
+      <div className="shop-filter-header">
+        <h5 className="shop-filter-title">
+          <IoFilterOutline /> Filters
+        </h5>
+        <div className="d-flex align-items-center gap-2">
+          <button type="button" className="shop-filter-clear" onClick={clearAllFilters}>
+            Clear All
+          </button>
+          <button
+            type="button"
+            className="shop-filter-close d-lg-none"
+            onClick={() => setShowFilters(false)}
+            aria-label="Close filters"
+          >
+            <IoCloseOutline size={20} />
+          </button>
+        </div>
+      </div>
+
+      {/* 1. Category */}
+      <div className="shop-filter-section">
+        <span className="shop-filter-label">Category</span>
+        {categoriesList.map((cat) => (
+          <Form.Check
+            key={cat._id || cat.slug}
+            type="radio"
+            id={`cat-${cat.slug}`}
+            name="categoryRadio"
+            label={cat.name}
+            checked={selectedCategory === cat.slug}
+            onChange={() => updateUrlParam('category', cat.slug)}
+            className="shop-filter-check mb-2"
+          />
+        ))}
+      </div>
+
+      {/* 2. Price Range */}
+      <div className="shop-filter-section">
+        <span className="shop-filter-label d-flex justify-content-between align-items-center">
+          <span>Max Price</span>
+          <span className="shop-price-value">৳{sliderValue}</span>
+        </span>
+        <Form.Range
+          className="shop-range"
+          min={catalogMin}
+          max={catalogMax}
+          step={50}
+          value={sliderValue}
+          onChange={(e) => setPriceRange(Number(e.target.value))}
+        />
+        <div className="d-flex justify-content-between shop-range-bounds">
+          <span>৳{catalogMin}</span>
+          <span>৳{catalogMax}</span>
+        </div>
+      </div>
+
+      {/* 3. Sizes */}
+      <div className="shop-filter-section">
+        <span className="shop-filter-label">Size Selection</span>
+        <div className="d-flex flex-wrap gap-2">
+          {['S', 'M', 'L', 'XL', 'XXL'].map((size) => (
+            <button
+              type="button"
+              key={size}
+              onClick={() => setSelectedSize(selectedSize === size ? '' : size)}
+              className={`shop-size-btn${selectedSize === size ? ' active' : ''}`}
+            >
+              {size}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 4. Availability */}
+      <div className="shop-filter-section shop-filter-section--last">
+        <span className="shop-filter-label">Availability</span>
+        <Form.Check
+          type="checkbox"
+          id="stock-in"
+          label="In Stock"
+          checked={availability === 'inStock'}
+          onChange={() => setAvailability(availability === 'inStock' ? '' : 'inStock')}
+          className="shop-filter-check mb-2"
+        />
+        <Form.Check
+          type="checkbox"
+          id="stock-out"
+          label="Out of Stock"
+          checked={availability === 'outOfStock'}
+          onChange={() => setAvailability(availability === 'outOfStock' ? '' : 'outOfStock')}
+          className="shop-filter-check"
+        />
+      </div>
+
+      <button type="button" className="shop-filter-apply d-lg-none" onClick={() => setShowFilters(false)}>
+        Show {totalProducts} Results
+      </button>
+    </div>
+  );
+
   return (
-    <Container className="py-5">
-      {/* Dynamic SEO-optimised Page Heading */}
-      <div className="mb-4">
-        <h1 className="fw-extrabold display-6 mb-1" style={{ color: 'var(--primary-navy)', fontFamily: "'Outfit', sans-serif" }}>
-          {selectedCategory 
-            ? `${categoriesList.find(c => c.slug === selectedCategory)?.name || selectedCategory} Collection` 
-            : 'Premium Apparel Catalog'}
+    <Container className="py-4 py-lg-5 shop-page">
+      {/* Page Heading */}
+      <div className="shop-page-header">
+        <span className="shop-header-eyebrow">
+          <IoStorefrontOutline size={15} /> {activeCategoryName || 'All Products'}
+        </span>
+        <h1 className="shop-header-title">
+          {activeCategoryName ? `${activeCategoryName} Collection` : 'Premium Apparel Catalog'}
         </h1>
-        <p className="text-muted mb-0" style={{ fontSize: '14.5px' }}>
-          Explore high-quality clothing, traditional Punajbis, custom T-shirts, and premium accessories.
+        <p className="shop-header-sub">
+          Explore high-quality clothing, traditional Punjabis, custom T-shirts, and premium accessories.
         </p>
       </div>
 
-      <Row className="gy-4">
-        
+      <Row className="gy-4 shop-grid">
+
         {/* LEFT FILTER SIDEBAR */}
-        <Col lg={3}>
-          <div className="glass-panel p-4 bg-white">
-            <div className="d-flex justify-content-between align-items-center mb-4">
-              <h5 className="fw-bold mb-0 d-flex align-items-center gap-2" style={{ color: 'var(--primary-navy)' }}>
-                <IoFilterOutline /> Filters
-              </h5>
-              <Button variant="link" size="sm" className="text-danger fw-semibold text-decoration-none p-0" onClick={clearAllFilters}>
-                Clear All
-              </Button>
-            </div>
-
-            {/* 1. Category */}
-            <Form.Group className="mb-4">
-              <Form.Label className="fw-bold mb-2">Category</Form.Label>
-              {categoriesList.map((cat) => (
-                <Form.Check
-                  key={cat._id || cat.slug}
-                  type="radio"
-                  id={`cat-${cat.slug}`}
-                  name="categoryRadio"
-                  label={cat.name}
-                  checked={selectedCategory === cat.slug}
-                  onChange={() => updateUrlParam('category', cat.slug)}
-                  className="mb-2"
-                />
-              ))}
-            </Form.Group>
-
-            {/* 2. Price Range */}
-            <Form.Group className="mb-4">
-              <Form.Label className="fw-bold mb-2 d-flex justify-content-between">
-                <span>Max Price</span>
-                <span className="text-danger fw-bold">৳{priceRange}</span>
-              </Form.Label>
-              <Form.Range
-                min={300}
-                max={5000}
-                step={50}
-                value={priceRange}
-                onChange={(e) => setPriceRange(Number(e.target.value))}
-              />
-              <div className="d-flex justify-content-between text-muted" style={{ fontSize: '11px' }}>
-                <span>৳300</span>
-                <span>৳5000</span>
-              </div>
-            </Form.Group>
-
-            {/* 3. Sizes */}
-            <Form.Group className="mb-4">
-              <Form.Label className="fw-bold mb-2">Size Selection</Form.Label>
-              <div className="d-flex flex-wrap gap-2">
-                {['S', 'M', 'L', 'XL', 'XXL'].map((size) => (
-                  <Button
-                    key={size}
-                    onClick={() => setSelectedSize(selectedSize === size ? '' : size)}
-                    variant={selectedSize === size ? 'danger' : 'outline-dark'}
-                    size="sm"
-                    className="px-3"
-                    style={{ minWidth: '40px', borderRadius: '6px' }}
-                  >
-                    {size}
-                  </Button>
-                ))}
-              </div>
-            </Form.Group>
-
-            {/* 4. Colors */}
-            <Form.Group className="mb-4">
-              <Form.Label className="fw-bold mb-2">Colors</Form.Label>
-              <div className="d-flex gap-2">
-                {[
-                  { name: 'Black', hex: '#000000' },
-                  { name: 'White', hex: '#ffffff' },
-                  { name: 'Red', hex: '#ff0000' },
-                  { name: 'Blue', hex: '#0000ff' },
-                  { name: 'Yellow', hex: '#ffff00' }
-                ].map((color) => (
-                  <button
-                    key={color.name}
-                    onClick={() => setSelectedColor(selectedColor === color.hex ? '' : color.hex)}
-                    className="rounded-circle border-0 shadow-sm"
-                    style={{
-                      backgroundColor: color.hex,
-                      width: '28px',
-                      height: '28px',
-                      border: selectedColor === color.hex ? '3px solid var(--accent-red)' : '1px solid #CBD5E1',
-                      outline: 'none'
-                    }}
-                    title={color.name}
-                  />
-                ))}
-              </div>
-            </Form.Group>
-
-            {/* 5. Rating */}
-            <Form.Group className="mb-4">
-              <Form.Label className="fw-bold mb-2">Ratings</Form.Label>
-              {[4, 3].map((rate) => (
-                <Form.Check
-                  key={rate}
-                  type="checkbox"
-                  id={`rating-${rate}`}
-                  label={`${rate} Star & Above`}
-                  checked={selectedRating === rate.toString()}
-                  onChange={() => setSelectedRating(selectedRating === rate.toString() ? '' : rate.toString())}
-                  className="mb-2"
-                />
-              ))}
-            </Form.Group>
-
-            {/* 6. Availability */}
-            <Form.Group className="mb-2">
-              <Form.Label className="fw-bold mb-2">Availability</Form.Label>
-              <Form.Check
-                type="checkbox"
-                id="stock-in"
-                label="In Stock"
-                checked={availability === 'inStock'}
-                onChange={() => setAvailability(availability === 'inStock' ? '' : 'inStock')}
-                className="mb-2"
-              />
-              <Form.Check
-                type="checkbox"
-                id="stock-out"
-                label="Out of Stock"
-                checked={availability === 'outOfStock'}
-                onChange={() => setAvailability(availability === 'outOfStock' ? '' : 'outOfStock')}
-              />
-            </Form.Group>
-
+        <Col lg={3} className="shop-sidebar-col">
+          {/* Backdrop for mobile drawer */}
+          {showFilters && <div className="shop-filter-backdrop d-lg-none" onClick={() => setShowFilters(false)} />}
+          <div className={`shop-filter-col${showFilters ? ' show' : ''}`}>
+            {filterPanel}
           </div>
         </Col>
 
         {/* TOP SORT BAR & PRODUCT LIST GRID */}
-        <Col lg={9}>
+        <Col lg={9} className="shop-content-col">
           <div className="d-flex flex-column gap-4">
-            
+
             {/* Top Sort Header */}
-            <div className="glass-panel p-3 bg-white d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
-              <div style={{ fontSize: '15px', color: 'var(--text-muted)' }}>
-                Showing <span className="fw-bold text-dark">{products.length}</span> of <span className="fw-bold text-dark">{totalProducts}</span> items
+            <div className="shop-toolbar">
+              <div className="shop-toolbar-count">
+                <span className="shop-toolbar-count-prefix">Showing </span><span>{products.length}</span> of <span>{totalProducts}</span> items
               </div>
-              
-              <div className="d-flex align-items-center gap-2">
-                <span className="text-nowrap text-muted" style={{ fontSize: '14px' }}>Sort By:</span>
+
+              <button
+                type="button"
+                className="shop-filter-trigger d-lg-none"
+                onClick={() => setShowFilters(true)}
+                aria-label="Filters & Sort"
+                title="Filters & Sort"
+              >
+                <IoFilterOutline size={20} />
+              </button>
+
+              <div className="shop-toolbar-sort">
+                <span className="shop-toolbar-sort-label">Sort By</span>
                 <Form.Select
                   size="sm"
+                  className="shop-sort-select"
                   value={sortParam}
                   onChange={(e) => updateUrlParam('sort', e.target.value)}
-                  style={{ width: '180px', borderRadius: '8px', padding: '6px 12px' }}
                 >
                   <option value="newest">New Arrivals</option>
                   <option value="popular">Popularity</option>
@@ -365,31 +397,37 @@ function ShopContent() {
 
             {/* Product Grid */}
             {isLoading ? (
-              <Row className="g-4">
+              <Row className="g-2 g-md-3">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <Col key={i} md={4} sm={6}>
-                    <Card className="border-0 shadow-sm rounded-4 p-3" style={{ height: '380px' }}>
-                      <div className="skeleton rounded-4 mb-3" style={{ height: '220px' }}></div>
-                      <div className="skeleton mb-2" style={{ height: '20px', width: '80%' }}></div>
-                      <div className="skeleton mb-3" style={{ height: '15px', width: '50%' }}></div>
-                      <div className="skeleton" style={{ height: '35px' }}></div>
-                    </Card>
+                  <Col key={i} md={4} sm={6} xs={6}>
+                    <div className="shop-skeleton-card">
+                      <div className="skeleton shop-skeleton-img" />
+                      <div className="skeleton mb-2" style={{ height: '16px', width: '80%' }} />
+                      <div className="skeleton" style={{ height: '18px', width: '50%' }} />
+                    </div>
                   </Col>
                 ))}
               </Row>
             ) : error ? (
-              <Alert variant="danger" className="text-center py-5 border-0 shadow-sm rounded-4 bg-white">
-                <h5 className="fw-bold text-danger mb-2">Database Connection Failed</h5>
-                <p className="text-muted mb-0 small">
-                  We are unable to load apparel items right now. Please ensure the backend database is connected and active.
+              <div className="shop-state-panel">
+                <div className="shop-state-icon shop-state-icon--error">
+                  <IoStorefrontOutline size={28} />
+                </div>
+                <h5 className="shop-state-title">Unable to Load Products</h5>
+                <p className="shop-state-text">
+                  We couldn't load apparel items right now. Please ensure the backend is connected and try again.
                 </p>
-              </Alert>
+              </div>
             ) : products.length === 0 ? (
-              <div className="text-center py-5 bg-white rounded-4 shadow-sm">
-                <IoSearch size={48} className="text-muted mb-3" />
-                <h5 className="fw-bold">No Products Found</h5>
-                <p className="text-muted">Try adjusting your filters or search terms.</p>
-                <Button variant="danger" size="sm" onClick={clearAllFilters}>Reset Search</Button>
+              <div className="shop-state-panel">
+                <div className="shop-state-icon">
+                  <IoSearch size={28} />
+                </div>
+                <h5 className="shop-state-title">No Products Found</h5>
+                <p className="shop-state-text">Try adjusting your filters or search terms.</p>
+                <button type="button" className="shop-state-btn" onClick={clearAllFilters}>
+                  Reset Filters
+                </button>
               </div>
             ) : (
               <>
@@ -498,39 +536,16 @@ function ShopContent() {
                   })}
                 </Row>
 
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="d-flex justify-content-center mt-5">
-                    <Pagination>
-                      <Pagination.Prev
-                        disabled={currentPage === 1}
-                        onClick={() => {
-                          setCurrentPage(currentPage - 1);
-                          updateUrlParam('page', (currentPage - 1).toString());
-                        }}
-                      />
-                      {[...Array(totalPages)].map((_, idx) => (
-                        <Pagination.Item
-                          key={idx + 1}
-                          active={currentPage === idx + 1}
-                          onClick={() => {
-                            setCurrentPage(idx + 1);
-                            updateUrlParam('page', (idx + 1).toString());
-                          }}
-                        >
-                          {idx + 1}
-                        </Pagination.Item>
-                      ))}
-                      <Pagination.Next
-                        disabled={currentPage === totalPages}
-                        onClick={() => {
-                          setCurrentPage(currentPage + 1);
-                          updateUrlParam('page', (currentPage + 1).toString());
-                        }}
-                      />
-                    </Pagination>
-                  </div>
-                )}
+                {/* Infinite scroll sentinel */}
+                <div ref={loadMoreRef} className="shop-load-more-sentinel">
+                  {isFetchingNextPage && (
+                    <div className="shop-load-more-spinner">
+                      <span className="shop-load-more-dot" />
+                      <span className="shop-load-more-dot" />
+                      <span className="shop-load-more-dot" />
+                    </div>
+                  )}
+                </div>
               </>
             )}
 
@@ -578,12 +593,6 @@ function ShopContent() {
         </Modal.Body>
       </Modal>
 
-      <style>{`
-        .scale-hover-img {
-          transition: transform 0.5s ease;
-        }
-       
-      `}</style>
     </Container>
   );
 }

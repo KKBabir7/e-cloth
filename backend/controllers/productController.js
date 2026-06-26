@@ -1,6 +1,17 @@
 const Product = require('../models/Product');
+const mongoose = require('mongoose');
 const { invalidateProductCache } = require('../middleware/cache');
 const { broadcast } = require('../utils/sseManager');
+
+const findProductByIdOrSlug = async (id) => {
+  if (mongoose.Types.ObjectId.isValid(id)) {
+    const product = await Product.findById(id);
+    if (product) return product;
+  }
+  return Product.findOne({ slug: id });
+};
+
+const escapeRegex = (str) => String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const LIST_FIELDS = [
   'name',
@@ -48,9 +59,11 @@ const getProducts = async (req, res) => {
       ];
     }
 
-    // 2. Category Filter
+    // 2. Category Filter — case-insensitive exact match so legacy products
+    // saved with display-cased categories (e.g. "Polo") still match the
+    // lowercase category slug (e.g. "polo") used by the storefront filters.
     if (category) {
-      queryObj.category = category;
+      queryObj.category = { $regex: `^${escapeRegex(category)}$`, $options: 'i' };
     }
 
     // 3. Price Filter
@@ -103,13 +116,33 @@ const getProducts = async (req, res) => {
     const skip = (pageNum - 1) * limitNum;
 
     // Execute queries
-    const total = await Product.countDocuments(queryObj);
-    const products = await Product.find(queryObj)
-      .select(LIST_FIELDS)
-      .sort(sortObj)
-      .skip(skip)
-      .limit(limitNum)
-      .lean();
+    const boundsQuery = {};
+    if (category) boundsQuery.category = { $regex: `^${escapeRegex(category)}$`, $options: 'i' };
+
+    const [total, products, priceBoundsResult] = await Promise.all([
+      Product.countDocuments(queryObj),
+      Product.find(queryObj)
+        .select(LIST_FIELDS)
+        .sort(sortObj)
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      Product.aggregate([
+        { $match: boundsQuery },
+        {
+          $group: {
+            _id: null,
+            minPrice: { $min: '$price' },
+            maxPrice: { $max: '$price' }
+          }
+        }
+      ])
+    ]);
+
+    const priceBounds = {
+      min: priceBoundsResult[0]?.minPrice ?? 0,
+      max: priceBoundsResult[0]?.maxPrice ?? 0
+    };
 
     res.status(200).json({
       success: true,
@@ -117,6 +150,7 @@ const getProducts = async (req, res) => {
       total,
       page: pageNum,
       pages: Math.ceil(total / limitNum),
+      priceBounds,
       products
     });
   } catch (error) {
@@ -319,26 +353,27 @@ const deleteProduct = async (req, res) => {
 /**
  * @desc    Add product review
  * @route   POST /api/products/:id/reviews
- * @access  Public
+ * @access  Public (logged-in users use account name)
  */
 const addProductReview = async (req, res) => {
   try {
     const { name, rating, comment } = req.body;
     const { id } = req.params;
 
-    if (!name || !rating || !comment) {
-      return res.status(400).json({ success: false, message: 'Please provide reviewer name, rating (1-5), and review comment' });
+    const reviewerName = req.user?.name || name?.trim();
+    if (!reviewerName || !rating || !comment?.trim()) {
+      return res.status(400).json({ success: false, message: 'Please provide your name, rating (1-5), and review comment' });
     }
 
-    const product = await Product.findById(id);
+    const product = await findProductByIdOrSlug(id);
     if (!product) {
       return res.status(404).json({ success: false, message: 'Product not found' });
     }
 
     const review = {
-      name,
+      name: reviewerName,
       rating: Number(rating),
-      comment,
+      comment: comment.trim(),
       createdAt: new Date()
     };
 

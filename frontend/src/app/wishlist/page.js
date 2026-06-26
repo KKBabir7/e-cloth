@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import BrandLoader from '../../components/BrandLoader';
 import { Container, Row, Col, Card, Button, Modal } from 'react-bootstrap';
-import { IoHeart, IoTrashOutline, IoCartOutline, IoHeartOutline } from 'react-icons/io5';
+import { IoHeart, IoTrashOutline, IoCartOutline, IoHeartOutline, IoArrowForward } from 'react-icons/io5';
 import { FiZoomIn } from 'react-icons/fi';
 import { useSelector, useDispatch } from 'react-redux';
 import { getBackendUrl, getProductImageUrl } from '../../utils/api';
@@ -90,14 +90,23 @@ export default function WishlistPage() {
 
   if (wishlistItems.length === 0) {
     return (
-      <Container className="py-5 text-center" style={{ minHeight: '60vh' }}>
-        <div className="py-5">
-          <IoHeartOutline size={80} className="text-muted mb-4 opacity-50" />
-          <h2 className="fw-bold mb-3" style={{ color: 'var(--primary-navy)' }}>Your Wishlist is Empty</h2>
-          <p className="text-muted mb-4">Add your favorite traditional apparel designs to read/save them later.</p>
-          <Link href="/shop" passHref legacyBehavior>
-            <Button variant="danger" className="btn-premium-accent btn-lg px-5">Browse Shop Collection</Button>
-          </Link>
+      <Container className="d-flex align-items-center justify-content-center" style={{ minHeight: '70vh' }}>
+        <div className="cart-empty-card text-center">
+          <span className="cart-empty-icon">
+            <IoHeartOutline size={42} />
+          </span>
+          <h3 className="cart-empty-title">Your Wishlist is Empty</h3>
+          <p className="cart-empty-text">
+            Save your favorite apparel and traditional designs here so you can easily find and shop them later.
+          </p>
+          <div className="cart-empty-actions">
+            <Link href="/shop" className="cart-empty-btn-primary">
+              Browse Shop Collection <IoArrowForward size={18} />
+            </Link>
+            <Link href="/" className="cart-empty-btn-ghost">
+              Back to Home
+            </Link>
+          </div>
         </div>
       </Container>
     );
@@ -106,7 +115,7 @@ export default function WishlistPage() {
   return (
     <Container className="py-5" style={{ minHeight: '75vh' }}>
       <h2 className="fw-bold mb-5" style={{ color: 'var(--primary-navy)' }}>
-        My <span style={{ color: 'var(--accent-red)' }}>Wishlist</span>
+        My Wishlist
       </h2>
 
       <Row className="g-2 g-md-3">

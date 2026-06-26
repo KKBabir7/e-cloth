@@ -7,7 +7,7 @@ import BrandLoader from '../../components/BrandLoader';
 import { useRouter } from 'next/navigation';
 import { useSelector, useDispatch } from 'react-redux';
 import { Container, Row, Col, Card, Table, Button, Form, Badge, InputGroup } from 'react-bootstrap';
-import { IoTrashOutline, IoBagCheck, IoArrowForward, IoGiftOutline, IoShirtOutline } from 'react-icons/io5';
+import { IoTrashOutline, IoBagCheck, IoArrowForward, IoGiftOutline, IoShirtOutline, IoBagHandleOutline } from 'react-icons/io5';
 import { removeFromCart, updateCartQty, applyCouponCode, removeCouponCode } from '../../store/cartSlice';
 import { useUI } from '../../context/UIContext';
 import axios from 'axios';
@@ -168,20 +168,23 @@ export default function CartPage() {
 
   if (items.length === 0) {
     return (
-      <Container className="py-5 text-center d-flex align-items-center justify-content-center" style={{ minHeight: '65vh' }}>
-        <div className="py-5 glass-panel p-5 bg-white shadow-sm" style={{ maxWidth: '500px' }}>
-          <div className="d-inline-flex align-items-center justify-content-center rounded-circle mb-4 bg-light shadow-sm" style={{ width: '100px', height: '100px', border: '1px solid #E2E8F0' }}>
-            <IoShirtOutline size={48} style={{ color: 'var(--primary-navy)' }} />
-          </div>
-          <h3 className="fw-bold mb-2" style={{ color: 'var(--primary-navy)' }}>Your shopping bag is empty</h3>
-          <p className="text-muted mb-4 px-3" style={{ fontSize: '14.5px', lineHeight: '1.6' }}>
-            It looks like you haven't added any items to your cart yet. Explore our premium cotton collections and customize your own apparel.
+      <Container className="d-flex align-items-center justify-content-center" style={{ minHeight: '70vh' }}>
+        <div className="cart-empty-card text-center">
+          <span className="cart-empty-icon">
+            <IoBagHandleOutline size={42} />
+          </span>
+          <h3 className="cart-empty-title">Your shopping bag is empty</h3>
+          <p className="cart-empty-text">
+            Looks like you haven't added anything yet. Explore our premium cotton collections and customize your own apparel.
           </p>
-          <Link href="/shop" passHref legacyBehavior>
-            <Button className="btn-premium-accent btn-lg px-5 border-0 text-white rounded-3 fw-bold d-inline-flex align-items-center gap-2">
-              Explore Collections <IoArrowForward />
-            </Button>
-          </Link>
+          <div className="cart-empty-actions">
+            <Link href="/shop" className="cart-empty-btn-primary">
+              Explore Collections <IoArrowForward size={18} />
+            </Link>
+            <Link href="/" className="cart-empty-btn-ghost">
+              Back to Home
+            </Link>
+          </div>
         </div>
       </Container>
     );
@@ -207,17 +210,16 @@ export default function CartPage() {
         </div>
       </div>
 
-      <div className="d-flex align-items-baseline gap-3 mb-4 flex-wrap">
-        <h3 className="fw-bold m-0" style={{ color: 'var(--primary-navy)', letterSpacing: '0.3px' }}>Your Shopping Bag</h3>
-        <span className="text-secondary fw-semibold">
-          ({items.reduce((acc, item) => acc + item.quantity, 0)} {items.reduce((acc, item) => acc + item.quantity, 0) === 1 ? 'item' : 'items'})
-        </span>
-      </div>
-
-      <Row className="gy-4">
+      <Row className="gy-4 cart-row">
         
         {/* LEFT SIDE: ITEMS LIST TABLE */}
-        <Col lg={8}>
+        <Col lg={8} className="order-2 order-lg-1 cart-bag-col">
+          <div className="d-flex align-items-baseline gap-3 mb-4 flex-wrap">
+            <h3 className="cart-bag-title fw-bold m-0" style={{ color: 'var(--primary-navy)', letterSpacing: '0.3px' }}>Your Shopping</h3>
+            <span className="text-secondary fw-semibold">
+              ({items.reduce((acc, item) => acc + item.quantity, 0)} {items.reduce((acc, item) => acc + item.quantity, 0) === 1 ? 'item' : 'items'})
+            </span>
+          </div>
           <div className="glass-panel cart-panel bg-white shadow-sm overflow-hidden border">
             {/* Desktop table */}
             <div className="d-none d-lg-block p-4">
@@ -264,11 +266,11 @@ export default function CartPage() {
         </Col>
  
         {/* RIGHT SIDE: TOTAL BILLS SUMMARY & COUPON */}
-        <Col lg={4}>
-          <div className="d-flex flex-column gap-4">
+        <Col lg={4} className="order-1 order-lg-2 cart-sidebar-col">
+          <div className="d-flex flex-column gap-4 cart-sidebar-inner">
             
             {/* Promo coupon inputs */}
-            <div className="glass-panel p-3 p-md-4 bg-white border cart-summary-panel">
+            <div className="glass-panel p-3 p-md-4 bg-white border cart-summary-panel cart-promo-panel">
               <h6 className="fw-bold mb-3 d-flex align-items-center gap-2" style={{ color: 'var(--primary-navy)', fontSize: '14.5px' }}>
                 <IoGiftOutline size={18} /> Apply Promo Code
               </h6>
@@ -307,7 +309,7 @@ export default function CartPage() {
             </div>
  
             {/* Calculations Summary */}
-            <div className="glass-panel p-3 p-md-4 bg-white border cart-summary-panel">
+            <div className="glass-panel p-3 p-md-4 bg-white border cart-summary-panel cart-order-panel">
               <h5 className="fw-bold mb-4" style={{ color: 'var(--primary-navy)', fontSize: '16px', letterSpacing: '0.3px' }}>Order Summary</h5>
               
               <div className="d-flex flex-column gap-3 mb-4" style={{ fontSize: '14px' }}>
@@ -339,7 +341,7 @@ export default function CartPage() {
               {/* Checkout Trigger */}
               <Button
                 onClick={handleCheckout}
-                className="w-100 btn-premium-accent py-3 justify-content-center bg-red-gradient border-0 text-white rounded-3 fw-bold d-flex align-items-center gap-2"
+                className="w-100 btn-premium-accent py-3 justify-content-center bg-red-gradient border-0 text-white rounded-3 fw-bold d-flex align-items-center gap-2 cart-checkout-btn"
                 style={{ transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}
               >
                 <IoBagCheck size={20} /> Proceed to Checkout <IoArrowForward />
@@ -354,6 +356,46 @@ export default function CartPage() {
       <style>{`
         .border-bottom-soft {
           border-bottom: 1px solid #F1F5F9;
+        }
+        @media (max-width: 991.98px) {
+          .cart-row {
+            --bs-gutter-x: 0;
+            --bs-gutter-y: 0;
+            margin-top: 0;
+          }
+          .cart-sidebar-col,
+          .cart-sidebar-inner {
+            display: contents !important;
+          }
+          .cart-bag-col {
+            order: 1;
+            width: 100%;
+          }
+          .cart-order-panel {
+            order: 2;
+            width: 100%;
+            margin-top: 1.5rem;
+          }
+          .cart-promo-panel {
+            order: 3;
+            width: 100%;
+            margin-top: 1.5rem;
+          }
+        }
+        @media (max-width: 575.98px) {
+          .cart-bag-title {
+            font-size: 1.25rem;
+          }
+          .cart-checkout-btn {
+            padding-top: 0.6rem !important;
+            padding-bottom: 0.6rem !important;
+            font-size: 13.5px;
+            gap: 0.4rem !important;
+          }
+          .cart-checkout-btn svg {
+            width: 16px;
+            height: 16px;
+          }
         }
       `}</style>
     </Container>

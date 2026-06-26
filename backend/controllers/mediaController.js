@@ -1,6 +1,7 @@
 const Media = require('../models/Media');
 const path = require('path');
 const fs = require('fs');
+const { broadcast } = require('../utils/sseManager');
 
 /**
  * @desc    Upload an image to media library
@@ -22,6 +23,7 @@ const uploadMedia = async (req, res) => {
       size: req.file.size
     });
 
+    broadcast('media');
     res.status(201).json({
       success: true,
       message: 'File uploaded successfully',
@@ -76,6 +78,7 @@ const deleteMedia = async (req, res) => {
 
     await Media.findByIdAndDelete(req.params.id);
 
+    broadcast('media');
     res.status(200).json({
       success: true,
       message: 'Media asset deleted successfully'

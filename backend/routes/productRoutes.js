@@ -11,13 +11,13 @@ const {
   updateProductReview
 } = require('../controllers/productController');
 // End of product routes configuration.
-const { protect, authorizeRoles } = require('../middleware/auth');
+const { protect, optionalProtect, authorizeRoles } = require('../middleware/auth');
 const { productCache } = require('../middleware/cache');
 
 // Public catalog and detailed view
 router.get('/', productCache, getProducts);
 router.get('/:id', getProductById);
-router.post('/:id/reviews', addProductReview);
+router.post('/:id/reviews', optionalProtect, addProductReview);
 
 // Admin controls (RBAC restricted)
 router.post('/', protect, authorizeRoles('superAdmin', 'admin', 'manager'), createProduct);
