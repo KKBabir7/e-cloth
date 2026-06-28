@@ -357,12 +357,21 @@ const deleteProduct = async (req, res) => {
  */
 const addProductReview = async (req, res) => {
   try {
-    const { name, rating, comment } = req.body;
+    const { rating, comment, name } = req.body;
     const { id } = req.params;
 
-    const reviewerName = req.user?.name || name?.trim();
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Please login to submit a review' });
+    }
+
+    let reviewerName = req.user.name;
+    const isAdmin = req.user.role === 'admin' || req.user.role === 'superAdmin';
+    if (isAdmin && name && name.trim()) {
+      reviewerName = name.trim();
+    }
+
     if (!reviewerName || !rating || !comment?.trim()) {
-      return res.status(400).json({ success: false, message: 'Please provide your name, rating (1-5), and review comment' });
+      return res.status(400).json({ success: false, message: 'Please provide rating (1-5) and review comment' });
     }
 
     const product = await findProductByIdOrSlug(id);
@@ -484,6 +493,43 @@ const updateProductReview = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Get all reviews across all products (Admin only)
+ * @route   GET /api/products/reviews/all
+ * @access  Private/Admin
+ */
+const getAllReviews = async (req, res) => {
+  try {
+    const products = await Product.find({ 'reviews.0': { $exists: true } }, 'name reviews').lean();
+    
+    // Flatten reviews and attach product info
+    const reviews = [];
+    products.forEach(product => {
+      if (product.reviews) {
+        product.reviews.forEach(review => {
+          reviews.push({
+            _id: review._id,
+            productId: product._id,
+            productName: product.name,
+            name: review.name,
+            rating: review.rating,
+            comment: review.comment,
+            createdAt: review.createdAt
+          });
+        });
+      }
+    });
+
+    // Sort by newest first
+    reviews.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    res.status(200).json({ success: true, count: reviews.length, reviews });
+  } catch (error) {
+    console.error('Get all reviews error:', error.message);
+    res.status(500).json({ success: false, message: 'Server error fetching reviews: ' + error.message });
+  }
+};
+
 module.exports = {
   getProducts,
   getProductById,
@@ -492,5 +538,6 @@ module.exports = {
   deleteProduct,
   addProductReview,
   deleteProductReview,
-  updateProductReview
+  updateProductReview,
+  getAllReviews
 };

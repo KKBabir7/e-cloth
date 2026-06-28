@@ -10,7 +10,7 @@ import {
   IoShieldCheckmarkOutline, IoLogoFacebook, IoLogoInstagram,
   IoChevronForward, IoStarSharp, IoShareSocialOutline,
   IoCheckmarkCircle, IoReturnDownBack, IoTimeOutline,
-  IoScanOutline, IoColorPaletteOutline
+  IoScanOutline, IoColorPaletteOutline, IoLockClosedOutline
 } from 'react-icons/io5';
 import { FaXTwitter, FaPinterest } from 'react-icons/fa6';
 import { useDispatch, useSelector } from 'react-redux';
@@ -827,74 +827,68 @@ export default function ProductDetailsPage() {
                   <div className="product-review-form">
                     <div className="product-review-form-header">
                       <h6 className="product-review-form-title">Write a Review</h6>
-                      <p className="product-review-form-sub">
-                        {isAuthenticated
-                          ? <>Sharing as <strong>{user?.name}</strong></>
-                          : 'Share your experience to help others. No login required.'}
-                      </p>
                     </div>
 
-                    <form onSubmit={handleReviewSubmit}>
-                      <div className="mb-3">
-                        <label className="product-review-label">Your Rating *</label>
-                        <div className="product-review-star-input">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <button
-                              key={star}
-                              type="button"
-                              className={`product-review-star-btn${star <= (hoverRating || newReviewRating) ? ' active' : ''}`}
-                              onClick={() => setNewReviewRating(star)}
-                              onMouseEnter={() => setHoverRating(star)}
-                              onMouseLeave={() => setHoverRating(0)}
-                              aria-label={`Rate ${star} stars`}
-                            >
-                              <IoStarSharp size={26} />
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                    {isAuthenticated ? (
+                      <form onSubmit={handleReviewSubmit}>
+                        <p className="product-review-form-sub mb-3" style={{ fontSize: '13px' }}>
+                          Sharing as <strong>{user?.name || 'Customer'}</strong>
+                        </p>
 
-                      {!isAuthenticated && (
                         <div className="mb-3">
-                          <label className="product-review-label">Your Name *</label>
-                          <input
-                            type="text"
+                          <label className="product-review-label">Your Rating *</label>
+                          <div className="product-review-star-input">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <button
+                                key={star}
+                                type="button"
+                                className={`product-review-star-btn${star <= (hoverRating || newReviewRating) ? ' active' : ''}`}
+                                onClick={() => setNewReviewRating(star)}
+                                onMouseEnter={() => setHoverRating(star)}
+                                onMouseLeave={() => setHoverRating(0)}
+                                aria-label={`Rate ${star} stars`}
+                              >
+                                <IoStarSharp size={26} />
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="mb-4">
+                          <label className="product-review-label">Review Comment *</label>
+                          <textarea
+                            rows={3}
                             required
-                            placeholder="e.g. Tanvir Rahman"
-                            value={newReviewName}
-                            onChange={(e) => setNewReviewName(e.target.value)}
-                            className="form-control-premium product-review-input"
+                            placeholder="What did you like or dislike about this product?"
+                            value={newReviewComment}
+                            onChange={(e) => setNewReviewComment(e.target.value)}
+                            className="form-control-premium product-review-input product-review-textarea"
                           />
                         </div>
-                      )}
 
-                      <div className="mb-4">
-                        <label className="product-review-label">Review Comment *</label>
-                        <textarea
-                          rows={3}
-                          required
-                          placeholder="What did you like or dislike about this product?"
-                          value={newReviewComment}
-                          onChange={(e) => setNewReviewComment(e.target.value)}
-                          className="form-control-premium product-review-input product-review-textarea"
-                        />
-                      </div>
-
-                      <button
-                        type="submit"
-                        disabled={submittingReview}
-                        className="product-review-submit"
-                      >
-                        {submittingReview ? 'Submitting...' : 'Submit Review'}
-                      </button>
-
-                      {!isAuthenticated && (
-                        <p className="product-review-login-hint">
-                          Have an account?{' '}
-                          <Link href={loginRedirect}>Login</Link>
+                        <button
+                          type="submit"
+                          disabled={submittingReview}
+                          className="product-review-submit w-100"
+                        >
+                          {submittingReview ? 'Submitting...' : 'Submit Review'}
+                        </button>
+                      </form>
+                    ) : (
+                      <div className="text-center py-4 px-3 bg-light rounded-4 border border-dashed d-flex flex-column align-items-center justify-content-center gap-3">
+                        <div className="rounded-circle bg-danger bg-opacity-10 p-3 text-danger">
+                          <IoLockClosedOutline size={26} />
+                        </div>
+                        <p className="text-muted small mb-0 fw-semibold text-center" style={{ maxWidth: '240px' }}>
+                          You must be logged in to share your premium review and experience.
                         </p>
-                      )}
-                    </form>
+                        <Link href={loginRedirect} passHref legacyBehavior>
+                          <a className="btn btn-danger btn-premium-accent bg-red-gradient text-white border-0 px-4 py-2 fw-bold rounded-3 text-decoration-none shadow-sm" style={{ fontSize: '13px' }}>
+                            Login to Account
+                          </a>
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 </Col>
 

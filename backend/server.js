@@ -95,7 +95,7 @@ const eventRoutes = require('./routes/eventRoutes'); // Global SSE real-time str
 // - auth/cart/order and other mutable endpoints: no-store for real-time correctness
 app.use('/api', (req, res, next) => {
   const isReadOnlyCatalogRequest = req.method === 'GET' && (
-    req.path.startsWith('/products') ||
+    (req.path === '/products' || req.path === '/products/') ||
     req.path.startsWith('/categories') ||
     req.path.startsWith('/hero-slides') ||
     req.path.startsWith('/media')

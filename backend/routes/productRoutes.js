@@ -8,16 +8,20 @@ const {
   deleteProduct,
   addProductReview,
   deleteProductReview,
-  updateProductReview
+  updateProductReview,
+  getAllReviews
 } = require('../controllers/productController');
 // End of product routes configuration.
 const { protect, optionalProtect, authorizeRoles } = require('../middleware/auth');
 const { productCache } = require('../middleware/cache');
 
+// Admin review list (placed before /:id to prevent routing conflict)
+router.get('/reviews/all', protect, authorizeRoles('superAdmin', 'admin', 'manager'), getAllReviews);
+
 // Public catalog and detailed view
 router.get('/', productCache, getProducts);
 router.get('/:id', getProductById);
-router.post('/:id/reviews', optionalProtect, addProductReview);
+router.post('/:id/reviews', protect, addProductReview);
 
 // Admin controls (RBAC restricted)
 router.post('/', protect, authorizeRoles('superAdmin', 'admin', 'manager'), createProduct);
