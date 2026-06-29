@@ -20,6 +20,7 @@ import { useUI } from '../../../context/UIContext';
 import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
 import { getBackendUrl, getProductImageUrl } from '@/utils/api';
+import { getColorName } from '@/utils/imageColor';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { FreeMode, Navigation, A11y } from 'swiper/modules';
 import 'swiper/css';
@@ -535,15 +536,20 @@ export default function ProductDetailsPage() {
                 {/* Color Selector */}
                 {product.variants?.colors?.length > 0 && (
                   <div>
-                    <div className="mb-2">
-                      <span className="fw-bold" style={{ fontSize: '13.5px', color: 'var(--primary-navy)' }}>Color</span>
+                    <div className="mb-2 d-flex align-items-center gap-2">
+                      <span className="fw-bold" style={{ fontSize: '13.5px', color: 'var(--primary-navy)' }}>Color:</span>
+                      {selectedColor && (
+                        <span className="small text-muted fw-bold bg-light px-2 py-0.5 rounded border" style={{ fontSize: '12px' }}>
+                          {getColorName(selectedColor)}
+                        </span>
+                      )}
                     </div>
                     <div className="product-color-swatches">
                       {product.variants.colors.map((color) => (
                         <button
                           key={color}
                           type="button"
-                          title={color}
+                          title={getColorName(color)}
                           onClick={() => {
                             setSelectedColor(color);
                             const colorImgs = product.colorImages || {};

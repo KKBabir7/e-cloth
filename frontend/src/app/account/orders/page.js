@@ -8,6 +8,7 @@ import { useUI } from '../../../context/UIContext';
 import axios from 'axios';
 import { useQuery } from '@tanstack/react-query';
 import { getBackendUrl, getProductImageUrl } from '@/utils/api';
+import { getColorName } from '@/utils/imageColor';
 
 export default function AccountOrdersPage() {
   const { showToast } = useUI();
@@ -136,7 +137,9 @@ export default function AccountOrdersPage() {
                             <span className="fw-bold d-block" style={{ fontSize: '13px', maxWidth: '240px' }}>
                               {item.productId ? item.productId.name : 'Custom Designed T-Shirt'}
                             </span>
-                            <span className="text-muted" style={{ fontSize: '11px' }}>Size: {item.size} &times; {item.quantity}</span>
+                            <span className="text-muted" style={{ fontSize: '11px' }}>
+                              Size: {item.size} | Color: {getColorName(item.color)} &times; {item.quantity}
+                            </span>
                           </div>
                         </div>
                         <span className="fw-bold" style={{ fontSize: '13.5px', color: 'var(--primary-navy)' }}>৳{item.price * item.quantity}</span>

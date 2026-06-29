@@ -12,6 +12,7 @@ import { removeFromCart, updateCartQty, applyCouponCode, removeCouponCode } from
 import { useUI } from '../../context/UIContext';
 import axios from 'axios';
 import { getProductImageUrl } from '../../utils/api';
+import { getColorName } from '../../utils/imageColor';
 
 export default function CartPage() {
   const router = useRouter();
@@ -109,7 +110,9 @@ export default function CartPage() {
             <span
               className="rounded-circle border ms-1"
               style={{ backgroundColor: item.color, width: '12px', height: '12px', display: 'inline-block' }}
+              title={getColorName(item.color)}
             />
+            <strong className="text-dark ms-1" style={{ fontSize: '11.5px' }}>{getColorName(item.color)}</strong>
           </span>
           {item.isCustom && (
             <Badge bg="danger" className="bg-red-gradient border-0 py-1.5 px-2.5 rounded-2 text-white" style={{ fontSize: '10px', fontWeight: '600' }}>

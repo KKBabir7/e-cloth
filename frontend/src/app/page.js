@@ -6,10 +6,9 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Container, Row, Col, Card, Button, Badge, Modal } from 'react-bootstrap';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { Navigation, Pagination, Autoplay, A11y } from 'swiper/modules';
+import { Navigation, Autoplay, A11y } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
-import 'swiper/css/pagination';
 import { IoShirtOutline, IoCartOutline, IoHeartOutline, IoHeart, IoCheckmarkCircle, IoArrowForward, IoImageOutline, IoLayersOutline, IoFlashOutline, IoLockClosedOutline, IoRefreshOutline, IoStar, IoShieldCheckmarkOutline } from 'react-icons/io5';
 import { FiChevronLeft, FiChevronRight, FiZoomIn } from 'react-icons/fi';
 import { useDispatch, useSelector } from 'react-redux';
@@ -240,9 +239,8 @@ export default function HomePage() {
       {!slidesLoading && slides.length > 0 && (
         <section className="hero-swiper-section mb-0">
           <Swiper
-            modules={[Navigation, Pagination, Autoplay, A11y]}
+            modules={[Navigation, Autoplay, A11y]}
             navigation
-            pagination={{ clickable: true }}
             autoplay={{ delay: 4500, disableOnInteraction: false, pauseOnMouseEnter: true }}
             loop={slides.length > 1}
             grabCursor={true}

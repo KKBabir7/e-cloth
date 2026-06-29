@@ -13,6 +13,7 @@ import { addToCart } from '../../store/cartSlice';
 import { useUI } from '../../context/UIContext';
 import axios from 'axios';
 import { getBackendUrl } from '@/utils/api';
+import Tshirt3DViewer from '../../components/Tshirt3DViewer';
 
 // Main exported design customizer with Suspense boundary
 export default function DesignStudio() {
@@ -32,12 +33,18 @@ function DesignContent() {
 
   const productId = searchParams.get('productId') || '';
 
-  const canvasRef = useRef(null);
-  const [canvas, setCanvas] = useState(null);
+  const frontCanvasRef = useRef(null);
+  const backCanvasRef = useRef(null);
+  const [frontCanvas, setFrontCanvas] = useState(null);
+  const [backCanvas, setBackCanvas] = useState(null);
+  const [tshirtView, setTshirtView] = useState('front'); // front or back
   const [tshirtColor, setTshirtColor] = useState('#ffffff');
   const [activeTab, setActiveTab] = useState('text');
-  const [tshirtView, setTshirtView] = useState('front'); // front or back
   const [selectedSize, setSelectedSize] = useState('L');
+  const [displayMode, setDisplayMode] = useState('2d'); // 2d or 3d
+
+  // Derived active canvas instance
+  const canvas = tshirtView === 'front' ? frontCanvas : backCanvas;
 
   // Text Form States
   const [textInput, setTextInput] = useState('CUSTOMWEAR');
@@ -54,23 +61,40 @@ function DesignContent() {
   const [frontDesignJson, setFrontDesignJson] = useState(null);
   const [backDesignJson, setBackDesignJson] = useState(null);
 
-  // Initialize Fabric.js Canvas
+  // Initialize both Fabric.js Canvases
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Dynamically import Fabric to avoid SSR issues
     const fabric = require('fabric').fabric;
 
-    const fabricCanvas = new fabric.Canvas(canvasRef.current, {
+    const clampObject = (obj, maxHeight) => {
+      if (!obj) return;
+      const bounds = obj.getBoundingRect();
+      if (obj.left < 0) {
+        obj.left = 0;
+      } else if (obj.left + bounds.width > 240) {
+        obj.left = 240 - bounds.width;
+      }
+      if (obj.top < 0) {
+        obj.top = 0;
+      } else if (obj.top + bounds.height > maxHeight) {
+        obj.top = maxHeight - bounds.height;
+      }
+    };
+
+    // 1. Initialize Front Canvas
+    const fCanvas = new fabric.Canvas(frontCanvasRef.current, {
       width: 240,
-      height: 320,
+      height: 440,
       backgroundColor: 'transparent',
       selection: true
     });
+    setFrontCanvas(fCanvas);
 
-    setCanvas(fabricCanvas);
+    fCanvas.on('object:moving', (e) => clampObject(e.target, 440));
+    fCanvas.on('object:scaling', (e) => clampObject(e.target, 440));
 
-    // Initial Welcome Text
+    // Initial Welcome Text on Front
     const text = new fabric.IText('Your Text', {
       left: 60,
       top: 130,
@@ -79,35 +103,26 @@ function DesignContent() {
       fill: '#000000',
       editable: true
     });
-    fabricCanvas.add(text);
-    fabricCanvas.setActiveObject(text);
+    fCanvas.add(text);
+    fCanvas.setActiveObject(text);
+
+    // 2. Initialize Back Canvas
+    const bCanvas = new fabric.Canvas(backCanvasRef.current, {
+      width: 240,
+      height: 440,
+      backgroundColor: 'transparent',
+      selection: true
+    });
+    setBackCanvas(bCanvas);
+
+    bCanvas.on('object:moving', (e) => clampObject(e.target, 440));
+    bCanvas.on('object:scaling', (e) => clampObject(e.target, 440));
 
     return () => {
-      fabricCanvas.dispose();
+      fCanvas.dispose();
+      bCanvas.dispose();
     };
   }, []);
-
-  // Sync canvas background view to toggle
-  useEffect(() => {
-    if (!canvas) return;
-    
-    // Save current view state before switching
-    if (tshirtView === 'front') {
-      setBackDesignJson(canvas.toJSON());
-      if (frontDesignJson) {
-        canvas.loadFromJSON(frontDesignJson, () => canvas.renderAll());
-      } else {
-        canvas.clear();
-      }
-    } else {
-      setFrontDesignJson(canvas.toJSON());
-      if (backDesignJson) {
-        canvas.loadFromJSON(backDesignJson, () => canvas.renderAll());
-      } else {
-        canvas.clear();
-      }
-    }
-  }, [tshirtView]);
 
   // Add Layer: Text
   const handleAddText = () => {
@@ -263,15 +278,13 @@ function DesignContent() {
     return new Promise((resolve) => {
       img.onload = () => {
         // Draw prints precisely on standard placement coordinates
-        ctx.drawImage(img, 120, 100, 240, 320);
+        ctx.drawImage(img, 120, 50, 240, 440);
         resolve(tempCanvas.toDataURL('image/png'));
       };
     });
   };
 
-  const handleOpenPreview = async () => {
-    const dataUrl = await generatePreview();
-    setPreviewImgData(dataUrl);
+  const handleOpenPreview = () => {
     setShowPreview(true);
   };
 
@@ -297,7 +310,9 @@ function DesignContent() {
     try {
       showToast('Compiling custom layers and saving...', 'info');
       const previewImg = await generatePreview();
-      const canvasJson = canvas.toJSON();
+      const frontJson = frontCanvas ? frontCanvas.toJSON() : null;
+      const backJson = backCanvas ? backCanvas.toJSON() : null;
+      const canvasJson = { front: frontJson, back: backJson };
 
       // 1. Persist Custom Design layout in Backend DB
       const res = await axios.post(`${getBackendUrl()}/api/design/save`, {
@@ -477,60 +492,112 @@ function DesignContent() {
         <Col lg={6} className="text-center">
           <div className="glass-panel p-4 bg-white d-flex flex-column align-items-center justify-content-center relative" style={{ minHeight: '520px' }}>
             
-            {/* Double-Sided view toggle switcher */}
-            <div className="d-flex gap-2 mb-3 bg-light p-1 rounded-3">
-              <Button
-                variant={tshirtView === 'front' ? 'danger' : 'light'}
-                onClick={() => setTshirtView('front')}
-                size="sm"
-                className="px-3"
-              >
-                Front Chest View
-              </Button>
-              <Button
-                variant={tshirtView === 'back' ? 'danger' : 'light'}
-                onClick={() => setTshirtView('back')}
-                size="sm"
-                className="px-3"
-              >
-                Back Silhouette View
-              </Button>
-            </div>
-
-            {/* T-Shirt Canvas Composite Superimposition Frame */}
-            <div className="position-relative shadow rounded-4 overflow-hidden" style={{
-              width: '380px',
-              height: '420px',
-              backgroundColor: tshirtColor,
-              transition: 'background-color 0.3s ease'
-            }}>
-              
-              {/* T-Shirt mock frame outline vectors */}
-              <div className="position-absolute w-100 h-100 top-0 start-0 pointer-events-none" style={{
-                border: '14px solid rgba(15, 23, 42, 0.05)',
-                backgroundImage: 'radial-gradient(circle at center, transparent 70%, rgba(0,0,0,0.08) 100%)',
-                zIndex: 1
-              }} />
-
-              {/* Printable chest grid bounds marker */}
-              <div className="position-absolute border border-dashed border-danger border-opacity-50" style={{
-                width: '242px',
-                height: '322px',
-                top: '50px',
-                left: '69px',
-                zIndex: 2,
-                pointerEvents: 'none'
-              }}>
-                <span className="position-absolute badge bg-danger opacity-75" style={{ fontSize: '8px', top: '4px', left: '4px' }}>Print Area</span>
+            {/* Display Mode Switcher (2D Editor vs 3D Preview) */}
+            <div className="d-flex justify-content-between align-items-center w-100 mb-3 px-2 flex-wrap gap-2">
+              <div className="d-flex gap-2 bg-light p-1 rounded-3">
+                <Button
+                  variant={displayMode === '2d' ? 'dark' : 'light'}
+                  onClick={() => setDisplayMode('2d')}
+                  size="sm"
+                  className="px-3 fw-bold"
+                >
+                  2D Studio Editor
+                </Button>
+                <Button
+                  variant={displayMode === '3d' ? 'danger' : 'light'}
+                  onClick={() => setDisplayMode('3d')}
+                  size="sm"
+                  className={`px-3 fw-bold ${displayMode === '3d' ? 'bg-red-gradient border-0 text-white' : ''}`}
+                >
+                  3D Interactive Preview
+                </Button>
               </div>
 
-              {/* Absolute Canvas overlay wrapper */}
-              <div className="position-absolute" style={{
-                top: '50px',
-                left: '69px',
-                zIndex: 3
-              }}>
-                <canvas ref={canvasRef} />
+              <div className="d-flex gap-2 bg-light p-1 rounded-3">
+                <Button
+                  variant={tshirtView === 'front' ? 'danger' : 'light'}
+                  onClick={() => setTshirtView('front')}
+                  size="sm"
+                  className="px-2"
+                  style={{ fontSize: '12px' }}
+                >
+                  Front View
+                </Button>
+                <Button
+                  variant={tshirtView === 'back' ? 'danger' : 'light'}
+                  onClick={() => setTshirtView('back')}
+                  size="sm"
+                  className="px-2"
+                  style={{ fontSize: '12px' }}
+                >
+                  Back View
+                </Button>
+              </div>
+            </div>
+
+            {/* Unified T-Shirt 3D/2D Viewer Frame */}
+            <div 
+              className="position-relative shadow rounded-4 overflow-hidden" 
+              style={{
+                width: '460px',
+                height: '500px',
+                backgroundColor: '#F8FAFC',
+                border: '1px solid #E2E8F0'
+              }}
+            >
+              
+              {/* 3D Model Base Layer (Always visible, rotates only in 3D mode) */}
+              <div className="position-absolute w-100 h-100 top-0 start-0" style={{ zIndex: 1 }}>
+                <Tshirt3DViewer 
+                  tshirtColor={tshirtColor}
+                  tshirtView={tshirtView}
+                  frontFabricCanvas={frontCanvas}
+                  backFabricCanvas={backCanvas}
+                  visible={true}
+                  interactive={displayMode === '3d'}
+                />
+              </div>
+
+              {/* 2D Interactive Design Layer (Only overlays in 2D mode, transparent background) */}
+              <div 
+                className="position-absolute w-100 h-100 top-0 start-0" 
+                style={{ 
+                  zIndex: 2,
+                  display: displayMode === '2d' ? 'block' : 'none',
+                  pointerEvents: 'auto'
+                }}
+              >
+                {/* Printable chest grid bounds marker */}
+                <div className="position-absolute border border-dashed border-danger border-opacity-50" style={{
+                  width: '242px',
+                  height: '442px',
+                  top: '45px',
+                  left: '109px',
+                  zIndex: 3,
+                  pointerEvents: 'none'
+                }}>
+                  <span className="position-absolute badge bg-danger opacity-75" style={{ fontSize: '8px', top: '4px', left: '4px' }}>Print Area</span>
+                </div>
+
+                {/* Absolute Canvas overlay wrapper for Front */}
+                <div className="position-absolute" style={{
+                  top: '45px',
+                  left: '109px',
+                  zIndex: 4,
+                  display: tshirtView === 'front' ? 'block' : 'none'
+                }}>
+                  <canvas ref={frontCanvasRef} />
+                </div>
+
+                {/* Absolute Canvas overlay wrapper for Back */}
+                <div className="position-absolute" style={{
+                  top: '45px',
+                  left: '109px',
+                  zIndex: 4,
+                  display: tshirtView === 'back' ? 'block' : 'none'
+                }}>
+                  <canvas ref={backCanvasRef} />
+                </div>
               </div>
 
             </div>
@@ -621,29 +688,26 @@ function DesignContent() {
       </Row>
 
       {/* FULLSCREEN PREVIEW MODAL */}
-      <Modal show={showPreview} onHide={() => setShowPreview(false)} centered size="md">
+      <Modal show={showPreview} onHide={() => setShowPreview(false)} centered size="lg">
         <Modal.Header closeButton>
-          <Modal.Title className="fw-bold">Interactive Print Preview</Modal.Title>
+          <Modal.Title className="fw-bold text-slate-800">3D Real-time Inspection Studio</Modal.Title>
         </Modal.Header>
-        <Modal.Body className="text-center p-4">
-          {previewImgData && (
-            <img
-              src={previewImgData}
-              alt="fullscreen composite design preview"
-              className="img-fluid rounded shadow"
-              style={{ maxHeight: '420px', objectFit: 'contain' }}
-            />
-          )}
-          <p className="text-muted mt-3 small">Realistic representation of fabric base texture and double-stitch borders.</p>
+        <Modal.Body className="p-0 bg-light rounded-bottom overflow-hidden position-relative" style={{ height: '520px' }}>
+          <Tshirt3DViewer 
+            tshirtColor={tshirtColor}
+            tshirtView={tshirtView}
+            frontFabricCanvas={frontCanvas}
+            backFabricCanvas={backCanvas}
+            visible={showPreview}
+            interactive={true}
+          />
+          {/* Interactive hints watermark overlay */}
+          <div className="position-absolute bottom-0 start-50 translate-middle-x pb-3 text-center pointer-events-none" style={{ zIndex: 10 }}>
+            <span className="badge bg-dark bg-opacity-75 px-3 py-2 rounded-pill fw-semibold" style={{ fontSize: '11px' }}>
+              🖱️ Drag to rotate T-Shirt • 🔍 Scroll to zoom in/out
+            </span>
+          </div>
         </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" size="sm" onClick={() => setShowPreview(false)}>
-            Close
-          </Button>
-          <Button variant="danger" size="sm" className="bg-red-gradient" onClick={handleDownload}>
-            Download Composite PNG
-          </Button>
-        </Modal.Footer>
       </Modal>
 
       <style>{`

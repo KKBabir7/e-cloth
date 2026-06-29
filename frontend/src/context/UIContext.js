@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { IoCheckmarkCircle, IoAlertCircle, IoInformationCircle } from 'react-icons/io5';
 import { Modal, Button } from 'react-bootstrap';
 import { getProductImageUrl } from '@/utils/api';
+import { getColorName } from '@/utils/imageColor';
 import { useSelector } from 'react-redux';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, A11y } from 'swiper/modules';
@@ -237,7 +238,7 @@ const SelectOptionsModal = ({ product, onConfirm, onClose }) => {
         {colors.length > 0 && (
           <div className="mb-4 text-center">
             <span className="fw-semibold text-secondary d-block mb-2" style={{ fontSize: '13.5px' }}>
-              Choose Color
+              Choose Color{selectedColor ? `: ${getColorName(selectedColor)}` : ''}
             </span>
             <div className={`d-flex justify-content-center gap-2 flex-wrap options-modal-field${fieldErrors.color ? ' has-error' : ''}`}>
               {colors.map((color) => (
@@ -245,6 +246,7 @@ const SelectOptionsModal = ({ product, onConfirm, onClose }) => {
                   key={color}
                   type="button"
                   onClick={() => handleSelectColor(color)}
+                  title={getColorName(color)}
                   className="rounded-circle border-0 shadow-sm transition-smooth color-select-btn"
                   style={{
                     backgroundColor: color,

@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSelector, useDispatch } from 'react-redux';
 import { Container, Row, Col, Card, Form, Button, Badge, Modal, InputGroup } from 'react-bootstrap';
-import { IoBagCheck, IoPhonePortraitOutline, IoLocationOutline, IoCashOutline, IoCardOutline } from 'react-icons/io5';
+import { IoBagCheck, IoPhonePortraitOutline, IoLocationOutline, IoCashOutline, IoCardOutline, IoBagHandleOutline } from 'react-icons/io5';
 import { clearCart, updateDeliveryCharge } from '../../store/cartSlice';
 import { useUI } from '../../context/UIContext';
 import { validateBdPhone, normalizePhone, calculateDeliveryCharge } from '../../../../shared/utils';
@@ -155,11 +155,20 @@ export default function CheckoutPage() {
   if (items.length === 0) {
     return (
       <Container className="py-5 text-center d-flex align-items-center justify-content-center" style={{ minHeight: '65vh' }}>
-        <div className="py-5 glass-panel p-5 bg-white shadow-sm" style={{ maxWidth: '500px' }}>
-          <h3 className="fw-bold mb-3" style={{ color: 'var(--primary-navy)' }}>Your Checkout Cart is Empty</h3>
-          <p className="text-muted mb-4">Add products to your shopping bag before checking out.</p>
+        <div className="py-5 glass-panel p-5 bg-white shadow-sm" style={{ maxWidth: '500px', borderRadius: '24px', border: '1px solid #F1F5F9' }}>
+          <div className="rounded-circle bg-danger bg-opacity-10 p-4 text-danger d-inline-flex mb-4" style={{ width: 84, height: 84, alignItems: 'center', justifyContent: 'center' }}>
+            <IoBagHandleOutline size={38} className="text-danger" />
+          </div>
+          <h3 className="fw-extrabold mb-2" style={{ color: 'var(--primary-navy)', fontFamily: 'var(--font-outfit)', letterSpacing: '-0.3px', fontSize: '22px' }}>
+            Your Checkout Cart is Empty
+          </h3>
+          <p className="text-muted small mb-4 mx-auto" style={{ maxWidth: '320px', lineHeight: '1.6' }}>
+            Add products to your shopping bag before checking out.
+          </p>
           <Link href="/shop" passHref legacyBehavior>
-            <Button className="btn-premium-accent btn-lg px-5 border-0 text-white rounded-3 fw-bold">Shop Our Collections</Button>
+            <a className="btn btn-danger btn-premium-accent bg-red-gradient px-5 border-0 text-white rounded-3 fw-bold py-2.5 shadow-sm text-decoration-none" style={{ fontSize: '14px' }}>
+              Shop Our Collections
+            </a>
           </Link>
         </div>
       </Container>

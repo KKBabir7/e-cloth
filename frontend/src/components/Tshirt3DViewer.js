@@ -1,0 +1,529 @@
+'use client';
+
+import React, { useEffect, useRef, useState } from 'react';
+import { Spinner } from 'react-bootstrap';
+
+export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCanvas, backFabricCanvas, visible, interactive }) {
+  const containerRef = useRef(null);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  // Refs for camera animation and controls
+  const cameraRef = useRef(null);
+  const rendererRef = useRef(null);
+  const controlsRef = useRef(null);
+
+  // Refs for Three.js objects
+  const modelGroupRef = useRef(null);
+  const shirtMeshRef = useRef(null);
+  const decalMeshFrontRef = useRef(null);
+  const decalMeshBackRef = useRef(null);
+  const isFallbackRef = useRef(false);
+  const DecalGeometryClassRef = useRef(null);
+  const ThreeModuleRef = useRef(null);
+
+  // Camera animation target coordinates
+  const targetCameraXRef = useRef(0);
+  const targetCameraYRef = useRef(0.05);
+  const targetCameraZRef = useRef(0.95);
+  const isAnimatingCameraRef = useRef(false);
+
+  // Refs for double-sided canvas textures
+  const frontTextureRef = useRef(null);
+  const backTextureRef = useRef(null);
+
+  // Helper to project BOTH front and back design decals
+  const projectDecals = () => {
+    const THREE = ThreeModuleRef.current;
+    const DecalGeometry = DecalGeometryClassRef.current;
+    const mesh = shirtMeshRef.current;
+    const modelGroup = modelGroupRef.current;
+
+    const texFront = frontTextureRef.current;
+    const texBack = backTextureRef.current;
+
+    if (!THREE || !DecalGeometry || !mesh || !modelGroup || !texFront || !texBack) return;
+
+    // Remove existing decals
+    if (decalMeshFrontRef.current) {
+      modelGroup.remove(decalMeshFrontRef.current);
+      decalMeshFrontRef.current = null;
+    }
+    if (decalMeshBackRef.current) {
+      modelGroup.remove(decalMeshBackRef.current);
+      decalMeshBackRef.current = null;
+    }
+
+    // Hide decals in 2D mode to prevent ghosting/double image
+    if (!interactive) {
+      return;
+    }
+
+    const isFallback = isFallbackRef.current;
+    
+    // Front vs Back position coordinates
+    let zOffset = 0.08;
+    let yOffset = -0.02;
+
+    if (isFallback) {
+      zOffset = 0.042;
+    } else {
+      // Find bounds of the mesh to project the decal precisely on the centered mesh surface
+      const tempBox = new THREE.Box3().setFromObject(mesh);
+      const tempSize = new THREE.Vector3();
+      tempBox.getSize(tempSize);
+      zOffset = tempSize.z / 2 + 0.005; // slightly in front of the mesh surface
+    }
+
+    const size = isFallback
+      ? new THREE.Vector3(0.24, 0.44, 0.2)
+      : new THREE.Vector3(0.28, 0.51, 0.2);
+
+    try {
+      // 1. Project Front Decal (using front texture)
+      const posFront = new THREE.Vector3(0, yOffset, zOffset);
+      const rotFront = new THREE.Euler(0, 0, 0);
+      const geoFront = new DecalGeometry(mesh, posFront, rotFront, size);
+      const matFront = new THREE.MeshBasicMaterial({
+        map: texFront,
+        transparent: true,
+        depthTest: true,
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -4
+      });
+      const decalFront = new THREE.Mesh(geoFront, matFront);
+      decalMeshFrontRef.current = decalFront;
+      modelGroup.add(decalFront);
+
+      // 2. Project Back Decal (using back texture)
+      const posBack = new THREE.Vector3(0, yOffset, -zOffset);
+      const rotBack = new THREE.Euler(0, Math.PI, 0);
+      const geoBack = new DecalGeometry(mesh, posBack, rotBack, size);
+      const matBack = new THREE.MeshBasicMaterial({
+        map: texBack,
+        transparent: true,
+        depthTest: true,
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -4
+      });
+      const decalBack = new THREE.Mesh(geoBack, matBack);
+      decalMeshBackRef.current = decalBack;
+      modelGroup.add(decalBack);
+
+    } catch (e) {
+      console.warn('Failed to project decals', e);
+    }
+  };
+
+  // 1. Scene Initialization (runs once on mount / canvas bind)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    let active = true;
+    let renderer, scene, camera, controls;
+    let animationFrameId;
+
+    const initThree = async () => {
+      try {
+        const THREE = await import('three');
+        const { OrbitControls } = await import('three/examples/jsm/controls/OrbitControls.js');
+        const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
+        const { DecalGeometry } = await import('three/examples/jsm/geometries/DecalGeometry.js');
+
+        if (!active) return;
+
+        ThreeModuleRef.current = THREE;
+        DecalGeometryClassRef.current = DecalGeometry;
+
+        const container = containerRef.current;
+        if (!container) return;
+
+        // ── Scene Setup ──
+        scene = new THREE.Scene();
+        scene.background = null;
+
+        // ── Camera ──
+        camera = new THREE.PerspectiveCamera(40, container.clientWidth / container.clientHeight, 0.1, 100);
+        cameraRef.current = camera;
+        camera.position.set(0, 0.05, 0.95);
+
+        // ── Renderer ──
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        rendererRef.current = renderer;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+        container.appendChild(renderer.domElement);
+
+        // ── Controls ──
+        controls = new OrbitControls(camera, renderer.domElement);
+        controlsRef.current = controls;
+        controls.enabled = !!interactive;
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.enableZoom = true;
+        controls.minDistance = 0.45;
+        controls.maxDistance = 1.30;
+        controls.maxPolarAngle = Math.PI - 0.1;
+        controls.minPolarAngle = 0.1;
+
+        // Cancel camera auto-animation when user manually starts dragging
+        controls.addEventListener('start', () => {
+          isAnimatingCameraRef.current = false;
+        });
+
+        // ── Lighting ──
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+        scene.add(ambientLight);
+
+        const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight1.position.set(2, 4, 3);
+        scene.add(dirLight1);
+
+        const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
+        dirLight2.position.set(-2, 2, -3);
+        scene.add(dirLight2);
+
+        const pointLight = new THREE.PointLight(0xffffff, 0.35, 10);
+        pointLight.position.set(0, 0.2, 1.5);
+        scene.add(pointLight);
+
+        // Model container group
+        const modelGroup = new THREE.Group();
+        modelGroupRef.current = modelGroup;
+        scene.add(modelGroup);
+
+        // ── Initialize CanvasTextures directly from DOM Canvases ──
+        if (frontFabricCanvas) {
+          const texFront = new THREE.CanvasTexture(frontFabricCanvas.getElement());
+          texFront.anisotropy = 8;
+          texFront.colorSpace = THREE.SRGBColorSpace;
+          frontTextureRef.current = texFront;
+
+          frontFabricCanvas.on('after:render', () => {
+            if (frontTextureRef.current) frontTextureRef.current.needsUpdate = true;
+          });
+        }
+
+        if (backFabricCanvas) {
+          const texBack = new THREE.CanvasTexture(backFabricCanvas.getElement());
+          texBack.anisotropy = 8;
+          texBack.colorSpace = THREE.SRGBColorSpace;
+          backTextureRef.current = texBack;
+
+          backFabricCanvas.on('after:render', () => {
+            if (backTextureRef.current) backTextureRef.current.needsUpdate = true;
+          });
+        }
+
+        // ── Fallback Extruded 3D T-shirt (Beautiful Procedural Shape) ──
+        const loadProceduralShirt = () => {
+          isFallbackRef.current = true;
+          const baseMaterial = new THREE.MeshStandardMaterial({
+            color: new THREE.Color(tshirtColor),
+            roughness: 0.8,
+            metalness: 0.1
+          });
+
+          // T-Shirt 2D Silhouette shape
+          const shape = new THREE.Shape();
+          shape.moveTo(-0.19, -0.32); // bottom left
+          shape.lineTo(0.19, -0.32);  // bottom right
+          shape.lineTo(0.19, 0.02);   // armpit right
+          shape.lineTo(0.36, -0.08);  // sleeve bottom right
+          shape.lineTo(0.42, 0.04);   // sleeve end right
+          shape.lineTo(0.22, 0.22);   // shoulder right
+          shape.lineTo(0.09, 0.22);   // neck right
+          // neck cutout
+          shape.quadraticCurveTo(0, 0.12, -0.09, 0.22);
+          shape.lineTo(-0.22, 0.22);  // shoulder left
+          shape.lineTo(-0.42, 0.04);  // sleeve end left
+          shape.lineTo(-0.36, -0.08); // sleeve bottom left
+          shape.lineTo(-0.19, 0.02);  // armpit left
+          shape.closePath();
+
+          const extrudeSettings = {
+            depth: 0.055,
+            bevelEnabled: true,
+            bevelSegments: 6,
+            steps: 1,
+            bevelSize: 0.015,
+            bevelThickness: 0.015
+          };
+
+          const torsoGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+          torsoGeo.center(); // Center the geometry
+
+          const torso = new THREE.Mesh(torsoGeo, baseMaterial);
+          torso.castShadow = true;
+          torso.receiveShadow = true;
+          modelGroup.add(torso);
+
+          // collar ring
+          const collarGeo = new THREE.TorusGeometry(0.088, 0.011, 8, 32);
+          const collar = new THREE.Mesh(collarGeo, baseMaterial);
+          collar.position.set(0, 0.20, 0.025);
+          collar.rotation.x = Math.PI / 2.1;
+          modelGroup.add(collar);
+
+          // neck label tag on back side
+          const tagGeo = new THREE.BoxGeometry(0.04, 0.03, 0.005);
+          const tagMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0 });
+          const tag = new THREE.Mesh(tagGeo, tagMat);
+          tag.position.set(0, 0.19, -0.026);
+          modelGroup.add(tag);
+
+          shirtMeshRef.current = torso;
+          projectDecals();
+          setLoading(false);
+        };
+
+        // ── Load Local GLTF 3D T-shirt model ──
+        const loader = new GLTFLoader();
+        const modelUrl = '/shirt_baked.glb';
+
+        loader.load(
+          modelUrl,
+          (gltf) => {
+            if (!active) return;
+            const model = gltf.scene;
+
+            // Auto-center the model using Box3
+            const box = new THREE.Box3().setFromObject(model);
+            const center = new THREE.Vector3();
+            box.getCenter(center);
+            model.position.x = -center.x;
+            model.position.y = -center.y;
+            model.position.z = -center.z;
+
+            // Auto-scale model to fit a standard unit height of 0.68
+            const size = new THREE.Vector3();
+            box.getSize(size);
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const targetScale = 0.68 / maxDim;
+            model.scale.set(targetScale, targetScale, targetScale);
+
+            model.traverse((child) => {
+              if (child.isMesh) {
+                shirtMeshRef.current = child;
+                child.castShadow = true;
+                child.receiveShadow = true;
+
+                // Create realistic cotton fabric material
+                child.material = new THREE.MeshStandardMaterial({
+                  color: new THREE.Color(tshirtColor),
+                  roughness: 0.8,
+                  metalness: 0.1
+                });
+              }
+            });
+
+            modelGroup.add(model);
+            
+            projectDecals();
+            setLoading(false);
+          },
+          undefined,
+          (err) => {
+            console.warn('GLTF loading error, falling back to procedural 3D model...', err);
+            if (!active) return;
+            loadProceduralShirt();
+          }
+        );
+
+        // ── Animate Loop ──
+        const animate = () => {
+          if (!active) return;
+          animationFrameId = requestAnimationFrame(animate);
+
+          // Smoothly glide the camera position to target if auto-animating
+          if (isAnimatingCameraRef.current) {
+            const tx = targetCameraXRef.current;
+            const ty = targetCameraYRef.current;
+            const tz = targetCameraZRef.current;
+            
+            camera.position.x += (tx - camera.position.x) * 0.1;
+            camera.position.y += (ty - camera.position.y) * 0.1;
+            camera.position.z += (tz - camera.position.z) * 0.1;
+
+            if (camera.position.distanceTo(new THREE.Vector3(tx, ty, tz)) < 0.01) {
+              camera.position.set(tx, ty, tz);
+              isAnimatingCameraRef.current = false;
+              if (interactive) {
+                controls.enabled = true;
+              }
+            }
+          }
+
+          controls.update();
+          renderer.render(scene, camera);
+        };
+
+        animate();
+
+        // ── Handle Resize ──
+        const handleResize = () => {
+          if (!container || !camera || !renderer) return;
+          camera.aspect = container.clientWidth / container.clientHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(container.clientWidth, container.clientHeight);
+        };
+
+        window.addEventListener('resize', handleResize);
+
+        // Cleanup
+        return () => {
+          window.removeEventListener('resize', handleResize);
+          if (frontFabricCanvas) frontFabricCanvas.off('after:render');
+          if (backFabricCanvas) backFabricCanvas.off('after:render');
+        };
+
+      } catch (err) {
+        console.error('Three.js initialization failed', err);
+        setErrorMsg('Error loading 3D graphics canvas.');
+        setLoading(false);
+      }
+    };
+
+    initThree();
+
+    return () => {
+      active = false;
+      cancelAnimationFrame(animationFrameId);
+      if (renderer && renderer.domElement && containerRef.current) {
+        try {
+          containerRef.current.removeChild(renderer.domElement);
+        } catch(e) {}
+      }
+      if (renderer) renderer.dispose();
+    };
+  }, [frontFabricCanvas, backFabricCanvas]);
+
+  // 2. Sync Color Changes Instantly without reloading scene
+  useEffect(() => {
+    const modelGroup = modelGroupRef.current;
+    if (!modelGroup) return;
+
+    modelGroup.traverse((child) => {
+      // Exclude decal meshes from color overriding
+      if (child.isMesh && child !== decalMeshFrontRef.current && child !== decalMeshBackRef.current) {
+        if (child.material) {
+          child.material.color.set(tshirtColor);
+        }
+      }
+    });
+  }, [tshirtColor]);
+
+  // 3. Sync View / Decal side projection and smooth camera rotation
+  useEffect(() => {
+    const isFront = tshirtView === 'front';
+
+    // Temporarily lock controls while camera glides to front/back view
+    if (controlsRef.current) {
+      controlsRef.current.enabled = false;
+    }
+
+    targetCameraXRef.current = 0;
+    targetCameraYRef.current = 0.05;
+    targetCameraZRef.current = isFront ? 0.95 : -0.95;
+    isAnimatingCameraRef.current = true;
+    
+    // Force render Fabric.js and update textures (clear active selection borders FIRST)
+    if (frontFabricCanvas) {
+      frontFabricCanvas.discardActiveObject();
+      frontFabricCanvas.renderAll();
+    }
+    if (backFabricCanvas) {
+      backFabricCanvas.discardActiveObject();
+      backFabricCanvas.renderAll();
+    }
+
+    // Force update texture maps
+    if (frontTextureRef.current) frontTextureRef.current.needsUpdate = true;
+    if (backTextureRef.current) backTextureRef.current.needsUpdate = true;
+
+    // Re-project BOTH decals to show up properly
+    projectDecals();
+  }, [tshirtView, interactive]);
+
+  // 4. Force Resize WebGL Renderer when tab visibility changes (solves 0x0 size bug when hidden)
+  useEffect(() => {
+    if (visible) {
+      // Force render Fabric.js and update textures (clear active selection borders FIRST)
+      if (frontFabricCanvas) {
+        frontFabricCanvas.discardActiveObject();
+        frontFabricCanvas.renderAll();
+      }
+      if (backFabricCanvas) {
+        backFabricCanvas.discardActiveObject();
+        backFabricCanvas.renderAll();
+      }
+
+      const resizeAndRender = () => {
+        const container = containerRef.current;
+        const renderer = rendererRef.current;
+        const camera = cameraRef.current;
+        if (container && renderer && camera) {
+          const width = container.clientWidth || 380;
+          const height = container.clientHeight || 420;
+          camera.aspect = width / height;
+          camera.updateProjectionMatrix();
+          renderer.setSize(width, height);
+          
+          // Re-project decals to align with updated scale
+          projectDecals();
+
+          if (frontTextureRef.current) frontTextureRef.current.needsUpdate = true;
+          if (backTextureRef.current) backTextureRef.current.needsUpdate = true;
+        }
+      };
+
+      // Trigger immediately and with a small layout paint delay
+      resizeAndRender();
+      const timer = setTimeout(resizeAndRender, 60);
+      return () => clearTimeout(timer);
+    }
+  }, [visible]);
+
+  // 5. Update OrbitControls enabled state dynamically and reset on 2D mode
+  useEffect(() => {
+    const controls = controlsRef.current;
+    const camera = cameraRef.current;
+    if (controls && camera) {
+      controls.enabled = !!interactive;
+      if (!interactive) {
+        // Reset rotation and zoom to flat front/back view when returning to 2D editor
+        controls.reset();
+        const isFront = tshirtView === 'front';
+        targetCameraXRef.current = 0;
+        targetCameraYRef.current = 0.05;
+        targetCameraZRef.current = isFront ? 0.95 : -0.95;
+        isAnimatingCameraRef.current = true;
+      }
+    }
+  }, [interactive, tshirtView]);
+
+  return (
+    <div 
+      ref={containerRef} 
+      className="position-relative w-100 h-100 d-flex align-items-center justify-content-center"
+      style={{ minHeight: '420px', cursor: 'grab' }}
+    >
+      {loading && (
+        <div className="position-absolute top-50 start-50 translate-middle text-center z-3">
+          <Spinner animation="border" variant="danger" />
+          <p className="mt-2 text-muted small fw-semibold">Loading 3D T-Shirt Studio…</p>
+        </div>
+      )}
+      {errorMsg && (
+        <div className="position-absolute top-50 start-50 translate-middle text-center text-danger small z-3 fw-bold">
+          {errorMsg}
+        </div>
+      )}
+    </div>
+  );
+}

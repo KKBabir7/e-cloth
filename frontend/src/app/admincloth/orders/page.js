@@ -7,6 +7,7 @@ import { IoReceiptOutline, IoDownloadOutline, IoSearchOutline, IoPrintOutline } 
 import { useUI } from '../../../context/UIContext';
 import axios from 'axios';
 import { getBackendUrl } from '@/utils/api';
+import { getColorName } from '@/utils/imageColor';
 
 export default function AdminOrdersPage() {
   const { showToast } = useUI();
@@ -263,8 +264,8 @@ export default function AdminOrdersPage() {
                         <td><Badge bg="dark">{item.size}</Badge></td>
                         <td>
                           <div className="d-flex align-items-center justify-content-center gap-2">
-                            <span className="rounded-circle border" style={{ backgroundColor: item.color, width: '14px', height: '14px', display: 'inline-block' }} />
-                            <span className="font-monospace small">{item.color}</span>
+                             <span className="rounded-circle border" style={{ backgroundColor: item.color, width: '14px', height: '14px', display: 'inline-block' }} />
+                             <span className="font-monospace small">{getColorName(item.color)} ({item.color})</span>
                           </div>
                         </td>
                         <td>৳{item.price}</td>
@@ -369,8 +370,8 @@ export default function AdminOrdersPage() {
                     <td><Badge bg="dark">{item.size}</Badge></td>
                     <td>
                       <div className="d-flex align-items-center justify-content-center gap-2">
-                        <span className="rounded-circle border" style={{ backgroundColor: item.color, width: '14px', height: '14px', display: 'inline-block' }} />
-                        <span className="font-monospace small">{item.color}</span>
+                         <span className="rounded-circle border" style={{ backgroundColor: item.color, width: '14px', height: '14px', display: 'inline-block' }} />
+                         <span className="font-monospace small">{getColorName(item.color)} ({item.color})</span>
                       </div>
                     </td>
                     <td>৳{item.price}</td>
