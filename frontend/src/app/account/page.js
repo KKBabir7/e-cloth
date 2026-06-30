@@ -14,6 +14,7 @@ import axios from 'axios';
 import { getBackendUrl } from '@/utils/api';
 import { loadUser } from '../../store/authSlice';
 import { fetchDivisions, fetchDistricts, fetchUpazilas } from '@/utils/bdGeocode';
+import CustomSelect from '../../components/CustomSelect';
 
 export default function AccountProfilePage() {
   const dispatch = useDispatch();
@@ -345,47 +346,38 @@ export default function AccountProfilePage() {
                   <Col xs={6}>
                     <Form.Group>
                       <Form.Label className="small fw-semibold text-dark">Division</Form.Label>
-                      <Form.Select
+                      <CustomSelect
                         value={selectedDivision}
-                        onChange={(e) => setSelectedDivision(e.target.value)}
-                        className="form-control-premium"
-                      >
-                        {divisions.map((div) => (
-                          <option key={div.id} value={div.name}>{div.name}</option>
-                        ))}
-                      </Form.Select>
+                        options={divisions.map((div) => ({ value: div.name, label: div.name }))}
+                        onChange={(val) => setSelectedDivision(val)}
+                        hasSearch={true}
+                      />
                     </Form.Group>
                   </Col>
 
                   <Col xs={6}>
                     <Form.Group>
                       <Form.Label className="small fw-semibold text-dark">District</Form.Label>
-                      <Form.Select
+                      <CustomSelect
                         value={selectedDistrict}
-                        onChange={(e) => setSelectedDistrict(e.target.value)}
-                        className="form-control-premium"
+                        options={districts.map((dist) => ({ value: dist, label: dist }))}
+                        onChange={(val) => setSelectedDistrict(val)}
                         disabled={districts.length === 0}
-                      >
-                        {districts.map((dist, idx) => (
-                          <option key={idx} value={dist}>{dist}</option>
-                        ))}
-                      </Form.Select>
+                        hasSearch={true}
+                      />
                     </Form.Group>
                   </Col>
                 </Row>
 
                 <Form.Group>
                   <Form.Label className="small fw-semibold text-dark">Thana / Upazila *</Form.Label>
-                  <Form.Select
+                  <CustomSelect
                     value={selectedUpazila}
-                    onChange={(e) => setSelectedUpazila(e.target.value)}
-                    className="form-control-premium"
+                    options={upazilas.map((upz) => ({ value: upz, label: upz }))}
+                    onChange={(val) => setSelectedUpazila(val)}
                     disabled={upazilas.length === 0}
-                  >
-                    {upazilas.map((upz, idx) => (
-                      <option key={idx} value={upz}>{upz}</option>
-                    ))}
-                  </Form.Select>
+                    hasSearch={true}
+                  />
                 </Form.Group>
 
                 <Form.Group>

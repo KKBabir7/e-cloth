@@ -16,6 +16,7 @@ import { useUI } from '../../context/UIContext';
 import axios from 'axios';
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { getBackendUrl, getProductImageUrl } from '@/utils/api';
+import CustomSelect from '../../components/CustomSelect';
 
 // Main component with Suspense boundary wrapping Client filters
 export default function ShopPage() {
@@ -379,19 +380,19 @@ function ShopContent() {
                 <IoFilterOutline size={20} />
               </button>
 
-              <div className="shop-toolbar-sort">
+              <div className="shop-toolbar-sort" style={{ minWidth: '180px' }}>
                 <span className="shop-toolbar-sort-label">Sort By</span>
-                <Form.Select
-                  size="sm"
-                  className="shop-sort-select"
+                <CustomSelect
                   value={sortParam}
-                  onChange={(e) => updateUrlParam('sort', e.target.value)}
-                >
-                  <option value="newest">New Arrivals</option>
-                  <option value="popular">Popularity</option>
-                  <option value="priceLowHigh">Price: Low to High</option>
-                  <option value="priceHighLow">Price: High to Low</option>
-                </Form.Select>
+                  options={[
+                    { value: 'newest', label: 'New Arrivals' },
+                    { value: 'popular', label: 'Popularity' },
+                    { value: 'priceLowHigh', label: 'Price: Low to High' },
+                    { value: 'priceHighLow', label: 'Price: High to Low' }
+                  ]}
+                  onChange={(val) => updateUrlParam('sort', val)}
+                  hasSearch={false}
+                />
               </div>
             </div>
 

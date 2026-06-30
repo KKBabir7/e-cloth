@@ -12,6 +12,7 @@ import { useUI } from '../../context/UIContext';
 import { validateBdPhone, normalizePhone, calculateDeliveryCharge } from '../../../../shared/utils';
 import axios from 'axios';
 import { getBackendUrl, getProductImageUrl } from '@/utils/api';
+import CustomSelect from '../../components/CustomSelect';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -241,17 +242,18 @@ export default function CheckoutPage() {
                 <Col md={6}>
                   <Form.Group className="mb-3 mb-md-0">
                     <Form.Label className="small fw-semibold text-secondary mb-1">District / Division *</Form.Label>
-                    <Form.Select
+                    <CustomSelect
                       value={district}
-                      onChange={(e) => setDistrict(e.target.value)}
-                      className="form-control-premium"
-                    >
-                      <option value="Dhaka">Dhaka (Inside Dhaka ৳80)</option>
-                      <option value="Chattogram">Chattogram (Outside Dhaka ৳150)</option>
-                      <option value="Sylhet">Sylhet (Outside Dhaka ৳150)</option>
-                      <option value="Rajshahi">Rajshahi (Outside Dhaka ৳150)</option>
-                      <option value="Khulna">Khulna (Outside Dhaka ৳150)</option>
-                    </Form.Select>
+                      options={[
+                        { value: 'Dhaka', label: 'Dhaka (Inside Dhaka ৳80)' },
+                        { value: 'Chattogram', label: 'Chattogram (Outside Dhaka ৳150)' },
+                        { value: 'Sylhet', label: 'Sylhet (Outside Dhaka ৳150)' },
+                        { value: 'Rajshahi', label: 'Rajshahi (Outside Dhaka ৳150)' },
+                        { value: 'Khulna', label: 'Khulna (Outside Dhaka ৳150)' }
+                      ]}
+                      onChange={(val) => setDistrict(val)}
+                      hasSearch={false}
+                    />
                   </Form.Group>
                 </Col>
                 
