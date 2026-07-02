@@ -4553,3 +4553,50 @@ input[type="range"]::-moz-range-thumb:hover {
   background: none !important;
 }
 
+/* Premium Pagination buttons styling */
+.shop-page-btn {
+  min-width: 40px;
+  height: 40px;
+  padding: 8px 12px;
+  border: 1px solid #E2E8F0;
+  background: #ffffff;
+  color: #475569;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: var(--font-outfit), sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease-in-out;
+}
+
+.shop-page-btn:hover:not(:disabled) {
+  border-color: #ff8525;
+  color: #ff8525;
+  background-color: #FFF8F2;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 133, 37, 0.1);
+}
+
+.shop-page-btn.active {
+  background: #ff8525 !important;
+  border-color: #ff8525 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(255, 133, 37, 0.2);
+}
+
+.shop-page-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background-color: #F1F5F9;
+  border-color: #E2E8F0;
+  color: #94A3B8;
+}
+
+.shop-page-btn.arrow-btn {
+  padding: 8px 16px;
+}
+
+

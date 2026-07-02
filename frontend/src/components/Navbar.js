@@ -21,11 +21,7 @@ export default function AppNavbar() {
   const designStudioNavClass = `btn-design-studio-nav border-0${isHomePage ? ' btn-design-studio-nav--home-pulse' : ''}`;
   const { showToast } = useUI();
 
-  // Hide user navbar in administrative directories
-  if (pathname && pathname.startsWith('/admincloth')) {
-    return null;
-  }
-  
+  // ── All hooks must be called unconditionally before any early return ──
   const { user, isAuthenticated } = useSelector((state) => state.auth);
   const { items } = useSelector((state) => state.cart);
   const wishlist = useSelector((state) => state.wishlist.items);
@@ -142,6 +138,11 @@ export default function AppNavbar() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Hide user navbar in administrative directories (must be AFTER all hooks)
+  if (pathname && pathname.startsWith('/admincloth')) {
+    return null;
+  }
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();

@@ -5,15 +5,16 @@ if (typeof window !== 'undefined') {
 }
 
 export const getBackendUrl = () => {
-  if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname;
-    // If running locally (localhost, 127.0.0.1, or local network IP like 192.168.x.x), 
-    // dynamically point to the same hostname on backend port 5000.
-    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.match(/^\d+\.\d+\.\d+\.\d+$/)) {
-      return `http://${hostname}:5000`;
-    }
+  // Server-side: use environment variable
+  if (typeof window === 'undefined') {
+    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
   }
-  return 'http://localhost:5000';
+  // Client-side: dynamically detect localhost vs production
+  const hostname = window.location.hostname;
+  if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.match(/^\d+\.\d+\.\d+\.\d+$/)) {
+    return `http://${hostname}:5000`;
+  }
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 };
 
 export const getProductImageUrl = (url) => {
