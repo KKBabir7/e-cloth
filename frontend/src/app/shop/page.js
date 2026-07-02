@@ -151,21 +151,44 @@ function ShopContent() {
     });
   }, [selectedCategory, firstPageBounds, catalogMin]);
 
-  // Infinite scroll — load next page when sentinel enters viewport
+  const fetchNextPageRef = useRef(fetchNextPage);
+  const hasNextPageRef = useRef(hasNextPage);
+  const isFetchingNextPageRef = useRef(isFetchingNextPage);
+
   useEffect(() => {
-    const node = loadMoreRef.current;
-    if (!node || !hasNextPage || isFetchingNextPage) return;
+    fetchNextPageRef.current = fetchNextPage;
+    hasNextPageRef.current = hasNextPage;
+    isFetchingNextPageRef.current = isFetchingNextPage;
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) fetchNextPage();
-      },
-      { rootMargin: '240px' }
-    );
+  // Infinite scroll — load next page when user scrolls near the bottom or if screen isn't filled
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!hasNextPageRef.current || isFetchingNextPageRef.current) return;
 
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [fetchNextPage, hasNextPage, isFetchingNextPage, products.length]);
+      const threshold = 350; // pixels from the bottom to trigger fetch
+      const totalHeight = document.documentElement.scrollHeight;
+      const scrollPosition = window.innerHeight + window.scrollY;
+
+      if (totalHeight - scrollPosition <= threshold) {
+        fetchNextPageRef.current();
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleScroll);
+    
+    // Check immediately on load/mount and when products count updates
+    const timer = setTimeout(() => {
+      handleScroll();
+    }, 150);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+      clearTimeout(timer);
+    };
+  }, [products.length]);
 
   const updateUrlParam = (key, value) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -547,7 +570,11 @@ function ShopContent() {
                 </Row>
 
                 {/* Infinite scroll sentinel */}
-                <div ref={loadMoreRef} className="shop-load-more-sentinel">
+                <div 
+                  ref={loadMoreRef} 
+                  className="shop-load-more-sentinel d-flex align-items-center justify-content-center"
+                  style={{ minHeight: '40px', width: '100%', margin: '20px 0' }}
+                >
                   {isFetchingNextPage && (
                     <div className="shop-load-more-spinner">
                       <span className="shop-load-more-dot" />

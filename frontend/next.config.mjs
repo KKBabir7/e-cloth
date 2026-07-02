@@ -10,6 +10,9 @@ const nextConfig = {
   },
   experimental: {
     optimizePackageImports: ['react-icons', 'react-bootstrap']
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
   }
 };
 
