@@ -11,7 +11,16 @@ import { logout } from '../store/authSlice';
 import { useUI } from '../context/UIContext';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
-import { getBackendUrl } from '../utils/api';
+import { getBackendUrl, getProductImageUrl } from '../utils/api';
+import * as BsIcons from 'react-icons/bs';
+
+const renderCategoryIcon = (iconName) => {
+  const IconComponent = BsIcons[iconName];
+  if (IconComponent) {
+    return <IconComponent size={15} className="me-2" style={{ flexShrink: 0 }} />;
+  }
+  return <BsIcons.BsTags size={15} className="me-2" style={{ flexShrink: 0 }} />;
+};
 
 export default function AppNavbar() {
   const router = useRouter();
@@ -29,6 +38,7 @@ export default function AppNavbar() {
   const [searchTerm, setSearchTerm] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
   const searchRef = useRef(null);
   const [mounted, setMounted] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -105,8 +115,11 @@ export default function AppNavbar() {
   useEffect(() => {
     if (searchTerm.trim().length < 2) {
       setSuggestions([]);
+      setSearchLoading(false);
       return;
     }
+
+    setSearchLoading(true);
 
     const delayDebounce = setTimeout(async () => {
       try {
@@ -116,8 +129,10 @@ export default function AppNavbar() {
         }
       } catch (err) {
         console.error('Autocomplete query error:', err);
+      } finally {
+        setSearchLoading(false);
       }
-    }, 300);
+    }, 400);
 
     return () => clearTimeout(delayDebounce);
   }, [searchTerm]);
@@ -194,6 +209,7 @@ export default function AppNavbar() {
                     onChange={(e) => { setSearchTerm(e.target.value); setShowSuggestions(true); }}
                     onFocus={() => setShowSuggestions(true)}
                     autoFocus
+                    className="search-bar-input"
                     style={{ 
                       backgroundColor: '#F3F4F6', border: 'none', color: 'var(--text-dark)',
                       fontSize: '15px', padding: '12px 20px 12px 48px', borderRadius: '30px', height: '48px', width: '100%'
@@ -201,32 +217,45 @@ export default function AppNavbar() {
                   />
                   <FiSearch className="position-absolute text-muted" style={{ left: '18px', top: '50%', transform: 'translateY(-50%)', fontSize: '20px' }} />
                 </div>
-                {showSuggestions && suggestions.length > 0 && (
+                {showSuggestions && (searchLoading || suggestions.length > 0 || searchTerm.trim().length >= 2) && (
                   <div className="glass-panel position-absolute w-100 mt-2 p-2 shadow-lg" style={{
                     zIndex: 1200, maxHeight: '350px', overflowY: 'auto',
                     backgroundColor: '#FFFFFF', border: '1px solid rgba(28, 30, 35, 0.08)', borderRadius: '12px'
                   }}>
-                    {suggestions.map((product) => (
-                      <div
-                        key={product._id}
-                        onClick={() => {
-                          router.push(`/product/${product._id}`);
-                          setShowSuggestions(false);
-                          setShowSearchModal(false);
-                          setSearchTerm('');
-                        }}
-                        className="d-flex align-items-center gap-2 p-2 hover-bg-light rounded"
-                        style={{ cursor: 'pointer', transition: 'background-color 0.2s' }}
-                      >
-                        <Image src={product.images[0]} alt={product.name} width={40} height={40} className="object-fit-cover rounded" />
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div className="fw-semibold text-truncate text-dark" style={{ fontSize: '13px' }}>{product.name}</div>
-                          <div className="fw-bold" style={{ fontSize: '12px', color: 'var(--accent-red)' }}>
-                            ৳{product.discountPrice > 0 ? product.discountPrice : product.price}
+                    {searchLoading ? (
+                      <div className="d-flex align-items-center justify-content-center p-4">
+                        <div className="spinner-border spinner-border-sm" role="status" style={{ color: 'var(--accent-red)' }}>
+                          <span className="visually-hidden">Loading...</span>
+                        </div>
+                        <span className="ms-2 text-muted" style={{ fontSize: '13px' }}>Searching...</span>
+                      </div>
+                    ) : suggestions.length === 0 && searchTerm.trim().length >= 2 ? (
+                      <div className="text-center p-3 text-muted" style={{ fontSize: '13.5px' }}>
+                        No apparel found for "{searchTerm}"
+                      </div>
+                    ) : (
+                      suggestions.map((product) => (
+                        <div
+                          key={product._id}
+                          onClick={() => {
+                            router.push(`/product/${product._id}`);
+                            setShowSuggestions(false);
+                            setShowSearchModal(false);
+                            setSearchTerm('');
+                          }}
+                          className="d-flex align-items-center gap-2 p-2 hover-bg-light rounded"
+                          style={{ cursor: 'pointer', transition: 'background-color 0.2s' }}
+                        >
+                          <Image src={getProductImageUrl(product.images[0])} alt={product.name} width={40} height={40} className="object-fit-cover rounded" unoptimized />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div className="fw-semibold text-truncate text-dark" style={{ fontSize: '13px' }}>{product.name}</div>
+                            <div className="fw-bold" style={{ fontSize: '12px', color: 'var(--accent-red)' }}>
+                              ৳{product.discountPrice > 0 ? product.discountPrice : product.price}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                 )}
               </Form>
@@ -292,7 +321,8 @@ export default function AppNavbar() {
                 >
                   {navCategories.map((cat) => (
                     <Link key={cat._id || cat.slug} href={`/shop?category=${cat.slug}`} passHref legacyBehavior>
-                      <NavDropdown.Item className="py-2 text-dark" style={{ fontSize: '13.5px' }}>
+                      <NavDropdown.Item className="py-2 text-dark d-flex align-items-center" style={{ fontSize: '13.5px' }}>
+                        {renderCategoryIcon(cat.icon)}
                         {capName(cat.name)}
                       </NavDropdown.Item>
                     </Link>
@@ -532,7 +562,8 @@ export default function AppNavbar() {
                 <Accordion.Body style={{ padding: '4px 0 4px 44px' }}>
                   {navCategories.map((cat) => (
                     <Link key={cat._id || cat.slug} href={`/shop?category=${cat.slug}`} passHref legacyBehavior>
-                      <a onClick={() => setShowOffcanvas(false)} className="d-block py-2 px-3 mb-1 text-decoration-none offcanvas-nav-link" style={{ borderRadius: '8px', color: '#64748b', fontSize: '13.5px' }}>
+                      <a onClick={() => setShowOffcanvas(false)} className="d-flex align-items-center py-2 px-3 mb-1 text-decoration-none offcanvas-nav-link" style={{ borderRadius: '8px', color: '#64748b', fontSize: '13.5px' }}>
+                        {renderCategoryIcon(cat.icon)}
                         {capName(cat.name)}
                       </a>
                     </Link>

@@ -12,6 +12,122 @@ import { useUI } from '../../../context/UIContext';
 import axios from 'axios';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getBackendUrl } from '@/utils/api';
+import * as BsIcons from 'react-icons/bs';
+import * as IoIcons from 'react-icons/io5';
+
+const BOOTSTRAP_ICONS = []; // Keep empty or legacy ref
+
+const renderCategoryIcon = (iconName) => {
+  if (!iconName) return <BsIcons.BsTags size={16} className="text-muted" style={{ flexShrink: 0 }} />;
+  if (iconName.startsWith('Io')) {
+    const IconComponent = IoIcons[iconName];
+    if (IconComponent) return <IconComponent size={16} className="text-muted" style={{ flexShrink: 0 }} />;
+  } else {
+    const IconComponent = BsIcons[iconName];
+    if (IconComponent) return <IconComponent size={16} className="text-muted" style={{ flexShrink: 0 }} />;
+  }
+  return <BsIcons.BsTags size={16} className="text-muted" style={{ flexShrink: 0 }} />;
+};
+
+const allIconKeys = [
+  ...Object.keys(BsIcons).filter(key => key.startsWith('Bs')),
+  ...Object.keys(IoIcons).filter(key => key.startsWith('Io'))
+];
+
+const POPULAR_ICONS = [
+  'IoShirtOutline', 'BsTags', 'BsFilterCircle', 'BsStars', 'BsBag', 'BsCart', 'BsHeart',
+  'IoGiftOutline', 'BsGem', 'BsAward', 'BsScissors', 'BsPalette', 'BsFlower1', 'BsPatchCheck',
+  'BsCollection', 'BsGrid', 'BsSuitClub', 'BsEmojiSmile', 'BsLightningCharge', 'BsFire',
+  'BsCrown', 'BsSun', 'BsSnow', 'BsCompass', 'BsHourglassSplit', 'BsBriefcase',
+  'BsTag', 'BsSmartwatch', 'BsSunglasses', 'BsTruck', 'BsCheckCircle', 'BsShop',
+  'BsEnvelope', 'BsTelephone', 'BsHouse', 'BsBookmark', 'BsShare', 'BsGear'
+];
+
+function IconPicker({ value, onChange }) {
+  const [search, setSearch] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+
+  const cleanSearch = search.replace(/[-_\s]/g, '').toLowerCase();
+  const filteredKeys = search.trim() === ''
+    ? POPULAR_ICONS
+    : allIconKeys
+        .filter(key => key.toLowerCase().replace(/[-_\s]/g, '').includes(cleanSearch))
+        .slice(0, 200);
+
+  let SelectedIcon = BsIcons.BsTags;
+  if (value && value.startsWith('Io')) {
+    SelectedIcon = IoIcons[value] || BsIcons.BsTags;
+  } else if (value) {
+    SelectedIcon = BsIcons[value] || BsIcons.BsTags;
+  }
+
+  return (
+    <div className="position-relative w-100">
+      <div 
+        onClick={() => setIsOpen(!isOpen)}
+        className="form-control d-flex align-items-center justify-content-between bg-white"
+        style={{ padding: '10px 14px', borderRadius: '8px', cursor: 'pointer', border: '1px solid #dee2e6' }}
+      >
+        <div className="d-flex align-items-center gap-2">
+          <SelectedIcon size={18} style={{ color: '#ff8525' }} />
+          <span className="fw-semibold" style={{ fontSize: '13.5px', color: '#1c1e23' }}>{value}</span>
+        </div>
+        <span className="text-muted" style={{ fontSize: '12px' }}>{isOpen ? 'Close ▴' : 'Choose Icon ▾'}</span>
+      </div>
+
+      {isOpen && (
+        <div 
+          className="position-absolute w-100 mt-2 p-3 shadow-lg bg-white rounded-3 border"
+          style={{ zIndex: 1100, maxHeight: '340px', overflowY: 'auto' }}
+        >
+          <input 
+            type="text"
+            placeholder="Type to search (e.g. tshirt, bag, star)..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="form-control form-control-sm mb-3"
+            onClick={(e) => e.stopPropagation()}
+            style={{ borderRadius: '6px', fontSize: '12.5px' }}
+          />
+
+          <div 
+            className="d-grid gap-2" 
+            style={{ gridTemplateColumns: 'repeat(5, 1fr)', maxHeight: '180px', overflowY: 'auto', paddingRight: '4px' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {filteredKeys.map((key) => {
+              const IconComp = key.startsWith('Io') ? IoIcons[key] : BsIcons[key];
+              if (!IconComp) return null;
+              const isSelected = key === value;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  title={key}
+                  onClick={() => {
+                    onChange(key);
+                    setIsOpen(false);
+                  }}
+                  className={`btn p-2 d-flex align-items-center justify-content-center rounded-2 ${isSelected ? 'btn-danger bg-red-gradient text-white border-0' : 'btn-outline-light text-dark hover-bg-light'}`}
+                  style={{ 
+                    aspectRatio: '1',
+                    border: isSelected ? 'none' : '1px solid #F1F5F9',
+                    fontSize: '18px'
+                  }}
+                >
+                  <IconComp size={18} />
+                </button>
+              );
+            })}
+          </div>
+          {filteredKeys.length === 0 && (
+            <div className="text-center text-muted small py-3">No matching icons found.</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function AdminCategoriesPage() {
   const { showToast } = useUI();
@@ -28,6 +144,7 @@ export default function AdminCategoriesPage() {
   const [accentColor, setAccentColor] = useState('#ff8525');
   const [order, setOrder] = useState('0');
   const [isActive, setIsActive] = useState(true);
+  const [icon, setIcon] = useState('BsTags');
   const [saving, setSaving] = useState(false);
 
   // Media Manager States
@@ -148,6 +265,7 @@ export default function AdminCategoriesPage() {
     setAccentColor('#ff8525');
     setOrder('0');
     setIsActive(true);
+    setIcon('BsTags');
     setShowAddModal(true);
   };
 
@@ -160,6 +278,7 @@ export default function AdminCategoriesPage() {
     setAccentColor(category.accentColor || '#ff8525');
     setOrder(category.order !== undefined ? String(category.order) : '0');
     setIsActive(category.isActive !== undefined ? category.isActive : true);
+    setIcon(category.icon || 'BsTags');
     setShowEditModal(true);
   };
 
@@ -180,7 +299,8 @@ export default function AdminCategoriesPage() {
         tagline,
         accentColor,
         order: Number(order || 0),
-        isActive
+        isActive,
+        icon
       });
 
       if (res.data.success) {
@@ -212,7 +332,8 @@ export default function AdminCategoriesPage() {
         tagline,
         accentColor,
         order: Number(order || 0),
-        isActive
+        isActive,
+        icon
       });
 
       if (res.data.success) {
@@ -359,7 +480,12 @@ export default function AdminCategoriesPage() {
                         style={{ width: '80px', height: '50px' }}
                       />
                     </td>
-                    <td className="fw-bold">{c.name}</td>
+                    <td className="fw-bold">
+                      <div className="d-flex align-items-center justify-content-center gap-2">
+                        {renderCategoryIcon(c.icon)}
+                        <span>{c.name}</span>
+                      </div>
+                    </td>
                     <td className="text-muted small">{c.tagline || '—'}</td>
                     <td className="font-monospace text-muted">{c.slug}</td>
                     <td className="fw-extrabold text-danger">
@@ -491,6 +617,11 @@ export default function AdminCategoriesPage() {
               />
             </Form.Group>
 
+            <Form.Group>
+              <Form.Label className="small fw-semibold">Category Menu Icon *</Form.Label>
+              <IconPicker value={icon} onChange={(val) => setIcon(val)} />
+            </Form.Group>
+
             <Form.Group className="mt-2">
               <Form.Check
                 type="switch"
@@ -600,6 +731,11 @@ export default function AdminCategoriesPage() {
                 onChange={(e) => setOrder(e.target.value)}
                 className="form-control-premium"
               />
+            </Form.Group>
+
+            <Form.Group>
+              <Form.Label className="small fw-semibold">Category Menu Icon *</Form.Label>
+              <IconPicker value={icon} onChange={(val) => setIcon(val)} />
             </Form.Group>
 
             <Form.Group className="mt-2">

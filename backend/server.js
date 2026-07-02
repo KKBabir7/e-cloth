@@ -88,6 +88,9 @@ const wishlistRoutes = require('./routes/wishlistRoutes');
 const heroSlideRoutes = require('./routes/heroSlideRoutes');
 const mediaRoutes = require('./routes/mediaRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
+const stickerRoutes = require('./routes/stickerRoutes');
+const fabricColorRoutes = require('./routes/fabricColorRoutes');
+const designSettingRoutes = require('./routes/designSettingRoutes');
 const eventRoutes = require('./routes/eventRoutes'); // Global SSE real-time stream
 
 // Selective API cache policy:
@@ -123,6 +126,9 @@ app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/hero-slides', heroSlideRoutes);
 app.use('/api/media', mediaRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/stickers', stickerRoutes);
+app.use('/api/fabric-colors', fabricColorRoutes);
+app.use('/api/design-settings', designSettingRoutes);
 app.use('/api/events', eventRoutes); // Single global SSE stream for all real-time updates
 
 // Root route
@@ -147,10 +153,14 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 
 const { seedDefaultCategories } = require('./controllers/categoryController');
+const { seedDefaultStickers } = require('./controllers/stickerController');
+const { seedDefaultFabricColors } = require('./controllers/fabricColorController');
 
 connectDB().then(async () => {
   if (process.env.SEED_ON_BOOT === 'true') {
     await seedDefaultCategories();
+    await seedDefaultStickers();
+    await seedDefaultFabricColors();
   }
   app.listen(PORT, () => {
     console.log(`CustomWear API Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);

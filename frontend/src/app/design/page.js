@@ -15,6 +15,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { addToCart } from '../../store/cartSlice';
 import { useUI } from '../../context/UIContext';
 import axios from 'axios';
+import { useQuery } from '@tanstack/react-query';
 import { getBackendUrl } from '@/utils/api';
 import Tshirt3DViewer from '../../components/Tshirt3DViewer';
 import CustomSelect from '../../components/CustomSelect';
@@ -174,6 +175,62 @@ function DesignContent() {
   const [shapeStrokeColor, setShapeStrokeColor] = useState('#ffffff');
   const [shapeStrokeWidth, setShapeStrokeWidth] = useState(0);
 
+  const { data: stickersData } = useQuery({
+    queryKey: ['stickers'],
+    queryFn: async () => {
+      const res = await axios.get(`${getBackendUrl()}/api/stickers`);
+      return res.data.success ? res.data.stickers : [];
+    }
+  });
+
+  const { data: colorsData } = useQuery({
+    queryKey: ['fabricColors'],
+    queryFn: async () => {
+      const res = await axios.get(`${getBackendUrl()}/api/fabric-colors`);
+      return res.data.success ? res.data.colors : [];
+    }
+  });
+
+  const { data: settingsData } = useQuery({
+    queryKey: ['designSettings'],
+    queryFn: async () => {
+      const res = await axios.get(`${getBackendUrl()}/api/design-settings`);
+      return res.data.success ? res.data.settings : { textPrice: 60, stickerPrice: 40 };
+    }
+  });
+
+  const textPrice = settingsData ? settingsData.textPrice : 60;
+  const stickerPrice = settingsData ? settingsData.stickerPrice : 40;
+  const imagePrice = settingsData ? settingsData.imagePrice : 50;
+  const shapePrice = settingsData ? settingsData.shapePrice : 30;
+  const [textLinesCount, setTextLinesCount] = useState(0);
+  const [stickersCount, setStickersCount] = useState(0);
+  const [imagesCount, setImagesCount] = useState(0);
+  const [shapesCount, setShapesCount] = useState(0);
+
+  const stickersList = stickersData || [];
+  const DEFAULT_COLORS = [
+    { name: 'White', hex: '#ffffff', sizes: ['S', 'M', 'L', 'XL', 'XXL'] },
+    { name: 'Black', hex: '#0f172a', sizes: ['S', 'M', 'L', 'XL', 'XXL'] },
+    { name: 'Crimson', hex: '#dc2626', sizes: ['S', 'M', 'L', 'XL', 'XXL'] },
+    { name: 'Royal Blue', hex: '#1e3a8a', sizes: ['S', 'M', 'L', 'XL', 'XXL'] },
+    { name: 'Navy Gray', hex: '#475569', sizes: ['S', 'M', 'L', 'XL', 'XXL'] }
+  ];
+  const fabricColors = colorsData && colorsData.length > 0 ? colorsData : DEFAULT_COLORS;
+
+  useEffect(() => {
+    if (colorsData && colorsData.length > 0) {
+      const colorExists = colorsData.some(c => c.hex.toLowerCase() === tshirtColor.toLowerCase());
+      if (!colorExists) {
+        const firstColor = colorsData[0];
+        setTshirtColor(firstColor.hex);
+        if (firstColor.sizes && firstColor.sizes.length > 0) {
+          setSelectedSize(firstColor.sizes[0]);
+        }
+      }
+    }
+  }, [colorsData]);
+
   // Close Layer Panel Dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -249,18 +306,73 @@ function DesignContent() {
     setActiveLayerId(canvas.getActiveObject());
   };
 
+  const countTextLines = () => {
+    let count = 0;
+    const countCanvasLines = (c) => {
+      if (!c) return 0;
+      let lines = 0;
+      c.getObjects().forEach(obj => {
+        if (obj.type === 'text' || obj.type === 'i-text' || obj.type === 'textbox') {
+          const textVal = obj.text || '';
+          const lineList = textVal.split('\n').filter(line => line.trim().length > 0);
+          lines += Math.max(1, lineList.length);
+        }
+      });
+      return lines;
+    };
+    count += countCanvasLines(frontCanvas);
+    count += countCanvasLines(backCanvas);
+    return count;
+  };
+
+  const countStickers = () => {
+    const countCanvasStickers = (c) => {
+      if (!c) return 0;
+      // Stickers have isSticker:true set by handleAddSticker
+      return c.getObjects().filter(obj => obj.type === 'image' && obj.isSticker === true).length;
+    };
+    return countCanvasStickers(frontCanvas) + countCanvasStickers(backCanvas);
+  };
+
+  const countImages = () => {
+    const countCanvasImages = (c) => {
+      if (!c) return 0;
+      // User-uploaded images: image type WITHOUT isSticker flag
+      return c.getObjects().filter(obj => obj.type === 'image' && obj.isSticker !== true).length;
+    };
+    return countCanvasImages(frontCanvas) + countCanvasImages(backCanvas);
+  };
+
+  const countShapes = () => {
+    const shapeTypes = new Set(['circle', 'rect', 'triangle', 'path', 'polygon', 'line', 'ellipse']);
+    const countCanvasShapes = (c) => {
+      if (!c) return 0;
+      return c.getObjects().filter(obj => shapeTypes.has(obj.type)).length;
+    };
+    return countCanvasShapes(frontCanvas) + countCanvasShapes(backCanvas);
+  };
+
   useEffect(() => {
     if (!canvas) return;
 
     updateLayersList();
+    setTextLinesCount(countTextLines());
+    setStickersCount(countStickers());
+    setImagesCount(countImages());
+    setShapesCount(countShapes());
 
     const handleCanvasChange = () => {
       updateLayersList();
+      setTextLinesCount(countTextLines());
+      setStickersCount(countStickers());
+      setImagesCount(countImages());
+      setShapesCount(countShapes());
     };
 
     canvas.on('object:added', handleCanvasChange);
     canvas.on('object:removed', handleCanvasChange);
     canvas.on('object:modified', handleCanvasChange);
+    canvas.on('text:changed', handleCanvasChange);
     canvas.on('selection:created', handleCanvasChange);
     canvas.on('selection:updated', handleCanvasChange);
     canvas.on('selection:cleared', handleCanvasChange);
@@ -269,11 +381,12 @@ function DesignContent() {
       canvas.off('object:added', handleCanvasChange);
       canvas.off('object:removed', handleCanvasChange);
       canvas.off('object:modified', handleCanvasChange);
+      canvas.off('text:changed', handleCanvasChange);
       canvas.off('selection:created', handleCanvasChange);
       canvas.off('selection:updated', handleCanvasChange);
       canvas.off('selection:cleared', handleCanvasChange);
     };
-  }, [canvas]);
+  }, [canvas, frontCanvas, backCanvas]);
 
   const selectCanvasLayer = (canvasIdx) => {
     if (!canvas) return;
@@ -943,11 +1056,19 @@ function DesignContent() {
       if (res.data.success) {
         const designRecord = res.data.design;
 
+        // Extract color price
+        const currentColorObj = fabricColors.find(c => c.hex.toLowerCase() === tshirtColor.toLowerCase()) || fabricColors[0] || { price: 1100, discountPrice: 0 };
+        const basePrice = currentColorObj.discountPrice > 0 && currentColorObj.discountPrice < currentColorObj.price
+          ? currentColorObj.discountPrice
+          : (currentColorObj.price || 1100);
+        
+        const finalPrice = basePrice + (textLinesCount * textPrice) + (stickersCount * stickerPrice) + (imagesCount * imagePrice) + (shapesCount * shapePrice);
+
         // 2. Push Saved ID into global Redux Cart Slice
         dispatch(addToCart({
           productId: productId || 'custom-apparel-001',
           name: `Custom Premium T-Shirt (${tshirtColor === '#ffffff' ? 'White' : 'Colored'})`,
-          price: 1100, // standard premium price point BDT 1100
+          price: finalPrice, // Dynamic pricing per color + text charges!
           image: previewImg,
           size: selectedSize,
           color: tshirtColor,
@@ -1861,31 +1982,34 @@ function DesignContent() {
                   <div>
                     <span className="small fw-semibold text-secondary d-block mb-2">Choose Sticker</span>
                     <div className="d-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
-                      {DEMO_STICKERS.map((st, idx) => (
-                        <div 
-                          key={idx}
-                          className="border rounded p-1 text-center"
-                          style={{ 
-                            cursor: 'pointer', 
-                            backgroundColor: '#F8FAFC', 
-                            transition: 'all 0.2s',
-                            borderRadius: '8px',
-                            borderWidth: '1px'
-                          }}
-                          onClick={() => handleAddSticker(st.url)}
-                          onMouseOver={(e) => {
-                            e.currentTarget.style.borderColor = '#ff8525';
-                            e.currentTarget.style.backgroundColor = 'rgba(255, 133, 37, 0.03)';
-                          }}
-                          onMouseOut={(e) => {
-                            e.currentTarget.style.borderColor = '#E2E8F0';
-                            e.currentTarget.style.backgroundColor = '#F8FAFC';
-                          }}
-                          title={st.name}
-                        >
-                          <img src={st.url} alt={st.name} style={{ width: '100%', height: '40px', objectFit: 'contain' }} />
-                        </div>
-                      ))}
+                      {stickersList.map((st, idx) => {
+                        const stickerUrl = (st.image && (st.image.startsWith('http') ? st.image : `${getBackendUrl()}${st.image}`)) || st.url;
+                        return (
+                          <div 
+                            key={st._id || idx}
+                            className="border rounded p-1 text-center"
+                            style={{ 
+                              cursor: 'pointer', 
+                              backgroundColor: '#F8FAFC', 
+                              transition: 'all 0.2s',
+                              borderRadius: '8px',
+                              borderWidth: '1px'
+                            }}
+                            onClick={() => handleAddSticker(stickerUrl)}
+                            onMouseOver={(e) => {
+                              e.currentTarget.style.borderColor = '#ff8525';
+                              e.currentTarget.style.backgroundColor = 'rgba(255, 133, 37, 0.03)';
+                            }}
+                            onMouseOut={(e) => {
+                              e.currentTarget.style.borderColor = '#E2E8F0';
+                              e.currentTarget.style.backgroundColor = '#F8FAFC';
+                            }}
+                            title={st.name}
+                          >
+                            <img src={stickerUrl} alt={st.name} style={{ width: '100%', height: '40px', objectFit: 'contain' }} />
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -2373,29 +2497,54 @@ function DesignContent() {
             {/* 1. Base Shirt Palette colors */}
             <div className="mb-4">
               <span className="small fw-semibold d-block mb-2">Base Fabric Color</span>
-              <div className="d-flex gap-2">
-                {[
-                  { name: 'White', hex: '#ffffff' },
-                  { name: 'Black', hex: '#0f172a' },
-                  { name: 'Crimson', hex: '#dc2626' },
-                  { name: 'Royal Blue', hex: '#1e3a8a' },
-                  { name: 'Navy Gray', hex: '#475569' }
-                ].map((color) => (
-                  <button
-                    key={color.name}
-                    type="button"
-                    onClick={() => setTshirtColor(color.hex)}
-                    className="rounded-circle border-0 shadow-sm"
-                    style={{
-                      backgroundColor: color.hex,
-                      width: '32px',
-                      height: '32px',
-                      border: tshirtColor === color.hex ? '3px solid var(--accent-red)' : '1px solid #CBD5E1',
-                      outline: 'none'
-                    }}
-                    title={color.name}
-                  />
-                ))}
+              <div className="d-flex flex-wrap gap-2">
+                {fabricColors.map((color) => {
+                  const isSelected = tshirtColor.toLowerCase() === color.hex.toLowerCase();
+                  const imageUrl = color.image ? (color.image.startsWith('http') ? color.image : `${getBackendUrl()}${color.image}`) : null;
+                  
+                  return (
+                    <button
+                      key={color.name}
+                      type="button"
+                      onClick={() => {
+                        setTshirtColor(color.hex);
+                        if (color.sizes && color.sizes.length > 0) {
+                          if (!color.sizes.includes(selectedSize)) {
+                            setSelectedSize(color.sizes[0]);
+                          }
+                        }
+                      }}
+                      className="position-relative p-0 overflow-hidden d-flex align-items-center justify-content-center transition-all"
+                      style={{
+                        width: '46px',
+                        height: '46px',
+                        borderRadius: '8px',
+                        border: isSelected ? '3px solid #ff8525' : '2px solid #E2E8F0',
+                        boxShadow: isSelected ? '0 4px 10px rgba(255, 133, 37, 0.25)' : 'none',
+                        transform: isSelected ? 'scale(1.08)' : 'scale(1)',
+                        backgroundColor: imageUrl ? '#f8fafc' : color.hex,
+                        cursor: 'pointer',
+                        outline: 'none',
+                        transition: 'all 0.2s ease-in-out'
+                      }}
+                      title={`${color.name} (${color.hex})`}
+                    >
+                      {imageUrl ? (
+                        <img 
+                          src={imageUrl} 
+                          alt={color.name} 
+                          className="w-100 h-100 object-fit-contain" 
+                          style={{ padding: '2px' }} 
+                        />
+                      ) : (
+                        <div 
+                          className="w-100 h-100" 
+                          style={{ backgroundColor: color.hex }} 
+                        />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -2403,24 +2552,80 @@ function DesignContent() {
             <div className="mb-4">
               <span className="small fw-semibold d-block mb-2">Select Your Sizing</span>
               <div className="d-flex gap-2">
-                {['M', 'L', 'XL', 'XXL'].map((s) => (
-                  <Button
-                    key={s}
-                    variant={selectedSize === s ? 'danger' : 'outline-dark'}
-                    onClick={() => setSelectedSize(s)}
-                    size="sm"
-                    style={{ flex: 1, borderRadius: '6px' }}
-                  >
-                    {s}
-                  </Button>
-                ))}
+                {(() => {
+                  const currentColorObj = fabricColors.find(c => c.hex.toLowerCase() === tshirtColor.toLowerCase()) || fabricColors[0] || { sizes: ['S', 'M', 'L', 'XL', 'XXL'] };
+                  const availableSizes = currentColorObj.sizes || ['S', 'M', 'L', 'XL', 'XXL'];
+                  return availableSizes.map((s) => (
+                    <Button
+                      key={s}
+                      variant={selectedSize === s ? 'danger' : 'outline-dark'}
+                      onClick={() => setSelectedSize(s)}
+                      size="sm"
+                      style={{ flex: 1, borderRadius: '6px' }}
+                    >
+                      {s}
+                    </Button>
+                  ));
+                })()}
               </div>
             </div>
 
             {/* Pricing details */}
             <div className="p-3 bg-light rounded-3 mb-4 text-center">
               <span className="text-muted d-block small">Premium Cotton 180 GSM print:</span>
-              <span className="fs-3 fw-extrabold text-danger">৳1,100</span>
+              {(() => {
+                const currentColorObj = fabricColors.find(c => c.hex.toLowerCase() === tshirtColor.toLowerCase()) || fabricColors[0] || { price: 1100, discountPrice: 0 };
+                const hasDiscount = currentColorObj.discountPrice > 0 && currentColorObj.discountPrice < currentColorObj.price;
+                const basePrice = hasDiscount ? currentColorObj.discountPrice : (currentColorObj.price || 1100);
+                const textCharges = textLinesCount * textPrice;
+                const stickerCharges = stickersCount * stickerPrice;
+                const imageCharges = imagesCount * imagePrice;
+                const shapeCharges = shapesCount * shapePrice;
+                const totalCombinedPrice = basePrice + textCharges + stickerCharges + imageCharges + shapeCharges;
+
+                return (
+                  <div className="d-flex flex-column gap-1">
+                    <div className="d-flex align-items-center justify-content-center gap-2">
+                      {hasDiscount ? (
+                        <>
+                          <span className="fs-6 text-muted text-decoration-line-through">৳{currentColorObj.price}</span>
+                          <span className="fs-4 fw-extrabold text-danger">৳{currentColorObj.discountPrice}</span>
+                        </>
+                      ) : (
+                        <span className="fs-4 fw-extrabold text-danger">৳{currentColorObj.price || 1100}</span>
+                      )}
+                    </div>
+                    {textLinesCount > 0 && (
+                      <div className="border-top mt-1 pt-1 small text-muted d-flex justify-content-between px-2">
+                        <span>Text ({textLinesCount} lines):</span>
+                        <span className="fw-semibold text-dark">+৳{textCharges}</span>
+                      </div>
+                    )}
+                    {stickersCount > 0 && (
+                      <div className="border-top mt-1 pt-1 small text-muted d-flex justify-content-between px-2">
+                        <span>Stickers ({stickersCount} pcs):</span>
+                        <span className="fw-semibold text-dark">+৳{stickerCharges}</span>
+                      </div>
+                    )}
+                    {imagesCount > 0 && (
+                      <div className="border-top mt-1 pt-1 small text-muted d-flex justify-content-between px-2">
+                        <span>Images ({imagesCount} pcs):</span>
+                        <span className="fw-semibold text-dark">+৳{imageCharges}</span>
+                      </div>
+                    )}
+                    {shapesCount > 0 && (
+                      <div className="border-top mt-1 pt-1 small text-muted d-flex justify-content-between px-2">
+                        <span>Shapes ({shapesCount} pcs):</span>
+                        <span className="fw-semibold text-dark">+৳{shapeCharges}</span>
+                      </div>
+                    )}
+                    <div className="border-top mt-1 pt-1 fw-bold text-dark d-flex justify-content-between px-2" style={{ fontSize: '15px' }}>
+                      <span>Total Price:</span>
+                      <span className="text-danger">৳{totalCombinedPrice}</span>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Action buttons */}

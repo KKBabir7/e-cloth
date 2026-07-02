@@ -766,7 +766,7 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   .category-showcase-title {
-    font-size: 12.5px;
+    font-size: 10.5px;
   }
 
   .category-showcase-tagline {
@@ -2794,7 +2794,7 @@ font-size: 14.5px;
 
 @media (max-width: 575.98px) {
   .shop-header-title {
-    font-size: 1.45rem;
+    font-size: 1.25rem;
   }
 }
 
@@ -3130,8 +3130,52 @@ font-size: 14.5px;
 
 @media (max-width: 575.98px) {
   .account-header-title {
-    font-size: 1.4rem;
+    font-size: 1.25rem;
   }
+  .account-avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 15px;
+  }
+  .account-nav-item {
+    padding: 4px 14px;
+  }
+  .account-nav-icon {
+    width: 25px;
+    height: 25px;
+    border-radius: 6px;
+  }
+  .account-nav-icon svg {
+    width: 14px;
+    height: 14px;
+  }
+  .account-nav-name {
+    font-size: 10px;
+  }
+  .account-page .card.p-4, .account-page .custom-card.p-4 {
+    padding: 0 !important;
+  }
+  .account-page h5 {
+    font-size: 16px !important;
+  }
+  .profile-detail-value {
+    font-size: 12px !important;
+  }
+  .edit-profile-btn {
+    padding: 6px 12px !important;
+    font-size: 12px !important;
+  }
+  .edit-profile-btn svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+}
+
+/* --- Search Bar Focus Overrides --- */
+.search-bar-input:focus {
+  box-shadow: none !important;
+  background-color: #F3F4F6 !important;
+  border-color: transparent !important;
 }
 
 /* --- Empty Cart State (theme-aligned) --- */

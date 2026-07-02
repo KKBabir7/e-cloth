@@ -17,7 +17,10 @@ const mapWishlistItems = (products) => {
     _id: p._id || p.id,
     name: p.name,
     price: p.price,
-    image: p.images?.[0] || p.image || '/images/placeholder-shirt.png'
+    discountPrice: p.discountPrice || 0,
+    images: p.images || [],
+    image: p.images?.[0] || p.image || '/images/placeholder-shirt.png',
+    stock: p.stock !== undefined ? p.stock : 1
   }));
 };
 

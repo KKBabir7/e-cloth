@@ -34,6 +34,11 @@ const categorySchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
+  },
+  icon: {
+    type: String,
+    trim: true,
+    default: 'BsTags'
   }
 }, {
   timestamps: true

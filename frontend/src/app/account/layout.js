@@ -44,8 +44,8 @@ export default function AccountLayout({ children }) {
         <span className="account-header-eyebrow">
           <IoPersonOutline size={14} /> My Account
         </span>
-        <h1 className="account-header-title">User Dashboard</h1>
-        <p className="account-header-sub">
+        <h1 className="account-header-title">My Dashboard</h1>
+        <p className="account-header-sub d-none d-lg-block">
           Manage your profile, track your orders, and revisit your saved designs.
         </p>
       </div>

@@ -1,10 +1,10 @@
 'use client';
 
-
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import BrandLoader from '../../components/BrandLoader';
-import { Container, Row, Col, Card, Button, Modal } from 'react-bootstrap';
+import { Container, Row, Col, Card, Button, Modal, Badge } from 'react-bootstrap';
 import { IoHeart, IoTrashOutline, IoCartOutline, IoHeartOutline, IoArrowForward } from 'react-icons/io5';
 import { FiZoomIn } from 'react-icons/fi';
 import { useSelector, useDispatch } from 'react-redux';
@@ -119,65 +119,107 @@ export default function WishlistPage() {
       </h2>
 
       <Row className="g-2 g-md-3">
-        {wishlistItems.map((item) => (
-          <Col lg={3} md={6} xs={6} key={item.id}>
-            <div className="custom-card d-flex flex-column h-100">
-              <div className="product-image-container position-relative overflow-hidden">
-                <Link href={`/product/${item.id}`}>
-                  <Card.Img
-                    variant="top"
-                    src={getProductImageUrl(item.image)}
-                    alt={item.name}
-                    className="primary-img"
-                  />
-                </Link>
-                <button
-                  onClick={() => dispatch(removeFromWishlist(item.id))}
-                  className="position-absolute border-0 rounded-circle d-flex align-items-center justify-content-center wishlist-float-btn"
-                  title="Remove from wishlist"
-                >
-                  <IoTrashOutline size={16} color="#DC2626" />
-                </button>
+        {wishlistItems.map((item) => {
+          const isDiscounted = item.discountPrice > 0;
+          const discountPercent = isDiscounted ? Math.round(((item.price - item.discountPrice) / item.price) * 100) : 0;
+          
+          const primaryImg = item.images && item.images.length > 0 ? item.images[0] : item.image;
+          const secondaryImg = item.images && item.images.length > 1 ? item.images[1] : null;
 
-                {/* Zoom Floating Button */}
-                <button
-                  onClick={() => setZoomImage(getProductImageUrl(item.image))}
-                  className="position-absolute border-0 rounded-circle d-flex align-items-center justify-content-center zoom-float-btn"
-                  title="Zoom Image"
-                >
-                  <FiZoomIn size={16} color="#475569" />
-                </button>
-              </div>
+          return (
+            <Col lg={3} md={6} xs={6} key={item.id}>
+              <div className="custom-card d-flex flex-column h-100">
+                <div className="product-image-container position-relative overflow-hidden">
+                  <Link href={`/product/${item.id}`}>
+                    <Image
+                      src={getProductImageUrl(primaryImg)}
+                      alt={item.name}
+                      className="primary-img"
+                      width={520}
+                      height={520}
+                      sizes="(max-width: 576px) 45vw, (max-width: 992px) 30vw, 20vw"
+                      unoptimized
+                    />
+                    {secondaryImg && (
+                      <Image
+                        src={getProductImageUrl(secondaryImg)}
+                        alt={item.name}
+                        className="secondary-img"
+                        width={520}
+                        height={520}
+                        sizes="(max-width: 576px) 45vw, (max-width: 992px) 30vw, 20vw"
+                        unoptimized
+                      />
+                    )}
+                  </Link>
 
-              <div className="product-details d-flex flex-column flex-grow-1">
-                <Link href={`/product/${item.id}`} className="text-decoration-none">
-                  <h4 className="product-card-title text-truncate">
-                    {item.name}
-                  </h4>
-                </Link>
+                  {item.stock === 0 && (
+                    <Badge bg="secondary" className="position-absolute px-3 py-2" style={{ top: '12px', left: '12px', zIndex: 10 }}>
+                      Out of Stock
+                    </Badge>
+                  )}
 
-                {/* Price and Actions Section */}
-                <div className="d-flex align-items-center justify-content-between mt-auto pt-1">
-                  {/* Price */}
-                  <div className="d-flex align-items-baseline gap-1">
-                    <span className="product-card-price">৳{item.price}</span>
-                  </div>
+                  <button
+                    onClick={() => dispatch(removeFromWishlist(item.id))}
+                    className="position-absolute border-0 rounded-circle d-flex align-items-center justify-content-center wishlist-float-btn"
+                    title="Remove from wishlist"
+                  >
+                    <IoHeart size={16} color="var(--accent-red)" />
+                  </button>
 
-                  {/* Actions */}
-                  <div className="d-flex align-items-center">
-                    <button
-                      onClick={() => handleMoveToCart(item)}
-                      className={`card-action-btn ${isInCart(item.id) ? 'active' : ''}`}
-                      title="Move to Cart"
-                    >
-                      <IoCartOutline size={18} />
-                    </button>
+                  {/* Zoom Floating Button */}
+                  <button
+                    onClick={() => setZoomImage(getProductImageUrl(primaryImg))}
+                    className="position-absolute border-0 rounded-circle d-flex align-items-center justify-content-center zoom-float-btn"
+                    title="Zoom Image"
+                  >
+                    <FiZoomIn size={16} color="#475569" />
+                  </button>
+                </div>
+
+                <div className="product-details d-flex flex-column flex-grow-1">
+                  <Link href={`/product/${item.id}`} className="text-decoration-none">
+                    <h4 className="product-card-title text-truncate">
+                      {item.name}
+                    </h4>
+                  </Link>
+
+                  {/* Price and Actions Section */}
+                  <div className="d-flex align-items-center justify-content-between mt-auto pt-1">
+                    {/* Price */}
+                    <div className="d-flex align-items-baseline gap-1">
+                      {isDiscounted ? (
+                        <>
+                          <span className="product-card-price discounted">৳{item.discountPrice}</span>
+                          <span className="product-card-price-original">৳{item.price}</span>
+                        </>
+                      ) : (
+                        <span className="product-card-price">৳{item.price}</span>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="d-flex align-items-center gap-2">
+                      {isDiscounted && (
+                        <span className="discount-badge-inline">
+                          Save {discountPercent}%
+                        </span>
+                      )}
+                      <button
+                        onClick={() => handleMoveToCart(item)}
+                        disabled={item.stock === 0}
+                        className={`card-action-btn ${isInCart(item.id) ? 'active' : ''}`}
+                        title="Move to Cart"
+                      >
+                        <IoCartOutline size={18} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </Col>
-        ))}
+            </Col>
+          );
+        })}
       </Row>
       
       {/* Premium Image Lightbox Modal */}

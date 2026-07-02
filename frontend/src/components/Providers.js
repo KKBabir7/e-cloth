@@ -57,6 +57,14 @@ function GlobalRealtimeSync() {
           qc.invalidateQueries({ queryKey: ['categories'] });
           qc.invalidateQueries({ queryKey: ['adminCategories'] });
           break;
+        case 'stickers':
+          qc.invalidateQueries({ queryKey: ['stickers'] });
+          qc.invalidateQueries({ queryKey: ['adminStickers'] });
+          break;
+        case 'fabric-colors':
+          qc.invalidateQueries({ queryKey: ['fabricColors'] });
+          qc.invalidateQueries({ queryKey: ['adminColors'] });
+          break;
         case 'hero-slides':
           qc.invalidateQueries({ queryKey: ['heroSlides'] });
           qc.invalidateQueries({ queryKey: ['adminSlides'] });

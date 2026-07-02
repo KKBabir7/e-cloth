@@ -26,7 +26,7 @@ const adminGetCategories = async (req, res) => {
 // ─── Admin: create category ───────────────────────────────────────────────
 const createCategory = async (req, res) => {
   try {
-    const { name, slug, image, tagline, accentColor, order, isActive } = req.body;
+    const { name, slug, image, tagline, accentColor, order, isActive, icon } = req.body;
 
     if (!name || !image) {
       return res.status(400).json({ success: false, message: 'Please provide category name and thumbnail image URL' });
@@ -48,7 +48,8 @@ const createCategory = async (req, res) => {
       tagline: tagline?.trim() || '',
       accentColor: accentColor?.trim() || '#ff8525',
       order: Number(order || 0),
-      isActive: isActive !== undefined ? isActive : true
+      isActive: isActive !== undefined ? isActive : true,
+      icon: icon?.trim() || 'BsTags'
     });
 
     broadcast('categories'); // 🔔 notify all connected browsers instantly
@@ -62,7 +63,7 @@ const createCategory = async (req, res) => {
 // ─── Admin: update category ───────────────────────────────────────────────
 const updateCategory = async (req, res) => {
   try {
-    const { name, slug, image, tagline, accentColor, order, isActive } = req.body;
+    const { name, slug, image, tagline, accentColor, order, isActive, icon } = req.body;
 
     const category = await Category.findById(req.params.id);
     if (!category) {
@@ -75,6 +76,7 @@ const updateCategory = async (req, res) => {
     if (accentColor !== undefined) category.accentColor = accentColor.trim() || '#ff8525';
     if (order !== undefined) category.order = Number(order);
     if (isActive !== undefined) category.isActive = isActive;
+    if (icon !== undefined) category.icon = icon.trim() || 'BsTags';
 
     if (slug) {
       const categorySlug = slug.trim();
@@ -122,10 +124,10 @@ const seedDefaultCategories = async () => {
     if (count === 0) {
       console.log('Seeding default categories in MongoDB...');
       const defaults = [
-        { name: 'Custom T-Shirts', slug: 'T-shirt', image: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500&auto=format&fit=crop', tagline: 'Comfort Wear', accentColor: '#ff8525', order: 0, isActive: true },
-        { name: 'Polo Shirts', slug: 'Polo', image: 'https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=500&auto=format&fit=crop', tagline: 'Smart Casual', accentColor: '#22c55e', order: 1, isActive: true },
-        { name: 'Casual Shirts', slug: 'Shirt', image: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=500&auto=format&fit=crop', tagline: 'Everyday Style', accentColor: '#3b82f6', order: 2, isActive: true },
-        { name: 'Traditional Panjabi', slug: 'Panjabi', image: 'https://images.unsplash.com/photo-1608748010899-18f300247112?w=500&auto=format&fit=crop', tagline: 'Festive Look', accentColor: '#a855f7', order: 3, isActive: true }
+        { name: 'Custom T-Shirts', slug: 'T-shirt', image: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500&auto=format&fit=crop', tagline: 'Comfort Wear', accentColor: '#ff8525', order: 0, isActive: true, icon: 'BsTshirt' },
+        { name: 'Polo Shirts', slug: 'Polo', image: 'https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=500&auto=format&fit=crop', tagline: 'Smart Casual', accentColor: '#22c55e', order: 1, isActive: true, icon: 'BsTags' },
+        { name: 'Casual Shirts', slug: 'Shirt', image: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=500&auto=format&fit=crop', tagline: 'Everyday Style', accentColor: '#3b82f6', order: 2, isActive: true, icon: 'BsFilterCircle' },
+        { name: 'Traditional Panjabi', slug: 'Panjabi', image: 'https://images.unsplash.com/photo-1608748010899-18f300247112?w=500&auto=format&fit=crop', tagline: 'Festive Look', accentColor: '#a855f7', order: 3, isActive: true, icon: 'BsStars' }
       ];
       await Category.insertMany(defaults);
       console.log('Seeded 4 default categories successfully.');

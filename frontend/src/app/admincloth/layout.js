@@ -9,7 +9,7 @@ import { Container, Row, Col, Card, ListGroup, Badge, Button, Navbar, Nav, NavDr
 import {
   IoGridOutline, IoShirtOutline, IoReceiptOutline, IoPeopleOutline,
   IoGiftOutline, IoShieldCheckmarkOutline, IoHomeOutline, IoLogOutOutline,
-  IoImagesOutline, IoLayersOutline, IoChatbubblesOutline
+  IoImagesOutline, IoLayersOutline, IoChatbubblesOutline, IoSparklesOutline
 } from 'react-icons/io5';
 import { logout } from '../../store/authSlice';
 import { useUI } from '../../context/UIContext';
@@ -64,7 +64,8 @@ export default function AdminLayout({ children }) {
     { name: 'Manage Users', path: '/admincloth/users', icon: <IoPeopleOutline size={18} /> },
     { name: 'Coupons & Promos', path: '/admincloth/coupons', icon: <IoGiftOutline size={18} /> },
     { name: 'Hero Slideshow', path: '/admincloth/hero-slides', icon: <IoImagesOutline size={18} /> },
-    { name: 'Reviews', path: '/admincloth/reviews', icon: <IoChatbubblesOutline size={18} /> }
+    { name: 'Reviews', path: '/admincloth/reviews', icon: <IoChatbubblesOutline size={18} /> },
+    { name: 'Design Manage', path: '/admincloth/design-manage', icon: <IoSparklesOutline size={18} /> }
   ];
 
   return (

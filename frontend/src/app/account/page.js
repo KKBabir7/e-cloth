@@ -182,14 +182,31 @@ export default function AccountProfilePage() {
               <IoPersonOutline /> Personal Profile Details
             </h5>
             {!isEditingProfile ? (
-              <Button
-                variant="outline-danger"
-                size="sm"
+              <button
                 onClick={() => setIsEditingProfile(true)}
-                className="d-flex align-items-center gap-2 px-3 py-2 rounded-3"
+                className="d-flex align-items-center gap-2 px-3 py-2 rounded-3 edit-profile-btn"
+                style={{
+                  color: 'var(--accent-red)',
+                  borderColor: 'var(--accent-red)',
+                  borderWidth: '1px',
+                  borderStyle: 'solid',
+                  backgroundColor: 'transparent',
+                  fontWeight: '500',
+                  fontSize: '14px',
+                  whiteSpace:'nowrap',
+                  transition: 'var(--transition-smooth)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = 'var(--accent-red)';
+                  e.currentTarget.style.color = '#fff';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = 'var(--accent-red)';
+                }}
               >
                 <IoCreateOutline size={18} /> Edit Profile
-              </Button>
+              </button>
             ) : (
               <Button
                 variant="outline-secondary"
@@ -208,32 +225,32 @@ export default function AccountProfilePage() {
 
           {!isEditingProfile ? (
             <Row className="gy-3">
-              <Col md={4}>
-                <div className="p-3 bg-light rounded-3 d-flex align-items-center gap-3">
-                  <IoPersonOutline className="text-danger" size={22} />
-                  <div>
-                    <span className="text-muted d-block small" style={{ fontSize: '11px' }}>Full Name</span>
-                    <span className="fw-bold text-dark">{user.name}</span>
+              <Col md={4} xs={12}>
+                <div className="p-3 bg-light rounded-3 d-flex align-items-center gap-3" style={{ minWidth: 0 }}>
+                  <IoPersonOutline style={{ color: 'var(--accent-red)', flexShrink: 0 }} size={16} />
+                  <div style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
+                    <span className="text-muted d-block small" style={{ fontSize: '12px' }}>Full Name</span>
+                    <span className="fw-bold text-dark text-truncate d-block profile-detail-value">{user.name}</span>
                   </div>
                 </div>
               </Col>
 
-              <Col md={4}>
-                <div className="p-3 bg-light rounded-3 d-flex align-items-center gap-3">
-                  <IoMailOutline className="text-danger" size={22} />
-                  <div>
-                    <span className="text-muted d-block small" style={{ fontSize: '11px' }}>Email Address</span>
-                    <span className="fw-bold text-dark">{user.email}</span>
+              <Col md={4} xs={12}>
+                <div className="p-3 bg-light rounded-3 d-flex align-items-center gap-3" style={{ minWidth: 0 }}>
+                  <IoMailOutline style={{ color: 'var(--accent-red)', flexShrink: 0 }} size={16} />
+                  <div style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
+                    <span className="text-muted d-block small" style={{ fontSize: '12px' }}>Email Address</span>
+                    <span className="fw-bold text-dark text-truncate d-block profile-detail-value" title={user.email}>{user.email}</span>
                   </div>
                 </div>
               </Col>
 
-              <Col md={4}>
-                <div className="p-3 bg-light rounded-3 d-flex align-items-center gap-3">
-                  <IoCallOutline className="text-danger" size={22} />
-                  <div>
-                    <span className="text-muted d-block small" style={{ fontSize: '11px' }}>Contact Number</span>
-                    <span className="fw-bold text-dark">{user.phone}</span>
+              <Col md={4} xs={12}>
+                <div className="p-3 bg-light rounded-3 d-flex align-items-center gap-3" style={{ minWidth: 0 }}>
+                  <IoCallOutline style={{ color: 'var(--accent-red)', flexShrink: 0 }} size={16} />
+                  <div style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
+                    <span className="text-muted d-block small" style={{ fontSize: '12px' }}>Contact Number</span>
+                    <span className="fw-bold text-dark d-block profile-detail-value">{user.phone}</span>
                   </div>
                 </div>
               </Col>
@@ -271,8 +288,7 @@ export default function AccountProfilePage() {
                   <Button
                     type="submit"
                     disabled={submittingProfile}
-                    variant="danger"
-                    className="btn-premium-accent bg-red-gradient w-100 py-2 d-flex align-items-center justify-content-center gap-2"
+                    className="btn-premium-accent bg-red-gradient w-100 py-2 d-flex align-items-center justify-content-center gap-2 border-0"
                   >
                     <IoCheckmarkCircleOutline size={20} />
                     {submittingProfile ? 'Saving...' : 'Save Configuration'}
@@ -342,8 +358,8 @@ export default function AccountProfilePage() {
               <span className="fw-bold d-block mb-3 text-dark" style={{ fontSize: '14px' }}>Add Shipping Address</span>
               <Form onSubmit={handleAddAddress} className="d-flex flex-column gap-3">
                 
-                <Row className="g-2">
-                  <Col xs={6}>
+                <Row className="g-3">
+                  <Col sm={6} xs={12}>
                     <Form.Group>
                       <Form.Label className="small fw-semibold text-dark">Division</Form.Label>
                       <CustomSelect
@@ -355,7 +371,7 @@ export default function AccountProfilePage() {
                     </Form.Group>
                   </Col>
 
-                  <Col xs={6}>
+                  <Col sm={6} xs={12}>
                     <Form.Group>
                       <Form.Label className="small fw-semibold text-dark">District</Form.Label>
                       <CustomSelect
@@ -395,8 +411,7 @@ export default function AccountProfilePage() {
                 <Button
                   type="submit"
                   disabled={submittingAddress}
-                  variant="danger"
-                  className="btn-premium-accent justify-content-center bg-red-gradient w-100 py-2 rounded-3 fw-bold mt-2"
+                  className="btn-premium-accent justify-content-center bg-red-gradient w-100 py-2 rounded-3 fw-bold mt-2 border-0"
                 >
                   {submittingAddress ? 'Saving Address...' : 'Save New Address'}
                 </Button>
