@@ -1,17 +1,25 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
-import { usePathname } from 'next/navigation';
+import { useEffect, useState, useRef, Suspense } from 'react';
+import { usePathname, useSearchParams } from 'next/navigation';
 import BrandLoader from './BrandLoader';
 
 
 export default function PageTransitionLoader() {
+  return (
+    <Suspense fallback={null}>
+      <PageTransitionLoaderContent />
+    </Suspense>
+  );
+}
+
+function PageTransitionLoaderContent() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [visible, setVisible] = useState(false);
   const [progress, setProgress] = useState(0);
   const timerRef = useRef(null);
   const progressRef = useRef(null);
-  const prevPathname = useRef(pathname);
   const startedRef = useRef(false);
 
   const clearAllTimers = () => {
@@ -36,11 +44,9 @@ export default function PageTransitionLoader() {
     }, 70);
   };
 
-  useEffect(() => {
-    // Only complete/hide when pathname actually changes
-    if (pathname === prevPathname.current) return;
-    prevPathname.current = pathname;
+  const currentQuery = searchParams.toString();
 
+  useEffect(() => {
     clearAllTimers();
     startedRef.current = false;
     timerRef.current = setTimeout(() => {
@@ -55,7 +61,7 @@ export default function PageTransitionLoader() {
     return () => {
       clearAllTimers();
     };
-  }, [pathname]);
+  }, [pathname, currentQuery]);
 
   useEffect(() => {
     const DRAG_THRESHOLD = 10;

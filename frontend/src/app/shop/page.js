@@ -35,6 +35,11 @@ function ShopContent() {
   const wishlistItems = useSelector((state) => state.wishlist.items);
   const cartItems = useSelector((state) => state.cart.items);
   const [zoomImage, setZoomImage] = useState(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Parse filters from URL Search Params
   const categoryParam = searchParams.get('category') || '';
@@ -333,6 +338,10 @@ function ShopContent() {
       </button>
     </div>
   );
+
+  if (!isMounted) {
+    return <BrandLoader fullPage={true} transparent={false} />;
+  }
 
   return (
     <Container className="py-4 py-lg-5 shop-page">
