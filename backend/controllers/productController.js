@@ -96,17 +96,17 @@ const getProducts = async (req, res) => {
       }
     }
 
-    // 7. Sort Options
-    let sortObj = { createdAt: -1 }; // default: newest arrivals
+    // 7. Sort Options — always include _id as tiebreaker for stable pagination
+    let sortObj = { createdAt: -1, _id: -1 }; // default: newest arrivals
     if (sort) {
       if (sort === 'priceLowHigh') {
-        sortObj = { price: 1 };
+        sortObj = { price: 1, _id: 1 };
       } else if (sort === 'priceHighLow') {
-        sortObj = { price: -1 };
+        sortObj = { price: -1, _id: -1 };
       } else if (sort === 'popular') {
-        sortObj = { 'ratings.count': -1, 'ratings.average': -1 };
+        sortObj = { 'ratings.count': -1, 'ratings.average': -1, _id: -1 };
       } else if (sort === 'newest') {
-        sortObj = { createdAt: -1 };
+        sortObj = { createdAt: -1, _id: -1 };
       }
     }
 

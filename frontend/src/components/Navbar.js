@@ -94,14 +94,8 @@ export default function AppNavbar() {
     }
   });
 
-  const fallbackCategories = [
-    { _id: 't-shirts', slug: 't-shirts', name: 't-shirts' },
-    { _id: 'polo-shirts', slug: 'polo-shirts', name: 'polo shirts' },
-    { _id: 'hoodies', slug: 'hoodies', name: 'hoodies' },
-    { _id: 'sweatshirts', slug: 'sweatshirts', name: 'sweatshirts' }
-  ];
 
-  const navCategories = (categoriesData && categoriesData.length > 0) ? categoriesData : fallbackCategories;
+  const navCategories = (categoriesData && categoriesData.length > 0) ? categoriesData : [];
 
   useEffect(() => {
     setMounted(true);

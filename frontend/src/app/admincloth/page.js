@@ -22,30 +22,7 @@ export default function AdminDashboardPage() {
         setStats(res.data.stats);
       }
     } catch (err) {
-      console.warn('Backend server unseeded or offline, serving premium analytical mock dashboard stats');
-      // Premium Mock stats fallback matching our scaling targets
-      setStats({
-        totalUsers: 51200,
-        totalOrders: 10450,
-        totalRevenue: 1284500,
-        stockAlertsCount: 2,
-        stockAlerts: [
-          { name: 'Royal Gold Traditional Panjabi', stock: 0, price: 5000, category: 'Panjabi' },
-          { name: 'Casual Slim Fit Denim Shirt', stock: 5, price: 1950, category: 'Shirt' }
-        ],
-        topSoldProducts: [
-          { name: 'Summer Breathable Solid T-Shirt', category: 'T-shirt', quantitySold: 450, totalSales: 220500 },
-          { name: 'Classic Crimson Polo Shirt', category: 'Polo', quantitySold: 320, totalSales: 304000 }
-        ],
-        salesChartData: [
-          { _id: '2026-05-24', ordersCount: 150, dailyRevenue: 18000 },
-          { _id: '2026-05-25', ordersCount: 240, dailyRevenue: 29000 },
-          { _id: '2026-05-26', ordersCount: 310, dailyRevenue: 42000 },
-          { _id: '2026-05-27', ordersCount: 420, dailyRevenue: 59000 },
-          { _id: '2026-05-28', ordersCount: 580, dailyRevenue: 85000 },
-          { _id: '2026-05-29', ordersCount: 650, dailyRevenue: 98000 }
-        ]
-      });
+      console.warn('Backend server offline. Could not load dashboard stats.');
     } finally {
       setLoading(false);
     }

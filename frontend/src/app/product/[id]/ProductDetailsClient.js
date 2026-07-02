@@ -787,7 +787,7 @@ export default function ProductDetailsClient({ initialProduct }) {
           <div className="product-tabs-panel">
 
             {/* Reviews Tab */}
-            {activeTab === 'reviews' && (
+            <div style={{ display: activeTab === 'reviews' ? 'block' : 'none' }}>
               <Row className="gy-4 gy-lg-5">
 
                 <Col lg={5}>
@@ -963,72 +963,80 @@ export default function ProductDetailsClient({ initialProduct }) {
                 </Col>
 
               </Row>
-            )}
+            </div>
 
             {/* Shipping Tab */}
-            {activeTab === 'shipping' && (
-              <div className="product-description-wysiwyg" style={{ fontSize: '14.5px', lineHeight: '1.8' }}>
-                {product.shippingReturns ? (
-                  <div dangerouslySetInnerHTML={{ __html: product.shippingReturns }} />
-                ) : (
-                  <div>
-                    <div className="d-flex flex-column gap-3">
-                      {[
-                        { icon: '🚀', title: 'Inside Dhaka', desc: 'Flat ৳80 delivery charge. Dispatched via Paperfly / Pathao. Estimated arrival: 1-2 working days.' },
-                        { icon: '🚛', title: 'Outside Dhaka', desc: 'Flat ৳150 delivery charge. Dispatched via Steadfast / SA Paribahan. Estimated arrival: 3-4 working days.' },
-                        { icon: '🔄', title: '7-Day Replacement Policy', desc: 'We support full size-exchanges or print-error replacements within 7 days of delivery. Keep tags attached and clothes unwashed.' },
-                      ].map((s, i) => (
-                        <div key={i} className="d-flex gap-3 p-4" style={{ borderRadius: '14px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-                          <span style={{ fontSize: '28px', flexShrink: 0 }}>{s.icon}</span>
-                          <div>
-                            <h6 className="fw-bold mb-1" style={{ color: 'var(--primary-navy)' }}>{s.title}</h6>
-                            <p className="text-muted mb-0" style={{ fontSize: '13.5px' }}>{s.desc}</p>
-                          </div>
+            <div 
+              className="product-description-wysiwyg" 
+              style={{ 
+                fontSize: '14.5px', 
+                lineHeight: '1.8',
+                display: activeTab === 'shipping' ? 'block' : 'none'
+              }}
+            >
+              {product.shippingReturns ? (
+                <div dangerouslySetInnerHTML={{ __html: product.shippingReturns }} />
+              ) : (
+                <div>
+                  <div className="d-flex flex-column gap-3">
+                    {[
+                      { icon: '🚀', title: 'Inside Dhaka', desc: 'Flat ৳80 delivery charge. Dispatched via Paperfly / Pathao. Estimated arrival: 1-2 working days.' },
+                      { icon: '🚛', title: 'Outside Dhaka', desc: 'Flat ৳150 delivery charge. Dispatched via Steadfast / SA Paribahan. Estimated arrival: 3-4 working days.' },
+                      { icon: '🔄', title: '7-Day Replacement Policy', desc: 'We support full size-exchanges or print-error replacements within 7 days of delivery. Keep tags attached and clothes unwashed.' },
+                    ].map((s, i) => (
+                      <div key={i} className="d-flex gap-3 p-4" style={{ borderRadius: '14px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+                        <span style={{ fontSize: '28px', flexShrink: 0 }}>{s.icon}</span>
+                        <div>
+                          <h6 className="fw-bold mb-1" style={{ color: 'var(--primary-navy)' }}>{s.title}</h6>
+                          <p className="text-muted mb-0" style={{ fontSize: '13.5px' }}>{s.desc}</p>
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    ))}
                   </div>
-                )}
-              </div>
-            )}
+                </div>
+              )}
+            </div>
 
             {/* Size Guide Tab */}
-            {activeTab === 'size-guide' && (
-              <div className="product-description-wysiwyg">
-                {product.sizeGuide ? (
-                  <div dangerouslySetInnerHTML={{ __html: product.sizeGuide }} />
-                ) : (
-                  <div>
-                    <h6 className="fw-bold mb-4" style={{ color: 'var(--primary-navy)', fontSize: '16px' }}>Standard T-Shirt Size Guide (inches)</h6>
-                    <div style={{ overflowX: 'auto' }}>
-                      <table className="table table-bordered text-center" style={{ fontSize: '14px', borderRadius: '12px', overflow: 'hidden' }}>
-                        <thead style={{ backgroundColor: 'var(--primary-navy)', color: '#fff' }}>
-                          <tr>
-                            <th className="py-3" style={{ backgroundColor: 'var(--primary-navy)', color: '#fff', border: 'none' }}>Size</th>
-                            <th className="py-3" style={{ backgroundColor: 'var(--primary-navy)', color: '#fff', border: 'none' }}>Chest (in)</th>
-                            <th className="py-3" style={{ backgroundColor: 'var(--primary-navy)', color: '#fff', border: 'none' }}>Length (in)</th>
-                            <th className="py-3" style={{ backgroundColor: 'var(--primary-navy)', color: '#fff', border: 'none' }}>Sleeve</th>
+            <div 
+              className="product-description-wysiwyg"
+              style={{
+                display: activeTab === 'size-guide' ? 'block' : 'none'
+              }}
+            >
+              {product.sizeGuide ? (
+                <div dangerouslySetInnerHTML={{ __html: product.sizeGuide }} />
+              ) : (
+                <div>
+                  <h6 className="fw-bold mb-4" style={{ color: 'var(--primary-navy)', fontSize: '16px' }}>Standard T-Shirt Size Guide (inches)</h6>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table className="table table-bordered text-center" style={{ fontSize: '14px', borderRadius: '12px', overflow: 'hidden' }}>
+                      <thead style={{ backgroundColor: 'var(--primary-navy)', color: '#fff' }}>
+                        <tr>
+                          <th className="py-3" style={{ backgroundColor: 'var(--primary-navy)', color: '#fff', border: 'none' }}>Size</th>
+                          <th className="py-3" style={{ backgroundColor: 'var(--primary-navy)', color: '#fff', border: 'none' }}>Chest (in)</th>
+                          <th className="py-3" style={{ backgroundColor: 'var(--primary-navy)', color: '#fff', border: 'none' }}>Length (in)</th>
+                          <th className="py-3" style={{ backgroundColor: 'var(--primary-navy)', color: '#fff', border: 'none' }}>Sleeve</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[['S','36–38','26.5','7.5'],['M','38–40','27.5','8.0'],['L','40–42','28.5','8.5'],['XL','42–44','29.5','9.0'],['XXL','44–46','30.5','9.5']].map(([sz, ch, ln, sl], i) => (
+                          <tr key={sz} style={{ backgroundColor: i % 2 === 0 ? '#FAFBFC' : '#FFFFFF' }}>
+                            <td className="fw-bold py-3" style={{ color: 'var(--primary-navy)' }}>{sz}</td>
+                            <td className="py-3">{ch}</td>
+                            <td className="py-3">{ln}</td>
+                            <td className="py-3">{sl}</td>
                           </tr>
-                        </thead>
-                        <tbody>
-                          {[['S','36–38','26.5','7.5'],['M','38–40','27.5','8.0'],['L','40–42','28.5','8.5'],['XL','42–44','29.5','9.0'],['XXL','44–46','30.5','9.5']].map(([sz, ch, ln, sl], i) => (
-                            <tr key={sz} style={{ backgroundColor: i % 2 === 0 ? '#FAFBFC' : '#FFFFFF' }}>
-                              <td className="fw-bold py-3" style={{ color: 'var(--primary-navy)' }}>{sz}</td>
-                              <td className="py-3">{ch}</td>
-                              <td className="py-3">{ln}</td>
-                              <td className="py-3">{sl}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    <p className="text-muted mt-3" style={{ fontSize: '12.5px' }}>
-                      💡 Tip: When in doubt, size up for a relaxed fit or size down for a fitted look. All measurements are approximate.
-                    </p>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                )}
-              </div>
-            )}
+                  <p className="text-muted mt-3" style={{ fontSize: '12.5px' }}>
+                    💡 Tip: When in doubt, size up for a relaxed fit or size down for a fitted look. All measurements are approximate.
+                  </p>
+                </div>
+              )}
+            </div>
 
           </div>
         </div>

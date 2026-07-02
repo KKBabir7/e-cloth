@@ -87,14 +87,14 @@ export default function ShopClient({ initialProductsData, initialCategoriesData 
     isFetching,
     error,
   } = useQuery({
-    queryKey: ['products', 'shop', selectedCategory, debouncedSearch, priceRange, selectedSize, availability, sortParam, pageParam],
+    queryKey: ['products', 'shop', categoryParam, debouncedSearch, maxPriceParam, sizeParam, availabilityParam, sortParam, pageParam],
     queryFn: async () => {
       let query = `${getBackendUrl()}/api/products?page=${pageParam}&limit=6&sort=${sortParam}`;
-      if (selectedCategory) query += `&category=${selectedCategory}`;
+      if (categoryParam) query += `&category=${categoryParam}`;
       if (debouncedSearch) query += `&search=${encodeURIComponent(debouncedSearch)}`;
-      if (priceRange != null) query += `&maxPrice=${priceRange}`;
-      if (selectedSize) query += `&size=${selectedSize}`;
-      if (availability) query += `&availability=${availability}`;
+      if (maxPriceParam != null) query += `&maxPrice=${maxPriceParam}`;
+      if (sizeParam) query += `&size=${sizeParam}`;
+      if (availabilityParam) query += `&availability=${availabilityParam}`;
 
       const res = await axios.get(query);
       if (res.data.success) {
