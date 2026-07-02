@@ -3,7 +3,7 @@ import dynamic from "next/dynamic";
 import Providers from "../components/Providers";
 import Footer from "../components/Footer";
 
-const AppNavbar = dynamic(() => import("../components/Navbar"), { ssr: false });
+import AppNavbar from "../components/Navbar";
 const FloatingCart = dynamic(() => import("../components/FloatingCart"), { ssr: false });
 const FloatingWhatsApp = dynamic(() => import("../components/FloatingWhatsApp"), { ssr: false });
 const PageTransitionLoader = dynamic(() => import("../components/PageTransitionLoader"), { ssr: false });
