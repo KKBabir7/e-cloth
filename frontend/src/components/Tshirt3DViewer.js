@@ -63,7 +63,7 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
     
     // Front vs Back position coordinates
     let zOffset = 0.08;
-    let yOffset = -0.02;
+    let yOffset = -0.01;
 
     if (isFallback) {
       zOffset = 0.042;

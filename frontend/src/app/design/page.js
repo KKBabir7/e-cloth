@@ -1086,6 +1086,38 @@ function DesignContent() {
     }
   };
 
+  // Save design to user account (without adding to cart)
+  const [isSavingDesign, setIsSavingDesign] = useState(false);
+  const handleSaveDesign = async () => {
+    if (!canvas) return;
+    if (!isAuthenticated) {
+      showToast('Please login to save your design', 'error');
+      router.push('/login?redirect=/design');
+      return;
+    }
+    try {
+      setIsSavingDesign(true);
+      showToast('Saving your design...', 'info');
+      const previewImg = await generatePreview();
+      const frontJson = frontCanvas ? frontCanvas.toJSON() : null;
+      const backJson = backCanvas ? backCanvas.toJSON() : null;
+      const canvasJson = { front: frontJson, back: backJson };
+      const res = await axios.post(`${getBackendUrl()}/api/design/save`, {
+        productId: productId || null,
+        canvasJson,
+        previewImage: previewImg
+      });
+      if (res.data.success) {
+        showToast('✅ Design saved to your account!', 'success');
+      }
+    } catch (err) {
+      console.error('Save design error:', err);
+      showToast('Error saving design', 'error');
+    } finally {
+      setIsSavingDesign(false);
+    }
+  };
+
   return (
     <Container className="py-5">
       <Row className="gy-4">
@@ -1461,7 +1493,7 @@ function DesignContent() {
                           <Form.Label className="small fw-semibold text-secondary m-0 d-flex align-items-center gap-1" style={{ fontSize: '11px' }}>
                             <IoReload size={12} className="text-secondary" /> Rotate
                           </Form.Label>
-                          <span className="text-dark fw-bold" style={{ fontSize: '10px' }}>{imageRotation}°</span>
+                          <span className="text-dark fw-bold" style={{ fontSize: '10px' }}>{imageRotation}Â°</span>
                         </div>
                         <Form.Range 
                           min={0} 
@@ -1920,7 +1952,7 @@ function DesignContent() {
                             <Form.Label className="small fw-semibold text-secondary m-0 d-flex align-items-center gap-1" style={{ fontSize: '11px' }}>
                               <IoReload size={12} className="text-secondary" /> Rotate
                             </Form.Label>
-                            <span className="text-dark fw-bold" style={{ fontSize: '10px' }}>{shapeRotation}°</span>
+                            <span className="text-dark fw-bold" style={{ fontSize: '10px' }}>{shapeRotation}Â°</span>
                           </div>
                           <Form.Range 
                             min={0} 
@@ -2081,7 +2113,7 @@ function DesignContent() {
                           <Form.Label className="small fw-semibold text-secondary m-0 d-flex align-items-center gap-1" style={{ fontSize: '11px' }}>
                             <IoReload size={12} className="text-secondary" /> Rotate
                           </Form.Label>
-                          <span className="text-dark fw-bold" style={{ fontSize: '10px' }}>{stickerRotation}°</span>
+                          <span className="text-dark fw-bold" style={{ fontSize: '10px' }}>{stickerRotation}Â°</span>
                         </div>
                         <Form.Range 
                           min={0} 
@@ -2299,7 +2331,7 @@ function DesignContent() {
                             >
                               <div className="d-flex align-items-center gap-2 overflow-hidden" style={{ flex: 1 }}>
                                 {/* Drag Indicator */}
-                                <span className="text-muted" style={{ fontSize: '10px', cursor: 'grab' }}>☰</span>
+                                <span className="text-muted" style={{ fontSize: '10px', cursor: 'grab' }}>â˜°</span>
                                 
                                 {/* Layer Type Icon */}
                                 {layer.type === 'text' ? (
@@ -2370,56 +2402,16 @@ function DesignContent() {
 
         {/* CENTER INTERACTIVE T-SHIRT CANVAS */}
         <Col lg={6} className="text-center sticky-tshirt-col">
-          <div className="glass-panel p-4 bg-white d-flex flex-column align-items-center justify-content-center relative" style={{ minHeight: '520px' }}>
+          <div className="d-flex flex-column align-items-center justify-content-center relative" style={{ minHeight: '520px' }}>
             
-            {/* Display Mode Switcher (2D Editor vs 3D Preview) */}
-            <div className="d-flex justify-content-between align-items-center w-100 mb-3 px-2 flex-wrap gap-2">
-              <div className="d-flex gap-2 bg-light p-1 rounded-3">
-                <Button
-                  variant={displayMode === '2d' ? 'dark' : 'light'}
-                  onClick={() => setDisplayMode('2d')}
-                  size="sm"
-                  className="px-3 fw-bold"
-                >
-                  2D Studio Editor
-                </Button>
-                <Button
-                  variant={displayMode === '3d' ? 'danger' : 'light'}
-                  onClick={() => setDisplayMode('3d')}
-                  size="sm"
-                  className={`px-3 fw-bold ${displayMode === '3d' ? 'bg-red-gradient border-0 text-white' : ''}`}
-                >
-                  3D Interactive Preview
-                </Button>
-              </div>
 
-              <div className="d-flex gap-2 bg-light p-1 rounded-3">
-                <Button
-                  variant={tshirtView === 'front' ? 'danger' : 'light'}
-                  onClick={() => setTshirtView('front')}
-                  size="sm"
-                  className="px-2"
-                  style={{ fontSize: '12px' }}
-                >
-                  Front View
-                </Button>
-                <Button
-                  variant={tshirtView === 'back' ? 'danger' : 'light'}
-                  onClick={() => setTshirtView('back')}
-                  size="sm"
-                  className="px-2"
-                  style={{ fontSize: '12px' }}
-                >
-                  Back View
-                </Button>
-              </div>
-            </div>
 
             {/* Unified T-Shirt 3D/2D Viewer Frame */}
             <div 
               className="position-relative shadow rounded-4 overflow-hidden" 
               style={{
-                width: '460px',
+                width: '100%',
+                margin: '0 auto',
                 height: '500px',
                 backgroundColor: '#F8FAFC',
                 border: '1px solid #E2E8F0'
@@ -2452,7 +2444,7 @@ function DesignContent() {
                   width: '242px',
                   height: '442px',
                   top: '45px',
-                  left: '109px',
+                  left: 'calc(50% - 121px)',
                   zIndex: 3,
                   pointerEvents: 'none'
                 }}>
@@ -2462,7 +2454,7 @@ function DesignContent() {
                 {/* Absolute Canvas overlay wrapper for Front */}
                 <div className="position-absolute" style={{
                   top: '45px',
-                  left: '109px',
+                  left: 'calc(50% - 121px)',
                   zIndex: 4,
                   display: tshirtView === 'front' ? 'block' : 'none'
                 }}>
@@ -2472,7 +2464,7 @@ function DesignContent() {
                 {/* Absolute Canvas overlay wrapper for Back */}
                 <div className="position-absolute" style={{
                   top: '45px',
-                  left: '109px',
+                  left: 'calc(50% - 121px)',
                   zIndex: 4,
                   display: tshirtView === 'back' ? 'block' : 'none'
                 }}>
@@ -2489,162 +2481,101 @@ function DesignContent() {
 
         {/* RIGHT CONTROL PANEL */}
         <Col lg={3}>
-          <div className="glass-panel p-3 bg-white h-100 d-flex flex-column gap-3">
-            <h5 className="fw-bold mb-3 d-flex align-items-center gap-2" style={{ color: 'var(--primary-navy)' }}>
-              <IoSave /> Save & Export
-            </h5>
-
-            {/* 1. Base Shirt Palette colors */}
-            <div className="mb-4">
-              <span className="small fw-semibold d-block mb-2">Base Fabric Color</span>
-              <div className="d-flex flex-wrap gap-2">
-                {fabricColors.map((color) => {
-                  const isSelected = tshirtColor.toLowerCase() === color.hex.toLowerCase();
-                  const imageUrl = color.image ? (color.image.startsWith('http') ? color.image : `${getBackendUrl()}${color.image}`) : null;
-                  
-                  return (
-                    <button
-                      key={color.name}
-                      type="button"
-                      onClick={() => {
-                        setTshirtColor(color.hex);
-                        if (color.sizes && color.sizes.length > 0) {
-                          if (!color.sizes.includes(selectedSize)) {
-                            setSelectedSize(color.sizes[0]);
-                          }
-                        }
-                      }}
-                      className="position-relative p-0 overflow-hidden d-flex align-items-center justify-content-center transition-all"
-                      style={{
-                        width: '46px',
-                        height: '46px',
-                        borderRadius: '8px',
-                        border: isSelected ? '3px solid #ff8525' : '2px solid #E2E8F0',
-                        boxShadow: isSelected ? '0 4px 10px rgba(255, 133, 37, 0.25)' : 'none',
-                        transform: isSelected ? 'scale(1.08)' : 'scale(1)',
-                        backgroundColor: imageUrl ? '#f8fafc' : color.hex,
-                        cursor: 'pointer',
-                        outline: 'none',
-                        transition: 'all 0.2s ease-in-out'
-                      }}
-                      title={`${color.name} (${color.hex})`}
-                    >
-                      {imageUrl ? (
-                        <img 
-                          src={imageUrl} 
-                          alt={color.name} 
-                          className="w-100 h-100 object-fit-contain" 
-                          style={{ padding: '2px' }} 
-                        />
-                      ) : (
-                        <div 
-                          className="w-100 h-100" 
-                          style={{ backgroundColor: color.hex }} 
-                        />
-                      )}
-                    </button>
-                  );
-                })}
+          <div className="d-flex flex-column gap-3 h-100" style={{ position: 'sticky', top: '80px' }}>
+            <div style={{
+              background: '#f1f5f9',
+              borderRadius: '16px', padding: '14px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.07)',
+              border: '1px solid #e2e8f0'
+            }}>
+              <div className="d-flex gap-1 mb-2" style={{ background: '#e2e8f0', borderRadius: '10px', padding: '4px' }}>
+                <button onClick={() => setDisplayMode('2d')} style={{ flex:1, border:'none', borderRadius:'7px', padding:'7px 0', fontSize:'12px', fontWeight:700, cursor:'pointer', background: displayMode==='2d' ? '#ffffff' : 'transparent', color: displayMode==='2d' ? '#0f172a' : '#64748b', transition:'all 0.25s ease', boxShadow: displayMode==='2d' ? '0 2px 8px rgba(0,0,0,0.1)' : 'none' }}>✏️ Editor</button>
+                <button onClick={() => setDisplayMode('3d')} style={{ flex:1, border:'none', borderRadius:'7px', padding:'7px 0', fontSize:'12px', fontWeight:700, cursor:'pointer', background: displayMode==='3d' ? 'linear-gradient(135deg,#ff8525,#e53e3e)' : 'transparent', color: displayMode==='3d' ? '#fff' : '#64748b', transition:'all 0.25s ease', boxShadow: displayMode==='3d' ? '0 2px 10px rgba(255,133,37,0.4)' : 'none' }}>🔮 Preview</button>
+              </div>
+              <div className="d-flex gap-1" style={{ background: '#e2e8f0', borderRadius: '10px', padding: '4px' }}>
+                <button onClick={() => setTshirtView('front')} style={{ flex:1, border:'none', borderRadius:'7px', padding:'6px 0', fontSize:'11px', fontWeight:600, cursor:'pointer', background: tshirtView==='front' ? '#ffffff' : 'transparent', color: tshirtView==='front' ? '#0f172a' : '#64748b', transition:'all 0.25s ease', boxShadow: tshirtView==='front' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none' }}>👕 Front View</button>
+                <button onClick={() => setTshirtView('back')} style={{ flex:1, border:'none', borderRadius:'7px', padding:'6px 0', fontSize:'11px', fontWeight:600, cursor:'pointer', background: tshirtView==='back' ? '#ffffff' : 'transparent', color: tshirtView==='back' ? '#0f172a' : '#64748b', transition:'all 0.25s ease', boxShadow: tshirtView==='back' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none' }}>🔄 Back View</button>
               </div>
             </div>
-
-            {/* 2. Sizing variant picker */}
-            <div className="mb-4">
-              <span className="small fw-semibold d-block mb-2">Select Your Sizing</span>
-              <div className="d-flex gap-2">
+            <div style={{ background:'#ffffff', borderRadius:'16px', border:'1px solid #e8ecf0', overflow:'hidden', boxShadow:'0 2px 12px rgba(0,0,0,0.06)' }}>
+              <div style={{ background:'linear-gradient(135deg,#ff8525 0%,#e53e3e 100%)', padding:'12px 16px', display:'flex', alignItems:'center', gap:'8px' }}>
+                <IoSave style={{ color:'#fff', fontSize:'15px' }} />
+                <span style={{ color:'#fff', fontWeight:700, fontSize:'13px', letterSpacing:'0.3px' }}>Configure & Export</span>
+              </div>
+              <div style={{ padding:'16px', display:'flex', flexDirection:'column', gap:'16px' }}>
+                <div>
+                  <p style={{ fontSize:'10px', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'1px', marginBottom:'10px' }}>🎨 Fabric Color</p>
+                  <div style={{ display:'flex', flexWrap:'wrap', gap:'8px' }}>
+                    {fabricColors.map((color) => {
+                      const isSelected = tshirtColor.toLowerCase() === color.hex.toLowerCase();
+                      const imageUrl = color.image ? (color.image.startsWith('http') ? color.image : `${getBackendUrl()}${color.image}`) : null;
+                      return (
+                        <button key={color.name} type="button" title={`${color.name} (${color.hex})`}
+                          onClick={() => { setTshirtColor(color.hex); if (color.sizes && color.sizes.length > 0 && !color.sizes.includes(selectedSize)) setSelectedSize(color.sizes[0]); }}
+                          style={{ width:'38px', height:'38px', borderRadius:'10px', border: isSelected ? '2.5px solid #ff8525' : '2px solid #e2e8f0', outline: isSelected ? '3px solid rgba(255,133,37,0.2)' : 'none', outlineOffset:'1px', backgroundColor: imageUrl ? '#f8fafc' : color.hex, cursor:'pointer', padding:0, overflow:'hidden', transform: isSelected ? 'scale(1.12)' : 'scale(1)', transition:'all 0.2s ease', boxShadow: isSelected ? '0 4px 12px rgba(255,133,37,0.35)' : '0 1px 3px rgba(0,0,0,0.1)' }}>
+                          {imageUrl ? <img src={imageUrl} alt={color.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : <div style={{ width:'100%', height:'100%', backgroundColor: color.hex }} />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div style={{ height:'1px', background:'linear-gradient(90deg,transparent,#e2e8f0,transparent)' }} />
+                <div>
+                  <p style={{ fontSize:'10px', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'1px', marginBottom:'10px' }}>📐 Select Size</p>
+                  <div style={{ display:'flex', flexWrap:'wrap', gap:'6px' }}>
+                    {(() => {
+                      const currentColorObj = fabricColors.find(c => c.hex.toLowerCase() === tshirtColor.toLowerCase()) || fabricColors[0] || { sizes: ['S','M','L','XL','XXL'] };
+                      const availableSizes = currentColorObj.sizes || ['S','M','L','XL','XXL'];
+                      return availableSizes.map((s) => (
+                        <button key={s} onClick={() => setSelectedSize(s)} style={{ minWidth:'36px', height:'36px', borderRadius:'9px', border: selectedSize===s ? 'none' : '1.5px solid #e2e8f0', background: selectedSize===s ? 'linear-gradient(135deg,#ff8525,#e53e3e)' : '#f8fafc', color: selectedSize===s ? '#fff' : '#64748b', fontWeight:700, fontSize:'12px', cursor:'pointer', transition:'all 0.2s ease', padding:'0 8px', boxShadow: selectedSize===s ? '0 4px 12px rgba(229,62,62,0.3)' : 'none', transform: selectedSize===s ? 'scale(1.05)' : 'scale(1)' }}>{s}</button>
+                      ));
+                    })()}
+                  </div>
+                </div>
+                <div style={{ height:'1px', background:'linear-gradient(90deg,transparent,#e2e8f0,transparent)' }} />
                 {(() => {
-                  const currentColorObj = fabricColors.find(c => c.hex.toLowerCase() === tshirtColor.toLowerCase()) || fabricColors[0] || { sizes: ['S', 'M', 'L', 'XL', 'XXL'] };
-                  const availableSizes = currentColorObj.sizes || ['S', 'M', 'L', 'XL', 'XXL'];
-                  return availableSizes.map((s) => (
-                    <Button
-                      key={s}
-                      variant={selectedSize === s ? 'danger' : 'outline-dark'}
-                      onClick={() => setSelectedSize(s)}
-                      size="sm"
-                      style={{ flex: 1, borderRadius: '6px' }}
-                    >
-                      {s}
-                    </Button>
-                  ));
+                  const currentColorObj = fabricColors.find(c => c.hex.toLowerCase() === tshirtColor.toLowerCase()) || fabricColors[0] || { price:1100, discountPrice:0 };
+                  const hasDiscount = currentColorObj.discountPrice > 0 && currentColorObj.discountPrice < currentColorObj.price;
+                  const basePrice = hasDiscount ? currentColorObj.discountPrice : (currentColorObj.price || 1100);
+                  const textCharges = textLinesCount * textPrice;
+                  const stickerCharges = stickersCount * stickerPrice;
+                  const imageCharges = imagesCount * imagePrice;
+                  const shapeCharges = shapesCount * shapePrice;
+                  const totalCombinedPrice = basePrice + textCharges + stickerCharges + imageCharges + shapeCharges;
+                  return (
+                    <div>
+                      <p style={{ fontSize:'10px', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'1px', marginBottom:'10px' }}>💰 Price Breakdown</p>
+                      <div style={{ background:'#f8fafc', borderRadius:'12px', border:'1px solid #e2e8f0', overflow:'hidden' }}>
+                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 14px' }}>
+                          <span style={{ fontSize:'12px', color:'#64748b' }}>Base Fabric</span>
+                          <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
+                            {hasDiscount && <span style={{ fontSize:'11px', color:'#94a3b8', textDecoration:'line-through' }}>৳{currentColorObj.price}</span>}
+                            <span style={{ fontSize:'13px', fontWeight:700, color:'#0f172a' }}>৳{basePrice}</span>
+                          </div>
+                        </div>
+                        {textCharges > 0 && <div style={{ display:'flex', justifyContent:'space-between', padding:'8px 14px', borderTop:'1px solid #e2e8f0' }}><span style={{ fontSize:'12px', color:'#64748b' }}>✏️ Text ({textLinesCount} lines)</span><span style={{ fontSize:'12px', fontWeight:600, color:'#475569' }}>+৳{textCharges}</span></div>}
+                        {stickerCharges > 0 && <div style={{ display:'flex', justifyContent:'space-between', padding:'8px 14px', borderTop:'1px solid #e2e8f0' }}><span style={{ fontSize:'12px', color:'#64748b' }}>🌟 Stickers ({stickersCount})</span><span style={{ fontSize:'12px', fontWeight:600, color:'#475569' }}>+৳{stickerCharges}</span></div>}
+                        {imageCharges > 0 && <div style={{ display:'flex', justifyContent:'space-between', padding:'8px 14px', borderTop:'1px solid #e2e8f0' }}><span style={{ fontSize:'12px', color:'#64748b' }}>🖼️ Images ({imagesCount})</span><span style={{ fontSize:'12px', fontWeight:600, color:'#475569' }}>+৳{imageCharges}</span></div>}
+                        {shapeCharges > 0 && <div style={{ display:'flex', justifyContent:'space-between', padding:'8px 14px', borderTop:'1px solid #e2e8f0' }}><span style={{ fontSize:'12px', color:'#64748b' }}>⬛ Shapes ({shapesCount})</span><span style={{ fontSize:'12px', fontWeight:600, color:'#475569' }}>+৳{shapeCharges}</span></div>}
+                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 14px', borderTop:'2px solid #e2e8f0', background:'linear-gradient(135deg,rgba(255,133,37,0.05),rgba(229,62,62,0.05))' }}>
+                          <span style={{ fontSize:'13px', fontWeight:700, color:'#0f172a' }}>Total</span>
+                          <span style={{ fontSize:'22px', fontWeight:800, background:'linear-gradient(135deg,#ff8525,#e53e3e)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>৳{totalCombinedPrice}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
                 })()}
               </div>
             </div>
-
-            {/* Pricing details */}
-            <div className="p-3 bg-light rounded-3 mb-4 text-center">
-              <span className="text-muted d-block small">Premium Cotton 180 GSM print:</span>
-              {(() => {
-                const currentColorObj = fabricColors.find(c => c.hex.toLowerCase() === tshirtColor.toLowerCase()) || fabricColors[0] || { price: 1100, discountPrice: 0 };
-                const hasDiscount = currentColorObj.discountPrice > 0 && currentColorObj.discountPrice < currentColorObj.price;
-                const basePrice = hasDiscount ? currentColorObj.discountPrice : (currentColorObj.price || 1100);
-                const textCharges = textLinesCount * textPrice;
-                const stickerCharges = stickersCount * stickerPrice;
-                const imageCharges = imagesCount * imagePrice;
-                const shapeCharges = shapesCount * shapePrice;
-                const totalCombinedPrice = basePrice + textCharges + stickerCharges + imageCharges + shapeCharges;
-
-                return (
-                  <div className="d-flex flex-column gap-1">
-                    <div className="d-flex align-items-center justify-content-center gap-2">
-                      {hasDiscount ? (
-                        <>
-                          <span className="fs-6 text-muted text-decoration-line-through">৳{currentColorObj.price}</span>
-                          <span className="fs-4 fw-extrabold text-danger">৳{currentColorObj.discountPrice}</span>
-                        </>
-                      ) : (
-                        <span className="fs-4 fw-extrabold text-danger">৳{currentColorObj.price || 1100}</span>
-                      )}
-                    </div>
-                    {textLinesCount > 0 && (
-                      <div className="border-top mt-1 pt-1 small text-muted d-flex justify-content-between px-2">
-                        <span>Text ({textLinesCount} lines):</span>
-                        <span className="fw-semibold text-dark">+৳{textCharges}</span>
-                      </div>
-                    )}
-                    {stickersCount > 0 && (
-                      <div className="border-top mt-1 pt-1 small text-muted d-flex justify-content-between px-2">
-                        <span>Stickers ({stickersCount} pcs):</span>
-                        <span className="fw-semibold text-dark">+৳{stickerCharges}</span>
-                      </div>
-                    )}
-                    {imagesCount > 0 && (
-                      <div className="border-top mt-1 pt-1 small text-muted d-flex justify-content-between px-2">
-                        <span>Images ({imagesCount} pcs):</span>
-                        <span className="fw-semibold text-dark">+৳{imageCharges}</span>
-                      </div>
-                    )}
-                    {shapesCount > 0 && (
-                      <div className="border-top mt-1 pt-1 small text-muted d-flex justify-content-between px-2">
-                        <span>Shapes ({shapesCount} pcs):</span>
-                        <span className="fw-semibold text-dark">+৳{shapeCharges}</span>
-                      </div>
-                    )}
-                    <div className="border-top mt-1 pt-1 fw-bold text-dark d-flex justify-content-between px-2" style={{ fontSize: '15px' }}>
-                      <span>Total Price:</span>
-                      <span className="text-danger">৳{totalCombinedPrice}</span>
-                    </div>
-                  </div>
-                );
-              })()}
+            <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
+              <button onClick={handleOpenPreview} onMouseOver={e => { e.currentTarget.style.borderColor='#ff8525'; e.currentTarget.style.color='#ff8525'; }} onMouseOut={e => { e.currentTarget.style.borderColor='#e2e8f0'; e.currentTarget.style.color='#475569'; }} style={{ border:'1.5px solid #e2e8f0', borderRadius:'12px', padding:'10px 16px', background:'#fff', color:'#475569', fontWeight:600, fontSize:'13px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', transition:'all 0.2s ease' }}><IoPushOutline style={{ fontSize:'15px' }} /> Full Preview</button>
+              <button onClick={handleSaveDesign} disabled={isSavingDesign} onMouseOver={e => { if (!isSavingDesign) { e.currentTarget.style.borderColor='#6366f1'; e.currentTarget.style.color='#6366f1'; } }} onMouseOut={e => { e.currentTarget.style.borderColor='#e2e8f0'; e.currentTarget.style.color='#475569'; }} style={{ border:'1.5px solid #e2e8f0', borderRadius:'12px', padding:'10px 16px', background:'#fff', color:'#475569', fontWeight:600, fontSize:'13px', cursor: isSavingDesign ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', transition:'all 0.2s ease', opacity: isSavingDesign ? 0.7 : 1 }}><IoSave style={{ fontSize:'15px' }} /> {isSavingDesign ? 'Saving...' : 'Save Design'}</button>
+              <button onClick={handleDownload} onMouseOver={e => { e.currentTarget.style.borderColor='#ff8525'; e.currentTarget.style.color='#ff8525'; }} onMouseOut={e => { e.currentTarget.style.borderColor='#e2e8f0'; e.currentTarget.style.color='#475569'; }} style={{ border:'1.5px solid #e2e8f0', borderRadius:'12px', padding:'10px 16px', background:'#fff', color:'#475569', fontWeight:600, fontSize:'13px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', transition:'all 0.2s ease' }}><IoDownload style={{ fontSize:'15px' }} /> Download JPG</button>
+              <button onClick={handleAddToCartWithDesign} onMouseOver={e => { e.currentTarget.style.boxShadow='0 8px 28px rgba(229,62,62,0.5)'; e.currentTarget.style.transform='translateY(-1px)'; }} onMouseOut={e => { e.currentTarget.style.boxShadow='0 6px 20px rgba(229,62,62,0.35)'; e.currentTarget.style.transform='translateY(0)'; }} style={{ border:'none', borderRadius:'12px', padding:'14px 16px', background:'linear-gradient(135deg,#ff8525 0%,#e53e3e 100%)', color:'#fff', fontWeight:700, fontSize:'14px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', boxShadow:'0 6px 20px rgba(229,62,62,0.35)', transition:'all 0.2s ease', letterSpacing:'0.3px' }}><IoCart style={{ fontSize:'18px' }} /> Add to Cart</button>
             </div>
-
-            {/* Action buttons */}
-            <div className="d-flex flex-column gap-2 mt-auto">
-              <Button variant="outline-dark" className="btn-premium-outline justify-content-center" onClick={handleOpenPreview}>
-                <IoPushOutline /> Full Screen Preview
-              </Button>
-              
-              <Button variant="outline-dark" className="btn-premium-outline justify-content-center" onClick={handleDownload}>
-                <IoDownload /> Download JPG Design
-              </Button>
-              
-              <Button variant="danger" className="btn-premium-accent justify-content-center bg-red-gradient" onClick={handleAddToCartWithDesign}>
-                <IoCart /> Buy Custom T-Shirt
-              </Button>
-            </div>
-
           </div>
         </Col>
+
 
       </Row>
 
@@ -2665,7 +2596,7 @@ function DesignContent() {
           {/* Interactive hints watermark overlay */}
           <div className="position-absolute bottom-0 start-50 translate-middle-x pb-3 text-center pointer-events-none" style={{ zIndex: 10 }}>
             <span className="badge bg-dark bg-opacity-75 px-3 py-2 rounded-pill fw-semibold" style={{ fontSize: '11px' }}>
-              🖱️ Drag to rotate T-Shirt • 🔍 Scroll to zoom in/out
+              ðŸ–±ï¸ Drag to rotate T-Shirt â€¢ ðŸ” Scroll to zoom in/out
             </span>
           </div>
         </Modal.Body>
