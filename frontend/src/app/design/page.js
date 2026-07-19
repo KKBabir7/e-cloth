@@ -3093,7 +3093,7 @@ function DesignContent() {
 
             </div>
 
-            <small className="text-muted d-block mt-3">Select elements directly on shirt mock to scale, rotate, or edit text.</small>
+            <small className="text-muted d-none d-lg-block mt-3">Select elements directly on shirt mock to scale, rotate, or edit text.</small>
 
           </div>
         </Col>
@@ -3376,6 +3376,11 @@ function DesignContent() {
         }
         
         @media (max-width: 991px) {
+          /* Hide corporate footer on mobile on design page */
+          footer.site-footer {
+            display: none !important;
+          }
+          
           /* Add bottom padding to container to prevent nav overlay overlap */
           .py-5.container {
             padding-bottom: 120px !important;
