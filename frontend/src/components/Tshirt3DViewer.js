@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Spinner } from 'react-bootstrap';
 
-export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCanvas, backFabricCanvas, visible, interactive }) {
+export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCanvas, backFabricCanvas, visible = true, interactive = true, hideDecals = false, cameraZOffset = 0.95, enableZoom = true, garmentType = 'tshirt' }) {
   const containerRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
@@ -22,11 +22,17 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
   const DecalGeometryClassRef = useRef(null);
   const ThreeModuleRef = useRef(null);
 
-  // Camera animation target coordinates
+  // Camera targets for smooth transition
   const targetCameraXRef = useRef(0);
   const targetCameraYRef = useRef(0.05);
-  const targetCameraZRef = useRef(0.95);
+  const targetCameraZRef = useRef(tshirtView === 'front' ? cameraZOffset : -cameraZOffset);
   const isAnimatingCameraRef = useRef(false);
+
+  // Keep track of the latest color without triggering scene re-renders
+  const currentColorRef = useRef(tshirtColor);
+  useEffect(() => {
+    currentColorRef.current = tshirtColor;
+  }, [tshirtColor]);
 
   // Refs for double-sided canvas textures
   const frontTextureRef = useRef(null);
@@ -54,8 +60,8 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
       decalMeshBackRef.current = null;
     }
 
-    // Hide decals in 2D mode to prevent ghosting/double image
-    if (!interactive) {
+    // Hide decals if explicitly requested (e.g., in 2D mode to prevent ghosting)
+    if (hideDecals) {
       return;
     }
 
@@ -77,11 +83,11 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
 
     const size = isFallback
       ? new THREE.Vector3(0.24, 0.44, 0.2)
-      : new THREE.Vector3(0.28, 0.51, 0.2);
+      : new THREE.Vector3(0.28, 0.51, 0.2); // Z depth 0.2 is enough now that matrixWorld is correct
 
     try {
       // 1. Project Front Decal (using front texture)
-      const posFront = new THREE.Vector3(0, yOffset, zOffset);
+      const posFront = new THREE.Vector3(0, yOffset, zOffset); 
       const rotFront = new THREE.Euler(0, 0, 0);
       const geoFront = new DecalGeometry(mesh, posFront, rotFront, size);
       const matFront = new THREE.MeshBasicMaterial({
@@ -97,7 +103,7 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
       modelGroup.add(decalFront);
 
       // 2. Project Back Decal (using back texture)
-      const posBack = new THREE.Vector3(0, yOffset, -zOffset);
+      const posBack = new THREE.Vector3(0, yOffset, -zOffset); 
       const rotBack = new THREE.Euler(0, Math.PI, 0);
       const geoBack = new DecalGeometry(mesh, posBack, rotBack, size);
       const matBack = new THREE.MeshBasicMaterial({
@@ -130,6 +136,7 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
         const THREE = await import('three');
         const { OrbitControls } = await import('three/examples/jsm/controls/OrbitControls.js');
         const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
+        const { OBJLoader } = await import('three/examples/jsm/loaders/OBJLoader.js');
         const { DecalGeometry } = await import('three/examples/jsm/geometries/DecalGeometry.js');
 
         if (!active) return;
@@ -147,7 +154,7 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
         // ── Camera ──
         camera = new THREE.PerspectiveCamera(40, container.clientWidth / container.clientHeight, 0.1, 100);
         cameraRef.current = camera;
-        camera.position.set(0, 0.05, 0.95);
+        camera.position.set(targetCameraXRef.current, targetCameraYRef.current, targetCameraZRef.current);
 
         // ── Renderer ──
         renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -165,9 +172,9 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
         controls.enabled = !!interactive;
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
-        controls.enableZoom = true;
+        controls.enableZoom = enableZoom;
         controls.minDistance = 0.45;
-        controls.maxDistance = 1.30;
+        controls.maxDistance = 4.00;
         controls.maxPolarAngle = Math.PI - 0.1;
         controls.minPolarAngle = 0.1;
 
@@ -220,11 +227,11 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
           });
         }
 
-        // ── Fallback Extruded 3D T-shirt (Beautiful Procedural Shape) ──
+        // ── Fallback Extruded 3D T-shirt (Procedural Shape) ──
         const loadProceduralShirt = () => {
           isFallbackRef.current = true;
           const baseMaterial = new THREE.MeshStandardMaterial({
-            color: new THREE.Color(tshirtColor),
+            color: new THREE.Color(currentColorRef.current),
             roughness: 0.8,
             metalness: 0.1
           });
@@ -256,7 +263,7 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
           };
 
           const torsoGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-          torsoGeo.center(); // Center the geometry
+          torsoGeo.center();
 
           const torso = new THREE.Mesh(torsoGeo, baseMaterial);
           torso.castShadow = true;
@@ -282,58 +289,330 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
           setLoading(false);
         };
 
-        // ── Load Local GLTF 3D T-shirt model ──
-        const loader = new GLTFLoader();
-        const modelUrl = '/shirt_baked.glb';
+        // ── Procedural 3D Polo T-Shirt ──
+        const loadProceduralPolo = () => {
+          isFallbackRef.current = true;
 
-        loader.load(
-          modelUrl,
-          (gltf) => {
-            if (!active) return;
-            const model = gltf.scene;
+          const baseMat = new THREE.MeshStandardMaterial({
+            color: new THREE.Color(currentColorRef.current),
+            roughness: 0.78, metalness: 0.05
+          });
+          const collarMat = new THREE.MeshStandardMaterial({
+            color: new THREE.Color(currentColorRef.current).multiplyScalar(0.88),
+            roughness: 0.72, metalness: 0.05
+          });
+          const buttonMat = new THREE.MeshStandardMaterial({
+            color: 0xf5f0e8, roughness: 0.35, metalness: 0.1
+          });
 
-            // Auto-center the model using Box3
-            const box = new THREE.Box3().setFromObject(model);
-            const center = new THREE.Vector3();
-            box.getCenter(center);
-            model.position.x = -center.x;
-            model.position.y = -center.y;
-            model.position.z = -center.z;
+          // ── Body shape: identical to t-shirt ──
+          const bodyShape = new THREE.Shape();
+          bodyShape.moveTo(-0.19, -0.32);
+          bodyShape.lineTo(0.19, -0.32);
+          bodyShape.lineTo(0.19, 0.02);
+          bodyShape.lineTo(0.36, -0.08);
+          bodyShape.lineTo(0.42, 0.04);
+          bodyShape.lineTo(0.22, 0.22);
+          bodyShape.lineTo(0.09, 0.22);
+          bodyShape.quadraticCurveTo(0, 0.12, -0.09, 0.22);
+          bodyShape.lineTo(-0.22, 0.22);
+          bodyShape.lineTo(-0.42, 0.04);
+          bodyShape.lineTo(-0.36, -0.08);
+          bodyShape.lineTo(-0.19, 0.02);
+          bodyShape.closePath();
 
-            // Auto-scale model to fit a standard unit height of 0.68
-            const size = new THREE.Vector3();
-            box.getSize(size);
-            const maxDim = Math.max(size.x, size.y, size.z);
-            const targetScale = 0.68 / maxDim;
-            model.scale.set(targetScale, targetScale, targetScale);
+          const bodyGeo = new THREE.ExtrudeGeometry(bodyShape, {
+            depth: 0.055, bevelEnabled: true,
+            bevelSegments: 6, steps: 1,
+            bevelSize: 0.014, bevelThickness: 0.014
+          });
+          bodyGeo.center();
+          const torso = new THREE.Mesh(bodyGeo, baseMat);
+          torso.castShadow = true;
+          torso.receiveShadow = true;
+          modelGroup.add(torso);
 
-            model.traverse((child) => {
-              if (child.isMesh) {
-                shirtMeshRef.current = child;
-                child.castShadow = true;
-                child.receiveShadow = true;
+          // ── Polo collar: two flat rectangular flaps laid down on chest ──
+          // They are thin boxes that lie flat at the neckline, angled slightly outward
+          // Left collar wing
+          const collarL = new THREE.Shape();
+          collarL.moveTo(0, 0);
+          collarL.lineTo(-0.115, 0);
+          collarL.lineTo(-0.13, -0.065);
+          collarL.lineTo(-0.01, -0.065);
+          collarL.closePath();
+          const collarLGeo = new THREE.ExtrudeGeometry(collarL, {
+            depth: 0.011, bevelEnabled: true,
+            bevelSegments: 2, bevelSize: 0.003, bevelThickness: 0.003
+          });
+          const collarLMesh = new THREE.Mesh(collarLGeo, collarMat);
+          // Lay flat: rotate on X so it faces forward, then position at neck
+          collarLMesh.rotation.x = -Math.PI / 2 + 0.18;
+          collarLMesh.position.set(-0.005, 0.218, 0.024);
+          collarLMesh.castShadow = true;
+          modelGroup.add(collarLMesh);
 
-                // Create realistic cotton fabric material
-                child.material = new THREE.MeshStandardMaterial({
-                  color: new THREE.Color(tshirtColor),
-                  roughness: 0.8,
-                  metalness: 0.1
-                });
-              }
-            });
+          // Right collar wing (mirror)
+          const collarR = new THREE.Shape();
+          collarR.moveTo(0, 0);
+          collarR.lineTo(0.115, 0);
+          collarR.lineTo(0.13, -0.065);
+          collarR.lineTo(0.01, -0.065);
+          collarR.closePath();
+          const collarRGeo = new THREE.ExtrudeGeometry(collarR, {
+            depth: 0.011, bevelEnabled: true,
+            bevelSegments: 2, bevelSize: 0.003, bevelThickness: 0.003
+          });
+          const collarRMesh = new THREE.Mesh(collarRGeo, collarMat);
+          collarRMesh.rotation.x = -Math.PI / 2 + 0.18;
+          collarRMesh.position.set(0.005, 0.218, 0.024);
+          collarRMesh.castShadow = true;
+          modelGroup.add(collarRMesh);
 
-            modelGroup.add(model);
-            
-            projectDecals();
-            setLoading(false);
-          },
-          undefined,
-          (err) => {
-            console.warn('GLTF loading error, falling back to procedural 3D model...', err);
-            if (!active) return;
-            loadProceduralShirt();
-          }
-        );
+          // Collar stand: small thin box sitting upright behind the fold
+          const standGeo = new THREE.BoxGeometry(0.20, 0.028, 0.010);
+          const stand = new THREE.Mesh(standGeo, collarMat);
+          stand.position.set(0, 0.228, 0.010);
+          stand.rotation.x = 0.12;
+          stand.castShadow = true;
+          modelGroup.add(stand);
+
+          // ── Placket strip ──
+          const placketGeo = new THREE.BoxGeometry(0.026, 0.11, 0.007);
+          const placket = new THREE.Mesh(placketGeo, collarMat);
+          placket.position.set(0, 0.135, 0.031);
+          placket.castShadow = true;
+          modelGroup.add(placket);
+
+          // ── 3 Buttons ──
+          [0.20, 0.167, 0.134].forEach(yBtn => {
+            const bGeo = new THREE.CylinderGeometry(0.007, 0.007, 0.005, 14);
+            const b = new THREE.Mesh(bGeo, buttonMat);
+            b.rotation.x = Math.PI / 2;
+            b.position.set(0, yBtn, 0.034);
+            modelGroup.add(b);
+          });
+
+          // ── Back neck label ──
+          const tagGeo = new THREE.BoxGeometry(0.036, 0.026, 0.004);
+          const tagMat = new THREE.MeshStandardMaterial({ color: 0xe8e4dc, roughness: 0.6 });
+          const tag = new THREE.Mesh(tagGeo, tagMat);
+          tag.position.set(0, 0.198, -0.028);
+          modelGroup.add(tag);
+
+          shirtMeshRef.current = torso;
+          projectDecals();
+          setLoading(false);
+        };
+
+        // ── Helper: add polo collar on top of the GLB shirt body ──
+        // GLB is always normalized: 0.68 total height, centered at origin.
+        // Neck top ≈ y:0.27, front face ≈ z:0.038
+        const addPoloCollar = () => {
+          const shirtCol = new THREE.Color(currentColorRef.current);
+          const collarMat = new THREE.MeshStandardMaterial({
+            color: shirtCol.clone().multiplyScalar(0.82),
+            roughness: 0.70, metalness: 0.04, side: THREE.DoubleSide
+          });
+          const buttonMat = new THREE.MeshStandardMaterial({
+            color: 0xf0ece0, roughness: 0.3, metalness: 0.08
+          });
+
+          // Known world coords after GLB normalization:
+          const neckY  = 0.268;   // Y at neckline top
+          const frontZ = 0.038;   // Z at shirt front surface
+          const neckW  = 0.155;   // collar total width
+
+          // ── Collar stand: thin upright band at neckline ──
+          const standGeo = new THREE.BoxGeometry(neckW, 0.022, 0.007);
+          const stand = new THREE.Mesh(standGeo, collarMat);
+          stand.position.set(0, neckY - 0.011, frontZ - 0.003);
+          stand.castShadow = true;
+          modelGroup.add(stand);
+
+          // ── Left collar flap: flat plane angled down on chest ──
+          // Shape: trapezoid wider at outer edge
+          const mkFlap = (side) => { // side = -1 left, +1 right
+            const pts = side === -1
+              ? [new THREE.Vector2(0,0), new THREE.Vector2(-neckW*0.48,0),
+                 new THREE.Vector2(-neckW*0.52,-0.058), new THREE.Vector2(-0.006,-0.042)]
+              : [new THREE.Vector2(0,0), new THREE.Vector2(neckW*0.48,0),
+                 new THREE.Vector2(neckW*0.52,-0.058), new THREE.Vector2(0.006,-0.042)];
+            const shape = new THREE.Shape(pts);
+            const geo = new THREE.ShapeGeometry(shape);
+            const mesh = new THREE.Mesh(geo, collarMat);
+            // Rotate: lie flat on chest, tilt slightly outward
+            mesh.rotation.x = -Math.PI / 2 + 0.28;
+            mesh.rotation.z = side * 0.04;
+            mesh.position.set(
+              side * 0.003,
+              neckY - 0.007,
+              frontZ + 0.004
+            );
+            mesh.castShadow = true;
+            return mesh;
+          };
+          modelGroup.add(mkFlap(-1));
+          modelGroup.add(mkFlap(1));
+
+          // ── Collar fold line (thin edge at top of flaps) ──
+          const foldGeo = new THREE.BoxGeometry(neckW, 0.004, 0.004);
+          const fold = new THREE.Mesh(foldGeo, collarMat);
+          fold.position.set(0, neckY + 0.001, frontZ + 0.003);
+          modelGroup.add(fold);
+
+          // ── Placket: narrow strip down front center ──
+          const placketGeo = new THREE.BoxGeometry(0.020, 0.088, 0.005);
+          const placket = new THREE.Mesh(placketGeo, collarMat);
+          placket.position.set(0, neckY - 0.022 - 0.044, frontZ + 0.002);
+          placket.castShadow = true;
+          modelGroup.add(placket);
+
+          // ── 3 small buttons ──
+          [0, 1, 2].forEach(i => {
+            const btnY = neckY - 0.018 - i * 0.028;
+            const btnGeo = new THREE.CylinderGeometry(0.0055, 0.0055, 0.004, 12);
+            const btn = new THREE.Mesh(btnGeo, buttonMat);
+            btn.rotation.x = Math.PI / 2;
+            btn.position.set(0, btnY, frontZ + 0.006);
+            modelGroup.add(btn);
+          });
+        };
+
+
+        if (garmentType === 'polo') {
+          // Load polo.obj
+          const loader = new OBJLoader();
+          loader.load(
+            '/polo.obj',
+            (obj) => {
+              if (!active) return;
+              const model = obj;
+
+              const box = new THREE.Box3().setFromObject(model);
+              const center = new THREE.Vector3();
+              box.getCenter(center);
+              model.position.x = -center.x;
+              model.position.y = -center.y;
+              model.position.z = -center.z;
+
+              const size = new THREE.Vector3();
+              box.getSize(size);
+              const maxDim = Math.max(size.x, size.y, size.z);
+              const targetScale = 0.68 / maxDim;
+              // Make the polo model 15% wider (X-axis) to match a boxier fit
+              model.scale.set(targetScale * 1.1, targetScale, targetScale);
+
+              let mainMesh = null;
+              model.traverse((child) => {
+                if (child.isMesh) {
+                  if (!mainMesh) mainMesh = child;
+                  child.castShadow = true;
+                  child.receiveShadow = true;
+                  child.material = new THREE.MeshStandardMaterial({
+                    color: new THREE.Color(currentColorRef.current),
+                    roughness: 0.8, metalness: 0.1
+                  });
+                }
+              });
+
+              modelGroup.add(model);
+              shirtMeshRef.current = mainMesh;
+
+              // Force update world matrix so DecalGeometry uses the scaled/positioned mesh
+              model.updateMatrixWorld(true);
+
+              projectDecals();
+              setLoading(false);
+
+            },
+            undefined,
+            (err) => {
+              console.warn('OBJ load failed for polo, using procedural body + collar', err);
+              if (!active) return;
+              // Fallback: procedural shirt body + collar
+              isFallbackRef.current = true;
+              const mat = new THREE.MeshStandardMaterial({
+                color: new THREE.Color(currentColorRef.current), roughness: 0.8, metalness: 0.1
+              });
+              const shape = new THREE.Shape();
+              shape.moveTo(-0.19, -0.32); shape.lineTo(0.19, -0.32);
+              shape.lineTo(0.19, 0.02); shape.lineTo(0.36, -0.08);
+              shape.lineTo(0.42, 0.04); shape.lineTo(0.22, 0.22);
+              shape.lineTo(0.09, 0.22);
+              shape.quadraticCurveTo(0, 0.12, -0.09, 0.22);
+              shape.lineTo(-0.22, 0.22); shape.lineTo(-0.42, 0.04);
+              shape.lineTo(-0.36, -0.08); shape.lineTo(-0.19, 0.02);
+              shape.closePath();
+              const geo = new THREE.ExtrudeGeometry(shape, {
+                depth: 0.055, bevelEnabled: true, bevelSegments: 6,
+                steps: 1, bevelSize: 0.014, bevelThickness: 0.014
+              });
+              geo.center();
+              const torso = new THREE.Mesh(geo, mat);
+              torso.castShadow = true; torso.receiveShadow = true;
+              modelGroup.add(torso);
+              shirtMeshRef.current = torso;
+              addPoloCollar();
+              projectDecals();
+              setLoading(false);
+            }
+          );
+
+        } else {
+          // Regular t-shirt: Try loading GLB, fall back to procedural
+          const loader = new GLTFLoader();
+          const modelUrl = '/shirt_baked.glb';
+
+          loader.load(
+            modelUrl,
+            (gltf) => {
+              if (!active) return;
+              const model = gltf.scene;
+
+              // Auto-center the model using Box3
+              const box = new THREE.Box3().setFromObject(model);
+              const center = new THREE.Vector3();
+              box.getCenter(center);
+              model.position.x = -center.x;
+              model.position.y = -center.y;
+              model.position.z = -center.z;
+
+              // Auto-scale model to fit a standard unit height of 0.68
+              const size = new THREE.Vector3();
+              box.getSize(size);
+              const maxDim = Math.max(size.x, size.y, size.z);
+              const targetScale = 0.68 / maxDim;
+              model.scale.set(targetScale, targetScale, targetScale);
+
+              model.traverse((child) => {
+                if (child.isMesh) {
+                  shirtMeshRef.current = child;
+                  child.castShadow = true;
+                  child.receiveShadow = true;
+
+                  child.material = new THREE.MeshStandardMaterial({
+                    color: new THREE.Color(currentColorRef.current),
+                    roughness: 0.8,
+                    metalness: 0.1
+                  });
+                }
+              });
+
+              modelGroup.add(model);
+              model.updateMatrixWorld(true);
+              projectDecals();
+              setLoading(false);
+            },
+            undefined,
+            (err) => {
+              console.warn('GLTF loading error, falling back to procedural 3D model...', err);
+              if (!active) return;
+              loadProceduralShirt();
+            }
+          );
+        }
+
 
         // ── Animate Loop ──
         const animate = () => {
@@ -401,7 +680,7 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
       }
       if (renderer) renderer.dispose();
     };
-  }, [frontFabricCanvas, backFabricCanvas]);
+  }, [frontFabricCanvas, backFabricCanvas, garmentType]);
 
   // 2. Sync Color Changes Instantly without reloading scene
   useEffect(() => {
@@ -412,7 +691,18 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
       // Exclude decal meshes from color overriding
       if (child.isMesh && child !== decalMeshFrontRef.current && child !== decalMeshBackRef.current) {
         if (child.material) {
-          child.material.color.set(tshirtColor);
+          const THREE = ThreeModuleRef.current;
+          if (THREE) {
+            // For polo: keep darker material pieces relatively darker
+            const isDark = child.material.color && child.material.color.r < 0.85;
+            if (isDark && garmentType === 'polo') {
+              child.material.color.set(new THREE.Color(tshirtColor).multiplyScalar(0.78));
+            } else {
+              child.material.color.set(tshirtColor);
+            }
+          } else {
+            child.material.color.set(tshirtColor);
+          }
         }
       }
     });
@@ -429,16 +719,20 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
 
     targetCameraXRef.current = 0;
     targetCameraYRef.current = 0.05;
-    targetCameraZRef.current = isFront ? 0.95 : -0.95;
+    targetCameraZRef.current = isFront ? cameraZOffset : -cameraZOffset;
     isAnimatingCameraRef.current = true;
     
     // Force render Fabric.js and update textures (clear active selection borders FIRST)
     if (frontFabricCanvas) {
-      frontFabricCanvas.discardActiveObject();
+      if (typeof frontFabricCanvas.discardActiveObject === 'function') {
+        frontFabricCanvas.discardActiveObject();
+      }
       frontFabricCanvas.renderAll();
     }
     if (backFabricCanvas) {
-      backFabricCanvas.discardActiveObject();
+      if (typeof backFabricCanvas.discardActiveObject === 'function') {
+        backFabricCanvas.discardActiveObject();
+      }
       backFabricCanvas.renderAll();
     }
 
@@ -455,11 +749,15 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
     if (visible) {
       // Force render Fabric.js and update textures (clear active selection borders FIRST)
       if (frontFabricCanvas) {
-        frontFabricCanvas.discardActiveObject();
+        if (typeof frontFabricCanvas.discardActiveObject === 'function') {
+          frontFabricCanvas.discardActiveObject();
+        }
         frontFabricCanvas.renderAll();
       }
       if (backFabricCanvas) {
-        backFabricCanvas.discardActiveObject();
+        if (typeof backFabricCanvas.discardActiveObject === 'function') {
+          backFabricCanvas.discardActiveObject();
+        }
         backFabricCanvas.renderAll();
       }
 
@@ -516,7 +814,9 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
       {loading && (
         <div className="position-absolute top-50 start-50 translate-middle text-center z-3">
           <Spinner animation="border" variant="danger" />
-          <p className="mt-2 text-muted small fw-semibold">Loading 3D T-Shirt Studio…</p>
+          <p className="mt-2 text-muted small fw-semibold">
+            Loading 3D {garmentType === 'polo' ? 'Polo T-Shirt' : 'T-Shirt'} Studio…
+          </p>
         </div>
       )}
       {errorMsg && (

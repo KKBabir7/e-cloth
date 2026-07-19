@@ -20,6 +20,14 @@ const designSchema = new mongoose.Schema({
   previewImage: {
     type: String,
     required: true
+  },
+  garmentType: {
+    type: String,
+    default: 'tshirt'
+  },
+  tshirtColor: {
+    type: String,
+    default: '#ffffff'
   }
 }, {
   timestamps: true

@@ -1,6 +1,8 @@
+const mongoose = require('mongoose');
 const Cart = require('../models/Cart');
 const Product = require('../models/Product');
 const Coupon = require('../models/Coupon');
+const CustomOrder = require('../models/CustomOrder');
 
 /**
  * Helper to calculate totals for a cart
@@ -84,43 +86,64 @@ exports.getCart = async (req, res) => {
  */
 exports.addToCart = async (req, res) => {
   try {
-    const { productId, size, color, quantity = 1, isCustom = false, customDesignId = null, previewImage } = req.body;
+    const { productId, size, color, quantity = 1, isCustom = false, customDesignId = null, previewImage, image, name, price } = req.body;
 
-    if (!productId) {
-      return res.status(400).json({ success: false, message: 'Please provide productId' });
-    }
+    let targetProductId = productId;
+    let product;
 
-    const product = await Product.findById(productId);
-    if (!product) {
-      return res.status(404).json({ success: false, message: 'Product not found' });
+    if (isCustom && (!productId || productId === 'custom-apparel-001' || !mongoose.Types.ObjectId.isValid(productId))) {
+      // Find or create a default custom product placeholder in the database
+      product = await Product.findOne({ slug: 'custom-apparel-placeholder' });
+      if (!product) {
+        product = await Product.create({
+          name: 'Custom Apparel',
+          slug: 'custom-apparel-placeholder',
+          price: 1100,
+          category: 'tshirt',
+          images: ['/placeholder.png'],
+          stock: 9999,
+          status: 'Active',
+          description: 'Placeholder product for custom designs.'
+        });
+      }
+      targetProductId = product._id;
+    } else {
+      if (!productId || !mongoose.Types.ObjectId.isValid(productId)) {
+        return res.status(400).json({ success: false, message: 'Please provide a valid productId' });
+      }
+      product = await Product.findById(productId);
+      if (!product) {
+        return res.status(404).json({ success: false, message: 'Product not found' });
+      }
+      targetProductId = product._id;
     }
 
     const cart = await findActiveCart(req);
 
-    // Match by productId, size, color, and custom design identity
+    // Match by targetProductId, size, color, and custom design identity
     const existingIndex = cart.items.findIndex(
       (item) =>
-        item.productId.toString() === productId &&
+        item.productId.toString() === targetProductId.toString() &&
         item.size === size &&
         item.color === color &&
         item.isCustom === isCustom &&
-        (customDesignId ? item.customDesignId?.toString() === customDesignId : !item.customDesignId)
+        (customDesignId ? item.customDesignId?.toString() === customDesignId.toString() : !item.customDesignId)
     );
 
     if (existingIndex > -1) {
       cart.items[existingIndex].quantity += Number(quantity);
     } else {
       cart.items.push({
-        productId,
-        name: product.name,
-        price: product.discountPrice > 0 ? product.discountPrice : product.price,
-        image: product.images[0],
+        productId: targetProductId,
+        name: isCustom ? name || `Custom ${product.name}` : product.name,
+        price: isCustom ? price || product.price : (product.discountPrice > 0 ? product.discountPrice : product.price),
+        image: isCustom ? (previewImage || image || product.images[0]) : product.images[0],
         size,
         color,
         quantity: Number(quantity),
         isCustom,
         customDesignId,
-        previewImage
+        previewImage: previewImage || image
       });
     }
 
@@ -186,6 +209,24 @@ exports.removeFromCart = async (req, res) => {
     }
 
     const cart = await findActiveCart(req);
+
+    // If removing a custom design, delete its CustomOrder record too
+    if (isCustom && customDesignId) {
+      const itemToRemove = cart.items.find(
+        (item) => item.productId.toString() === productId &&
+                  item.size === size &&
+                  item.color === color &&
+                  item.isCustom === isCustom &&
+                  item.customDesignId?.toString() === customDesignId
+      );
+      if (itemToRemove) {
+        try {
+          await CustomOrder.findByIdAndDelete(customDesignId);
+        } catch (err) {
+          console.error('Error deleting CustomOrder on cart remove:', err);
+        }
+      }
+    }
 
     cart.items = cart.items.filter(
       (item) =>

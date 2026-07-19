@@ -9,7 +9,8 @@ import { Container, Row, Col, Card, ListGroup, Badge, Button, Navbar, Nav, NavDr
 import {
   IoGridOutline, IoShirtOutline, IoReceiptOutline, IoPeopleOutline,
   IoGiftOutline, IoShieldCheckmarkOutline, IoHomeOutline, IoLogOutOutline,
-  IoImagesOutline, IoLayersOutline, IoChatbubblesOutline, IoSparklesOutline
+  IoImagesOutline, IoLayersOutline, IoChatbubblesOutline, IoSparklesOutline,
+  IoColorPaletteOutline
 } from 'react-icons/io5';
 import { logout } from '../../store/authSlice';
 import { useUI } from '../../context/UIContext';
@@ -61,6 +62,7 @@ export default function AdminLayout({ children }) {
     { name: 'Manage Products', path: '/admincloth/products', icon: <IoShirtOutline size={18} /> },
     { name: 'Manage Categories', path: '/admincloth/categories', icon: <IoLayersOutline size={18} /> },
     { name: 'Manage Orders', path: '/admincloth/orders', icon: <IoReceiptOutline size={18} /> },
+    { name: 'Custom Orders', path: '/admincloth/custom-orders', icon: <IoColorPaletteOutline size={18} /> },
     { name: 'Manage Users', path: '/admincloth/users', icon: <IoPeopleOutline size={18} /> },
     { name: 'Coupons & Promos', path: '/admincloth/coupons', icon: <IoGiftOutline size={18} /> },
     { name: 'Hero Slideshow', path: '/admincloth/hero-slides', icon: <IoImagesOutline size={18} /> },

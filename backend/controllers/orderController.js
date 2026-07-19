@@ -2,6 +2,7 @@ const Order = require('../models/Order');
 const Product = require('../models/Product');
 const User = require('../models/User');
 const Coupon = require('../models/Coupon');
+const CustomOrder = require('../models/CustomOrder');
 const { getOrderQueue } = require('../config/db');
 const { calculateDeliveryCharge } = require('../../shared/utils');
 const { broadcast } = require('../utils/sseManager');
@@ -28,14 +29,24 @@ const createOrder = async (req, res) => {
 
     let subtotal = 0;
     for (const item of products) {
-      const dbProduct = dbProductMap.get(item.productId.toString());
-      if (!dbProduct) {
-        return res.status(404).json({ success: false, message: `Product not found: ${item.productId}` });
+      if (item.isCustom && item.customDesignId) {
+        const customOrder = await CustomOrder.findById(item.customDesignId);
+        if (customOrder) {
+          subtotal += customOrder.price * item.quantity;
+          item.price = customOrder.price;
+        } else {
+          subtotal += item.price * item.quantity; // fallback
+        }
+      } else {
+        const dbProduct = dbProductMap.get(item.productId.toString());
+        if (!dbProduct) {
+          return res.status(404).json({ success: false, message: `Product not found: ${item.productId}` });
+        }
+        
+        const price = dbProduct.discountPrice > 0 ? dbProduct.discountPrice : dbProduct.price;
+        subtotal += price * item.quantity;
+        item.price = price; // attach verified database price
       }
-      
-      const price = dbProduct.discountPrice > 0 ? dbProduct.discountPrice : dbProduct.price;
-      subtotal += price * item.quantity;
-      item.price = price; // attach verified database price
     }
 
     // 2. Shipping calculation using shared module
@@ -78,6 +89,15 @@ const createOrder = async (req, res) => {
       totalAmount,
       status: 'Pending'
     });
+
+    // 5.1 Link Custom Orders
+    const customOrderIds = products.filter(p => p.isCustom && p.customDesignId).map(p => p.customDesignId);
+    if (customOrderIds.length > 0) {
+      await CustomOrder.updateMany(
+        { _id: { $in: customOrderIds } },
+        { $set: { status: 'Pending', orderId: order._id } }
+      );
+    }
 
     // 6. Queue BullMQ Order Processing Job
     const orderQueue = getOrderQueue();

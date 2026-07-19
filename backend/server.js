@@ -92,6 +92,7 @@ const stickerRoutes = require('./routes/stickerRoutes');
 const fabricColorRoutes = require('./routes/fabricColorRoutes');
 const designSettingRoutes = require('./routes/designSettingRoutes');
 const eventRoutes = require('./routes/eventRoutes'); // Global SSE real-time stream
+const customOrderRoutes = require('./routes/customOrderRoutes');
 
 // Selective API cache policy:
 // - public catalog endpoints: short-lived cache to reduce repeated payload cost
@@ -130,6 +131,7 @@ app.use('/api/stickers', stickerRoutes);
 app.use('/api/fabric-colors', fabricColorRoutes);
 app.use('/api/design-settings', designSettingRoutes);
 app.use('/api/events', eventRoutes); // Single global SSE stream for all real-time updates
+app.use('/api/custom-orders', customOrderRoutes);
 
 // Root route
 app.get('/', (req, res) => {

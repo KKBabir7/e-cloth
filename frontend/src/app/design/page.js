@@ -127,6 +127,8 @@ function DesignContent() {
   const [activeTab, setActiveTab] = useState('text');
   const [selectedSize, setSelectedSize] = useState('L');
   const [displayMode, setDisplayMode] = useState('2d'); // 2d or 3d
+  const [garmentType, setGarmentType] = useState('tshirt'); // tshirt or polo
+
 
   // Derived active canvas instance
   const canvas = tshirtView === 'front' ? frontCanvas : backCanvas;
@@ -142,6 +144,7 @@ function DesignContent() {
   const [isUnderline, setIsUnderline] = useState(false);
   const [isLinethrough, setIsLinethrough] = useState(false);
   const [letterSpacing, setLetterSpacing] = useState(0);
+  const [textBend, setTextBend] = useState(0);
   const [strokeColor, setStrokeColor] = useState('#ffffff');
   const [strokeWidth, setStrokeWidth] = useState(0);
 
@@ -499,6 +502,7 @@ function DesignContent() {
       const obj = canvasInstance.getActiveObject();
       if (!obj) return;
       if (obj.type === 'i-text' || obj.type === 'text') {
+        setActiveTab('text');
         activeObjectRef.current = obj;
         setTextInput(obj.text || '');
         setTextColor(obj.fill || '#000000');
@@ -510,10 +514,12 @@ function DesignContent() {
         setIsUnderline(!!obj.underline);
         setIsLinethrough(!!obj.linethrough);
         setLetterSpacing((obj.charSpacing || 0) / 10);
+        setTextBend(obj.textBend || 0);
         setStrokeColor(obj.stroke || '#ffffff');
         setStrokeWidth(obj.strokeWidth || 0);
       } else if (obj.type === 'image') {
         if (obj.isSticker) {
+          setActiveTab('sticker');
           setStickerOpacity(obj.opacity !== undefined ? obj.opacity : 1);
           setStickerScale(obj.scaleX !== undefined ? obj.scaleX : 1);
           setStickerRotation(obj.angle !== undefined ? obj.angle : 0);
@@ -523,10 +529,11 @@ function DesignContent() {
           
           const contrastF = obj.filters && obj.filters.find(f => f && (f.type === 'Contrast' || f.contrast !== undefined));
           setStickerContrast(contrastF ? contrastF.contrast : 0);
-
+ 
           const saturationF = obj.filters && obj.filters.find(f => f && (f.type === 'Saturation' || f.saturation !== undefined));
           setStickerSaturation(saturationF ? saturationF.saturation : 0);
         } else {
+          setActiveTab('image');
           setImageOpacity(obj.opacity !== undefined ? obj.opacity : 1);
           setImageScale(obj.scaleX !== undefined ? obj.scaleX : 1);
           setImageRotation(obj.angle !== undefined ? obj.angle : 0);
@@ -536,17 +543,43 @@ function DesignContent() {
           
           const contrastF = obj.filters && obj.filters.find(f => f && (f.type === 'Contrast' || f.contrast !== undefined));
           setImageContrast(contrastF ? contrastF.contrast : 0);
-
+ 
           const saturationF = obj.filters && obj.filters.find(f => f && (f.type === 'Saturation' || f.saturation !== undefined));
           setImageSaturation(saturationF ? saturationF.saturation : 0);
         }
       } else {
+        setActiveTab('shape');
         setShapeColor(obj.fill || '#ff8525');
         setShapeOpacity(obj.opacity !== undefined ? obj.opacity : 1);
         setShapeScale(obj.scaleX !== undefined ? obj.scaleX : 1);
         setShapeRotation(obj.angle !== undefined ? obj.angle : 0);
         setShapeStrokeColor(obj.stroke || '#ffffff');
         setShapeStrokeWidth(obj.strokeWidth !== undefined ? obj.strokeWidth : 0);
+      }
+    };
+
+    const handleObjectScaling = (canvasInstance) => (e) => {
+      const obj = e.target;
+      if (!obj) return;
+      clampObject(obj, 440);
+      if (obj.type === 'i-text' || obj.type === 'text') {
+        const effectiveSize = Math.round(obj.fontSize * obj.scaleX);
+        setFontSize(effectiveSize);
+      }
+    };
+
+    const handleObjectModified = (canvasInstance) => (e) => {
+      const obj = e.target;
+      if (!obj) return;
+      if (obj.type === 'i-text' || obj.type === 'text') {
+        const effectiveSize = Math.round(obj.fontSize * obj.scaleX);
+        obj.set({
+          fontSize: effectiveSize,
+          scaleX: 1,
+          scaleY: 1
+        });
+        canvasInstance.renderAll();
+        setFontSize(effectiveSize);
       }
     };
 
@@ -561,7 +594,8 @@ function DesignContent() {
     setFrontCanvas(fCanvas);
 
     fCanvas.on('object:moving', (e) => clampObject(e.target, 440));
-    fCanvas.on('object:scaling', (e) => clampObject(e.target, 440));
+    fCanvas.on('object:scaling', handleObjectScaling(fCanvas));
+    fCanvas.on('object:modified', handleObjectModified(fCanvas));
     fCanvas.on('selection:created', () => syncSidebarFromObject(fCanvas));
     fCanvas.on('selection:updated', () => syncSidebarFromObject(fCanvas));
     fCanvas.on('selection:cleared', () => {
@@ -593,7 +627,8 @@ function DesignContent() {
     setBackCanvas(bCanvas);
 
     bCanvas.on('object:moving', (e) => clampObject(e.target, 440));
-    bCanvas.on('object:scaling', (e) => clampObject(e.target, 440));
+    bCanvas.on('object:scaling', handleObjectScaling(bCanvas));
+    bCanvas.on('object:modified', handleObjectModified(bCanvas));
     bCanvas.on('selection:created', () => syncSidebarFromObject(bCanvas));
     bCanvas.on('selection:updated', () => syncSidebarFromObject(bCanvas));
     bCanvas.on('selection:cleared', () => {
@@ -623,6 +658,101 @@ function DesignContent() {
       document.head.appendChild(link);
     }
   }, []);
+
+  // Load saved design if redesign query param is present
+  useEffect(() => {
+    if (!frontCanvas || !backCanvas) return;
+    const redesignId = searchParams.get('redesign');
+    if (!redesignId) return;
+
+    const loadSavedDesign = async () => {
+      try {
+        showToast('Loading saved design...', 'info');
+        const res = await axios.get(`${getBackendUrl()}/api/design/${redesignId}`, { withCredentials: true });
+        if (res.data.success) {
+          const design = res.data.design;
+          
+          // 1. Set fabric color, garment type, etc.
+          if (design.tshirtColor) setTshirtColor(design.tshirtColor);
+          if (design.garmentType) setGarmentType(design.garmentType);
+          
+          // Helper to wrap loadFromJSON in a Promise
+          const loadCanvasPromise = (canvasInstance, json) => {
+            return new Promise((resolve) => {
+              if (!json) return resolve();
+              canvasInstance.loadFromJSON(json, () => {
+                canvasInstance.renderAll();
+                resolve();
+              });
+            });
+          };
+
+          // 2. Load canvas JSON in parallel
+          await Promise.all([
+            loadCanvasPromise(frontCanvas, design.canvasJson?.front),
+            loadCanvasPromise(backCanvas, design.canvasJson?.back)
+          ]);
+
+          // Normalize isSticker and override toObject for loaded image/sticker objects
+          [frontCanvas, backCanvas].forEach(c => {
+            if (!c) return;
+            c.getObjects().forEach(obj => {
+              if (obj.type === 'image') {
+                const srcStr = obj.src || (obj._element && obj._element.src);
+                const isSticker = obj.isSticker || (typeof srcStr === 'string' && !srcStr.startsWith('data:'));
+                if (isSticker) {
+                  obj.isSticker = true;
+                  obj.stickerUrl = obj.stickerUrl || srcStr;
+                  
+                  // Re-override toObject so it continues to serialize correctly if saved again
+                  const fabric = require('fabric').fabric;
+                  obj.toObject = (function(toObject) {
+                    return function() {
+                      return fabric.util.object.extend(toObject.call(this), {
+                        isSticker: true,
+                        stickerUrl: this.stickerUrl
+                      });
+                    };
+                  })(obj.toObject);
+                }
+              }
+            });
+          });
+          
+          // 3. Auto-select first loaded layer to sync editor sidebar panels
+          const frontObjects = frontCanvas.getObjects();
+          const backObjects = backCanvas.getObjects();
+          
+          if (frontObjects.length > 0) {
+            setTshirtView('front');
+            const firstText = frontObjects.find(obj => obj.type === 'i-text' || obj.type === 'text');
+            const target = firstText || frontObjects[0];
+            if (target) {
+              frontCanvas.setActiveObject(target);
+              frontCanvas.renderAll();
+              syncSidebarFromObject(frontCanvas);
+            }
+          } else if (backObjects.length > 0) {
+            setTshirtView('back');
+            const firstText = backObjects.find(obj => obj.type === 'i-text' || obj.type === 'text');
+            const target = firstText || backObjects[0];
+            if (target) {
+              backCanvas.setActiveObject(target);
+              backCanvas.renderAll();
+              syncSidebarFromObject(backCanvas);
+            }
+          }
+          
+          showToast('Design loaded successfully!', 'success');
+        }
+      } catch (err) {
+        console.error('Error loading redesign:', err);
+        showToast(`Failed to load saved design: ${err.message}`, 'error');
+      }
+    };
+
+    loadSavedDesign();
+  }, [frontCanvas, backCanvas, searchParams]);
 
   // Add Layer: Text
   const handleAddText = async () => {
@@ -674,6 +804,7 @@ function DesignContent() {
     setIsUnderline(false);
     setIsLinethrough(false);
     setLetterSpacing(0);
+    setTextBend(0);
     setStrokeColor('#ffffff');
     setStrokeWidth(0);
   };
@@ -689,10 +820,9 @@ function DesignContent() {
       }
       if (document.fonts) {
         document.fonts.load(`1em "${fontFamily}"`).then(() => {
-          activeObj.set({
+          const updatedProps = {
             text: textInput,
             fill: textColor,
-            fontSize: parseInt(fontSize),
             fontFamily: fontFamily,
             fontWeight: fontWeight,
             textAlign: textAlign,
@@ -701,8 +831,38 @@ function DesignContent() {
             linethrough: isLinethrough,
             charSpacing: letterSpacing * 10,
             stroke: strokeWidth > 0 ? strokeColor : null,
-            strokeWidth: strokeWidth
-          });
+            strokeWidth: strokeWidth,
+            textBend: textBend
+          };
+
+          const isUserDragging = canvas._currentTransform !== undefined && canvas._currentTransform !== null;
+          if (!isUserDragging) {
+            updatedProps.fontSize = parseInt(fontSize);
+            updatedProps.scaleX = 1;
+            updatedProps.scaleY = 1;
+          }
+
+          activeObj.set(updatedProps);
+
+          // Apply text bending (curved text)
+          if (textBend === 0) {
+            activeObj.set({ path: null });
+          } else {
+            activeObj.set({ path: null });
+            const textWidth = activeObj.width || 100;
+            const maxAngle = 359.99;
+            const angleDeg = (textBend / 100) * maxAngle;
+            const angleRad = angleDeg * Math.PI / 180;
+            const R = textWidth / Math.abs(angleRad);
+            const X = 2 * R * Math.sin(Math.abs(angleRad) / 2);
+            const largeArcFlag = Math.abs(angleDeg) > 180 ? 1 : 0;
+            const sweepFlag = textBend > 0 ? 1 : 0;
+            const fabric = require('fabric').fabric;
+            const path = new fabric.Path(`M 0 0 A ${R} ${R} 0 ${largeArcFlag} ${sweepFlag} ${X} 0`, {
+              visible: false, fill: '', stroke: ''
+            });
+            activeObj.set({ path: path });
+          }
 
           // Apply horizontal alignment relative to 240px print area
           if (textAlign === 'center') {
@@ -716,10 +876,9 @@ function DesignContent() {
           canvas.renderAll();
         });
       } else {
-        activeObj.set({
+        const updatedProps = {
           text: textInput,
           fill: textColor,
-          fontSize: parseInt(fontSize),
           fontFamily: fontFamily,
           fontWeight: fontWeight,
           textAlign: textAlign,
@@ -728,8 +887,38 @@ function DesignContent() {
           linethrough: isLinethrough,
           charSpacing: letterSpacing * 10,
           stroke: strokeWidth > 0 ? strokeColor : null,
-          strokeWidth: strokeWidth
-        });
+          strokeWidth: strokeWidth,
+          textBend: textBend
+        };
+
+        const isUserDragging = canvas._currentTransform !== undefined && canvas._currentTransform !== null;
+        if (!isUserDragging) {
+          updatedProps.fontSize = parseInt(fontSize);
+          updatedProps.scaleX = 1;
+          updatedProps.scaleY = 1;
+        }
+
+        activeObj.set(updatedProps);
+
+        // Apply text bending (curved text)
+        if (textBend === 0) {
+          activeObj.set({ path: null });
+        } else {
+          activeObj.set({ path: null });
+          const textWidth = activeObj.width || 100;
+          const maxAngle = 359.99;
+          const angleDeg = (textBend / 100) * maxAngle;
+          const angleRad = angleDeg * Math.PI / 180;
+          const R = textWidth / Math.abs(angleRad);
+          const X = 2 * R * Math.sin(Math.abs(angleRad) / 2);
+          const largeArcFlag = Math.abs(angleDeg) > 180 ? 1 : 0;
+          const sweepFlag = textBend > 0 ? 1 : 0;
+          const fabric = require('fabric').fabric;
+          const path = new fabric.Path(`M 0 0 A ${R} ${R} 0 ${largeArcFlag} ${sweepFlag} ${X} 0`, {
+            visible: false, fill: '', stroke: ''
+          });
+          activeObj.set({ path: path });
+        }
 
         // Apply horizontal alignment relative to 240px print area
         if (textAlign === 'center') {
@@ -743,7 +932,7 @@ function DesignContent() {
         canvas.renderAll();
       }
     }
-  }, [textInput, textColor, fontSize, fontFamily, fontWeight, textAlign, fontStyle, isUnderline, isLinethrough, letterSpacing, strokeColor, strokeWidth, canvas]);
+  }, [textInput, textColor, fontSize, fontFamily, fontWeight, textAlign, fontStyle, isUnderline, isLinethrough, letterSpacing, textBend, strokeColor, strokeWidth, canvas]);
 
   // Add Layer: Shape (Circle / Square / Star)
   const handleAddShape = (shapeType) => {
@@ -1020,14 +1209,6 @@ function DesignContent() {
     setShowPreview(true);
   };
 
-  const handleDownload = async () => {
-    const dataUrl = await generatePreview();
-    const link = document.createElement('a');
-    link.download = `customwear-design-${tshirtView}.png`;
-    link.href = dataUrl;
-    link.click();
-    showToast('Download started!', 'success');
-  };
 
   // Add design directly to checkout cart
   const handleAddToCartWithDesign = async () => {
@@ -1046,15 +1227,20 @@ function DesignContent() {
       const backJson = backCanvas ? backCanvas.toJSON() : null;
       const canvasJson = { front: frontJson, back: backJson };
 
-      // 1. Persist Custom Design layout in Backend DB
-      const res = await axios.post(`${getBackendUrl()}/api/design/save`, {
+      // 1. Create Custom Order in Backend
+      const res = await axios.post(`${getBackendUrl()}/api/custom-orders/cart`, {
         productId: productId || null,
+        productType: garmentType,
+        color: tshirtColor,
+        size: selectedSize,
+        quantity: 1,
+        price: 1100, // Will recalculate base below
         canvasJson,
         previewImage: previewImg
       });
 
       if (res.data.success) {
-        const designRecord = res.data.design;
+        const customOrderRecord = res.data.customOrder;
 
         // Extract color price
         const currentColorObj = fabricColors.find(c => c.hex.toLowerCase() === tshirtColor.toLowerCase()) || fabricColors[0] || { price: 1100, discountPrice: 0 };
@@ -1067,14 +1253,15 @@ function DesignContent() {
         // 2. Push Saved ID into global Redux Cart Slice
         dispatch(addToCart({
           productId: productId || 'custom-apparel-001',
-          name: `Custom Premium T-Shirt (${tshirtColor === '#ffffff' ? 'White' : 'Colored'})`,
+          name: `Custom Premium ${garmentType === 'polo' ? 'Polo' : 'T-Shirt'} (${tshirtColor === '#ffffff' ? 'White' : 'Colored'})`,
           price: finalPrice, // Dynamic pricing per color + text charges!
           image: previewImg,
           size: selectedSize,
           color: tshirtColor,
           quantity: 1,
           isCustom: true,
-          customDesignId: designRecord._id
+          customDesignId: customOrderRecord._id, // This is now the CustomOrder ID
+          garmentType: garmentType
         }));
 
         showToast('Custom T-Shirt added to cart!', 'success');
@@ -1105,7 +1292,9 @@ function DesignContent() {
       const res = await axios.post(`${getBackendUrl()}/api/design/save`, {
         productId: productId || null,
         canvasJson,
-        previewImage: previewImg
+        previewImage: previewImg,
+        garmentType: garmentType,
+        tshirtColor: tshirtColor
       });
       if (res.data.success) {
         showToast('✅ Design saved to your account!', 'success');
@@ -1262,19 +1451,37 @@ function DesignContent() {
                     </div>
                   </Form.Group>
 
-                  {/* Letter Spacing */}
-                  <Form.Group>
-                    <div className="d-flex justify-content-between align-items-center mb-1">
-                      <Form.Label className="small fw-semibold text-secondary m-0">Letter Spacing</Form.Label>
-                      <span className="small text-dark fw-bold">{letterSpacing}px</span>
-                    </div>
-                    <Form.Range 
-                      min={-5} 
-                      max={20} 
-                      value={letterSpacing}
-                      onChange={(e) => setLetterSpacing(parseInt(e.target.value))}
-                    />
-                  </Form.Group>
+                  {/* Letter Spacing & Text Bend */}
+                  <Row className="g-3">
+                    <Col xs={6}>
+                      <Form.Group>
+                        <div className="d-flex justify-content-between align-items-center mb-1">
+                          <Form.Label className="small fw-semibold text-secondary m-0">Spacing</Form.Label>
+                          <span className="small text-dark fw-bold">{letterSpacing}px</span>
+                        </div>
+                        <Form.Range 
+                          min={-5} 
+                          max={20} 
+                          value={letterSpacing}
+                          onChange={(e) => setLetterSpacing(parseInt(e.target.value))}
+                        />
+                      </Form.Group>
+                    </Col>
+                    <Col xs={6}>
+                      <Form.Group>
+                        <div className="d-flex justify-content-between align-items-center mb-1">
+                          <Form.Label className="small fw-semibold text-secondary m-0">Text Bend</Form.Label>
+                          <span className="small text-dark fw-bold">{textBend}</span>
+                        </div>
+                        <Form.Range 
+                          min={-100} 
+                          max={100} 
+                          value={textBend}
+                          onChange={(e) => setTextBend(parseInt(e.target.value))}
+                        />
+                      </Form.Group>
+                    </Col>
+                  </Row>
 
                   {/* Font Color */}
                   <Form.Group>
@@ -2427,6 +2634,8 @@ function DesignContent() {
                   backFabricCanvas={backCanvas}
                   visible={true}
                   interactive={displayMode === '3d'}
+                  hideDecals={displayMode === '2d'}
+                  garmentType={garmentType}
                 />
               </div>
 
@@ -2488,10 +2697,40 @@ function DesignContent() {
               boxShadow: '0 2px 8px rgba(0,0,0,0.07)',
               border: '1px solid #e2e8f0'
             }}>
+
+              {/* Garment Type Selector */}
+              <p style={{ fontSize: '10px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>👕 Garment Type</p>
+              <div className="d-flex gap-1 mb-3" style={{ background: '#e2e8f0', borderRadius: '10px', padding: '4px' }}>
+                <button
+                  onClick={() => setGarmentType('tshirt')}
+                  style={{
+                    flex: 1, border: 'none', borderRadius: '7px', padding: '7px 0',
+                    fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+                    background: garmentType === 'tshirt' ? 'linear-gradient(135deg,#ff8525,#e53e3e)' : 'transparent',
+                    color: garmentType === 'tshirt' ? '#fff' : '#64748b',
+                    transition: 'all 0.25s ease',
+                    boxShadow: garmentType === 'tshirt' ? '0 2px 8px rgba(229,62,62,0.3)' : 'none'
+                  }}
+                >👕 T-Shirt</button>
+                <button
+                  onClick={() => setGarmentType('polo')}
+                  style={{
+                    flex: 1, border: 'none', borderRadius: '7px', padding: '7px 0',
+                    fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+                    background: garmentType === 'polo' ? 'linear-gradient(135deg,#ff8525,#e53e3e)' : 'transparent',
+                    color: garmentType === 'polo' ? '#fff' : '#64748b',
+                    transition: 'all 0.25s ease',
+                    boxShadow: garmentType === 'polo' ? '0 2px 8px rgba(229,62,62,0.3)' : 'none'
+                  }}
+                >🎽 Polo</button>
+              </div>
+
+              {/* 2D / 3D Toggle */}
               <div className="d-flex gap-1 mb-2" style={{ background: '#e2e8f0', borderRadius: '10px', padding: '4px' }}>
                 <button onClick={() => setDisplayMode('2d')} style={{ flex:1, border:'none', borderRadius:'7px', padding:'7px 0', fontSize:'12px', fontWeight:700, cursor:'pointer', background: displayMode==='2d' ? '#ffffff' : 'transparent', color: displayMode==='2d' ? '#0f172a' : '#64748b', transition:'all 0.25s ease', boxShadow: displayMode==='2d' ? '0 2px 8px rgba(0,0,0,0.1)' : 'none' }}>✏️ Editor</button>
                 <button onClick={() => setDisplayMode('3d')} style={{ flex:1, border:'none', borderRadius:'7px', padding:'7px 0', fontSize:'12px', fontWeight:700, cursor:'pointer', background: displayMode==='3d' ? 'linear-gradient(135deg,#ff8525,#e53e3e)' : 'transparent', color: displayMode==='3d' ? '#fff' : '#64748b', transition:'all 0.25s ease', boxShadow: displayMode==='3d' ? '0 2px 10px rgba(255,133,37,0.4)' : 'none' }}>🔮 Preview</button>
               </div>
+
               <div className="d-flex gap-1" style={{ background: '#e2e8f0', borderRadius: '10px', padding: '4px' }}>
                 <button onClick={() => setTshirtView('front')} style={{ flex:1, border:'none', borderRadius:'7px', padding:'6px 0', fontSize:'11px', fontWeight:600, cursor:'pointer', background: tshirtView==='front' ? '#ffffff' : 'transparent', color: tshirtView==='front' ? '#0f172a' : '#64748b', transition:'all 0.25s ease', boxShadow: tshirtView==='front' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none' }}>👕 Front View</button>
                 <button onClick={() => setTshirtView('back')} style={{ flex:1, border:'none', borderRadius:'7px', padding:'6px 0', fontSize:'11px', fontWeight:600, cursor:'pointer', background: tshirtView==='back' ? '#ffffff' : 'transparent', color: tshirtView==='back' ? '#0f172a' : '#64748b', transition:'all 0.25s ease', boxShadow: tshirtView==='back' ? '0 2px 4px rgba(0,0,0,0.05)' : 'none' }}>🔄 Back View</button>
@@ -2568,9 +2807,10 @@ function DesignContent() {
               </div>
             </div>
             <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
-              <button onClick={handleOpenPreview} onMouseOver={e => { e.currentTarget.style.borderColor='#ff8525'; e.currentTarget.style.color='#ff8525'; }} onMouseOut={e => { e.currentTarget.style.borderColor='#e2e8f0'; e.currentTarget.style.color='#475569'; }} style={{ border:'1.5px solid #e2e8f0', borderRadius:'12px', padding:'10px 16px', background:'#fff', color:'#475569', fontWeight:600, fontSize:'13px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', transition:'all 0.2s ease' }}><IoPushOutline style={{ fontSize:'15px' }} /> Full Preview</button>
-              <button onClick={handleSaveDesign} disabled={isSavingDesign} onMouseOver={e => { if (!isSavingDesign) { e.currentTarget.style.borderColor='#6366f1'; e.currentTarget.style.color='#6366f1'; } }} onMouseOut={e => { e.currentTarget.style.borderColor='#e2e8f0'; e.currentTarget.style.color='#475569'; }} style={{ border:'1.5px solid #e2e8f0', borderRadius:'12px', padding:'10px 16px', background:'#fff', color:'#475569', fontWeight:600, fontSize:'13px', cursor: isSavingDesign ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', transition:'all 0.2s ease', opacity: isSavingDesign ? 0.7 : 1 }}><IoSave style={{ fontSize:'15px' }} /> {isSavingDesign ? 'Saving...' : 'Save Design'}</button>
-              <button onClick={handleDownload} onMouseOver={e => { e.currentTarget.style.borderColor='#ff8525'; e.currentTarget.style.color='#ff8525'; }} onMouseOut={e => { e.currentTarget.style.borderColor='#e2e8f0'; e.currentTarget.style.color='#475569'; }} style={{ border:'1.5px solid #e2e8f0', borderRadius:'12px', padding:'10px 16px', background:'#fff', color:'#475569', fontWeight:600, fontSize:'13px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', transition:'all 0.2s ease' }}><IoDownload style={{ fontSize:'15px' }} /> Download JPG</button>
+              <div style={{ display:'flex', gap:'8px' }}>
+                <button onClick={handleOpenPreview} onMouseOver={e => { e.currentTarget.style.borderColor='#ff8525'; e.currentTarget.style.color='#ff8525'; }} onMouseOut={e => { e.currentTarget.style.borderColor='#e2e8f0'; e.currentTarget.style.color='#475569'; }} style={{ flex: 1, border:'1.5px solid #e2e8f0', borderRadius:'12px', padding:'8px 10px', background:'#fff', color:'#475569', fontWeight:600, fontSize:'13px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'6px', transition:'all 0.2s ease', whiteSpace: 'nowrap' }}><IoPushOutline style={{ fontSize:'15px' }} /> Full Preview</button>
+                <button onClick={handleSaveDesign} disabled={isSavingDesign} onMouseOver={e => { if (!isSavingDesign) { e.currentTarget.style.borderColor='#6366f1'; e.currentTarget.style.color='#6366f1'; } }} onMouseOut={e => { e.currentTarget.style.borderColor='#e2e8f0'; e.currentTarget.style.color='#475569'; }} style={{ flex: 1, border:'1.5px solid #e2e8f0', borderRadius:'12px', padding:'8px 10px', background:'#fff', color:'#475569', fontWeight:600, fontSize:'13px', cursor: isSavingDesign ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'6px', transition:'all 0.2s ease', opacity: isSavingDesign ? 0.7 : 1, whiteSpace: 'nowrap' }}><IoSave style={{ fontSize:'15px' }} /> {isSavingDesign ? 'Saving...' : 'Save Design'}</button>
+              </div>
               <button onClick={handleAddToCartWithDesign} onMouseOver={e => { e.currentTarget.style.boxShadow='0 8px 28px rgba(229,62,62,0.5)'; e.currentTarget.style.transform='translateY(-1px)'; }} onMouseOut={e => { e.currentTarget.style.boxShadow='0 6px 20px rgba(229,62,62,0.35)'; e.currentTarget.style.transform='translateY(0)'; }} style={{ border:'none', borderRadius:'12px', padding:'14px 16px', background:'linear-gradient(135deg,#ff8525 0%,#e53e3e 100%)', color:'#fff', fontWeight:700, fontSize:'14px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', boxShadow:'0 6px 20px rgba(229,62,62,0.35)', transition:'all 0.2s ease', letterSpacing:'0.3px' }}><IoCart style={{ fontSize:'18px' }} /> Add to Cart</button>
             </div>
           </div>
@@ -2592,6 +2832,7 @@ function DesignContent() {
             backFabricCanvas={backCanvas}
             visible={showPreview}
             interactive={true}
+            garmentType={garmentType}
           />
           {/* Interactive hints watermark overlay */}
           <div className="position-absolute bottom-0 start-50 translate-middle-x pb-3 text-center pointer-events-none" style={{ zIndex: 10 }}>
