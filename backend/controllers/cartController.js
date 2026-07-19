@@ -366,3 +366,86 @@ exports.clearCart = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error clearing cart: ' + error.message });
   }
 };
+
+/**
+ * @desc    Get all carts in the system (Admin only)
+ * @route   GET /api/cart/admin
+ * @access  Private (Admin)
+ */
+exports.getCartsAdmin = async (req, res) => {
+  try {
+    const carts = await Cart.find()
+      .populate('userId', 'name email phone')
+      .populate('items.productId', 'name price')
+      .sort({ updatedAt: -1 });
+
+    res.status(200).json({ success: true, carts });
+  } catch (error) {
+    console.error('Get admin carts error:', error);
+    res.status(500).json({ success: false, message: 'Server error retrieving carts: ' + error.message });
+  }
+};
+
+/**
+ * @desc    Delete a full cart (Admin only)
+ * @route   DELETE /api/cart/admin/:cartId
+ * @access  Private (Admin)
+ */
+exports.deleteCartAdmin = async (req, res) => {
+  try {
+    const cart = await Cart.findById(req.params.cartId);
+    if (!cart) {
+      return res.status(404).json({ success: false, message: 'Cart not found' });
+    }
+    // Delete any linked custom orders
+    for (const item of cart.items) {
+      if (item.isCustom && item.customDesignId) {
+        try {
+          await CustomOrder.findByIdAndDelete(item.customDesignId);
+        } catch (err) {
+          console.error('Error deleting CustomOrder:', err);
+        }
+      }
+    }
+    await cart.deleteOne();
+    res.status(200).json({ success: true, message: 'Cart deleted successfully' });
+  } catch (error) {
+    console.error('Delete admin cart error:', error);
+    res.status(500).json({ success: false, message: 'Server error deleting cart: ' + error.message });
+  }
+};
+
+/**
+ * @desc    Delete a specific item from a cart (Admin only)
+ * @route   DELETE /api/cart/admin/:cartId/item/:itemId
+ * @access  Private (Admin)
+ */
+exports.deleteCartItemAdmin = async (req, res) => {
+  try {
+    const cart = await Cart.findById(req.params.cartId);
+    if (!cart) {
+      return res.status(404).json({ success: false, message: 'Cart not found' });
+    }
+    const item = cart.items.find(i => i._id.toString() === req.params.itemId);
+    if (!item) {
+      return res.status(404).json({ success: false, message: 'Cart item not found' });
+    }
+    // If custom design, delete its CustomOrder record
+    if (item.isCustom && item.customDesignId) {
+      try {
+        await CustomOrder.findByIdAndDelete(item.customDesignId);
+      } catch (err) {
+        console.error('Error deleting CustomOrder:', err);
+      }
+    }
+    cart.items = cart.items.filter(i => i._id.toString() !== req.params.itemId);
+    
+    recalculateTotals(cart);
+    await cart.save();
+    
+    res.status(200).json({ success: true, cart, message: 'Item deleted successfully' });
+  } catch (error) {
+    console.error('Delete admin cart item error:', error);
+    res.status(500).json({ success: false, message: 'Server error deleting item: ' + error.message });
+  }
+};

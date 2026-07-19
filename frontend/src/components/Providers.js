@@ -78,6 +78,10 @@ function GlobalRealtimeSync() {
         case 'orders':
           qc.invalidateQueries({ queryKey: ['orders'] });
           break;
+        case 'custom-orders':
+          qc.invalidateQueries({ queryKey: ['custom-orders'] });
+          qc.invalidateQueries({ queryKey: ['designs'] });
+          break;
         case 'media':
           qc.invalidateQueries({ queryKey: ['media'] });
           break;

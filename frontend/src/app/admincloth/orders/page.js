@@ -59,10 +59,27 @@ export default function AdminOrdersPage() {
 
   useEffect(() => {
     fetchAllOrders(false);
-    const interval = setInterval(() => {
-      fetchAllOrders(true);
-    }, 4000);
-    return () => clearInterval(interval);
+
+    const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || getBackendUrl();
+    const es = new EventSource(`${BACKEND}/api/events`);
+
+    const handleUpdate = (e) => {
+      try {
+        const { type } = JSON.parse(e.data);
+        if (type === 'orders' || type === 'custom-orders') {
+          fetchAllOrders(true);
+        }
+      } catch (err) {
+        console.error('SSE update parsing error:', err);
+      }
+    };
+
+    es.addEventListener('update', handleUpdate);
+
+    return () => {
+      es.removeEventListener('update', handleUpdate);
+      es.close();
+    };
   }, [statusFilter, searchTerm]);
 
   const handleUpdateStatus = async (orderDbId, nextStatus) => {

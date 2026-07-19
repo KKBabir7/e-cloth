@@ -148,7 +148,8 @@ const createOrder = async (req, res) => {
       }
     }
 
-    broadcast('orders');
+    broadcast('orders', { action: 'placed', orderId: order.orderId, customerName: order.shippingAddress?.name || 'Guest' });
+    broadcast('custom-orders', { action: 'placed', orderId: order.orderId });
 
     res.status(201).json({
       success: true,
@@ -236,7 +237,8 @@ const updateOrderStatus = async (req, res) => {
     if (paymentStatus) order.paymentStatus = paymentStatus;
 
     await order.save();
-    broadcast('orders');
+    broadcast('orders', { action: 'status_update', orderId: order.orderId });
+    broadcast('custom-orders', { action: 'status_update', orderId: order.orderId });
 
     res.status(200).json({
       success: true,

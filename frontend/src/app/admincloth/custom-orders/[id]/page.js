@@ -18,21 +18,43 @@ export default function CustomOrderDetails({ params }) {
   const { showToast } = useUI();
   const router = useRouter();
 
+  const fetchOrder = async () => {
+    try {
+      const res = await axios.get(`${getBackendUrl()}/api/custom-orders/admin/${id}`, { withCredentials: true });
+      if (res.data.success) {
+        setOrder(res.data.customOrder);
+        initCanvases(res.data.customOrder.canvasJson);
+      }
+    } catch (err) {
+      showToast('Failed to load order details', 'error');
+      router.push('/admincloth/custom-orders');
+    }
+    setLoading(false);
+  };
+
   useEffect(() => {
-    const fetchOrder = async () => {
+    fetchOrder();
+
+    const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || getBackendUrl();
+    const es = new EventSource(`${BACKEND}/api/events`);
+
+    const handleUpdate = (e) => {
       try {
-        const res = await axios.get(`${getBackendUrl()}/api/custom-orders/admin/${id}`, { withCredentials: true });
-        if (res.data.success) {
-          setOrder(res.data.customOrder);
-          initCanvases(res.data.customOrder.canvasJson);
+        const { type } = JSON.parse(e.data);
+        if (type === 'custom-orders' || type === 'orders') {
+          fetchOrder();
         }
       } catch (err) {
-        showToast('Failed to load order details', 'error');
-        router.push('/admincloth/custom-orders');
+        console.error('SSE update parsing error:', err);
       }
-      setLoading(false);
     };
-    fetchOrder();
+
+    es.addEventListener('update', handleUpdate);
+
+    return () => {
+      es.removeEventListener('update', handleUpdate);
+      es.close();
+    };
   }, [id]);
 
   const initCanvases = (canvasJson) => {

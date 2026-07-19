@@ -103,9 +103,52 @@ const getDesignById = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Get all saved custom designs (Admin only)
+ * @route   GET /api/design/admin
+ * @access  Private (Admin)
+ */
+const getDesignsAdmin = async (req, res) => {
+  try {
+    const designs = await Design.find()
+      .populate('userId', 'name email phone')
+      .populate('productId', 'name')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      designs
+    });
+  } catch (error) {
+    console.error('Get admin designs error:', error.message);
+    res.status(500).json({ success: false, message: 'Server error fetching designs: ' + error.message });
+  }
+};
+
+/**
+ * @desc    Delete any saved custom design (Admin only)
+ * @route   DELETE /api/design/admin/:id
+ * @access  Private (Admin)
+ */
+const deleteDesignAdmin = async (req, res) => {
+  try {
+    const design = await Design.findById(req.params.id);
+    if (!design) {
+      return res.status(404).json({ success: false, message: 'Design not found' });
+    }
+    await design.deleteOne();
+    res.status(200).json({ success: true, message: 'Saved design deleted successfully' });
+  } catch (error) {
+    console.error('Delete admin design error:', error.message);
+    res.status(500).json({ success: false, message: 'Server error deleting design: ' + error.message });
+  }
+};
+
 module.exports = {
   saveDesign,
   getUserDesigns,
   deleteDesign,
-  getDesignById
+  getDesignById,
+  getDesignsAdmin,
+  deleteDesignAdmin
 };

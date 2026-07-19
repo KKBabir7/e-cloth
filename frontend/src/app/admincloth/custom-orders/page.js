@@ -30,6 +30,27 @@ export default function CustomOrdersList() {
 
   useEffect(() => {
     fetchOrders();
+
+    const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || getBackendUrl();
+    const es = new EventSource(`${BACKEND}/api/events`);
+
+    const handleUpdate = (e) => {
+      try {
+        const { type } = JSON.parse(e.data);
+        if (type === 'custom-orders' || type === 'orders') {
+          fetchOrders();
+        }
+      } catch (err) {
+        console.error('SSE update parsing error:', err);
+      }
+    };
+
+    es.addEventListener('update', handleUpdate);
+
+    return () => {
+      es.removeEventListener('update', handleUpdate);
+      es.close();
+    };
   }, [statusFilter]);
 
   const updateStatus = async (id, newStatus) => {

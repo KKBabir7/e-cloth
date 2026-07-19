@@ -2,6 +2,7 @@ const CustomOrder = require('../models/CustomOrder');
 const Order = require('../models/Order');
 const Cart = require('../models/Cart');
 const User = require('../models/User');
+const { broadcast } = require('../utils/sseManager');
 
 exports.addToCartCustomOrder = async (req, res) => {
   try {
@@ -34,6 +35,7 @@ exports.addToCartCustomOrder = async (req, res) => {
     });
 
     await customOrder.save();
+    broadcast('custom-orders');
 
     res.status(201).json({
       success: true,
@@ -66,6 +68,7 @@ exports.removeFromCartCustomOrder = async (req, res) => {
     if ((userId && customOrder.userId && customOrder.userId.toString() === userId.toString()) ||
         (!userId && customOrder.sessionId === sessionId)) {
       await CustomOrder.findByIdAndDelete(id);
+      broadcast('custom-orders');
       return res.json({ success: true, message: 'Custom order removed from cart' });
     }
 
@@ -139,6 +142,7 @@ exports.updateCustomOrderStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Custom order not found' });
     }
 
+    broadcast('custom-orders', { action: 'status_update', id: customOrder._id, status: customOrder.status });
     res.json({ success: true, customOrder, message: 'Status updated successfully' });
   } catch (error) {
     console.error('Error in updateCustomOrderStatus:', error);

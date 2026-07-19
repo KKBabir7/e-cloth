@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import BrandLoader from '../../components/BrandLoader';
 import { usePathname, useRouter } from 'next/navigation';
@@ -10,10 +10,11 @@ import {
   IoGridOutline, IoShirtOutline, IoReceiptOutline, IoPeopleOutline,
   IoGiftOutline, IoShieldCheckmarkOutline, IoHomeOutline, IoLogOutOutline,
   IoImagesOutline, IoLayersOutline, IoChatbubblesOutline, IoSparklesOutline,
-  IoColorPaletteOutline
+  IoColorPaletteOutline, IoNotificationsOutline, IoCartOutline, IoBrushOutline
 } from 'react-icons/io5';
 import { logout } from '../../store/authSlice';
 import { useUI } from '../../context/UIContext';
+import { getBackendUrl } from '../../utils/api';
 
 export default function AdminLayout({ children }) {
   const pathname = usePathname();
@@ -21,6 +22,79 @@ export default function AdminLayout({ children }) {
   const dispatch = useDispatch();
   const { showToast } = useUI();
   const { isAuthenticated, loading, user } = useSelector((state) => state.auth);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const playNotificationSound = () => {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+      osc.frequency.setValueAtTime(880.00, ctx.currentTime + 0.12); // A5
+      
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+      
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.45);
+    } catch (err) {
+      console.warn('AudioContext not allowed or supported:', err);
+    }
+  };
+
+  const clearNotifications = () => {
+    setNotifications([]);
+    setUnreadCount(0);
+  };
+
+  // Real-time SSE Order placement listener for admin notifications
+  useEffect(() => {
+    if (pathname === '/admincloth/login') return;
+    if (!isAuthenticated || !user || (user.role !== 'admin' && user.role !== 'superAdmin')) return;
+
+    const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || getBackendUrl();
+    const es = new EventSource(`${BACKEND}/api/events`);
+
+    const handleUpdate = (e) => {
+      try {
+        const { type, action, orderId, customerName } = JSON.parse(e.data);
+        if (action === 'placed') {
+          playNotificationSound();
+          if (type === 'orders') {
+            const msg = `New Standard Order #${orderId} placed by ${customerName}`;
+            showToast(`🔔 ${msg}`, 'success');
+            setNotifications(prev => [
+              { id: Date.now() + Math.random(), text: msg, time: new Date().toLocaleTimeString('en-BD', { hour: '2-digit', minute: '2-digit' }) },
+              ...prev
+            ]);
+            setUnreadCount(prev => prev + 1);
+          } else if (type === 'custom-orders') {
+            const msg = `New Custom Order #${orderId} placed`;
+            showToast(`🎨 ${msg}`, 'info');
+            setNotifications(prev => [
+              { id: Date.now() + Math.random(), text: msg, time: new Date().toLocaleTimeString('en-BD', { hour: '2-digit', minute: '2-digit' }) },
+              ...prev
+            ]);
+            setUnreadCount(prev => prev + 1);
+          }
+        }
+      } catch (err) {
+        console.error('SSE notification error:', err);
+      }
+    };
+
+    es.addEventListener('update', handleUpdate);
+
+    return () => {
+      es.removeEventListener('update', handleUpdate);
+      es.close();
+    };
+  }, [isAuthenticated, user, pathname]);
 
   // Administrative RBAC Role Security check
   useEffect(() => {
@@ -63,6 +137,8 @@ export default function AdminLayout({ children }) {
     { name: 'Manage Categories', path: '/admincloth/categories', icon: <IoLayersOutline size={18} /> },
     { name: 'Manage Orders', path: '/admincloth/orders', icon: <IoReceiptOutline size={18} /> },
     { name: 'Custom Orders', path: '/admincloth/custom-orders', icon: <IoColorPaletteOutline size={18} /> },
+    { name: 'Cart Management', path: '/admincloth/carts', icon: <IoCartOutline size={18} /> },
+    { name: 'Saved Designs', path: '/admincloth/saved-designs', icon: <IoBrushOutline size={18} /> },
     { name: 'Manage Users', path: '/admincloth/users', icon: <IoPeopleOutline size={18} /> },
     { name: 'Coupons & Promos', path: '/admincloth/coupons', icon: <IoGiftOutline size={18} /> },
     { name: 'Hero Slideshow', path: '/admincloth/hero-slides', icon: <IoImagesOutline size={18} /> },
@@ -85,6 +161,53 @@ export default function AdminLayout({ children }) {
           
           <Navbar.Collapse id="admin-navbar-nav" className="justify-content-end">
             <Nav className="align-items-center gap-3">
+              {/* Real-time Notifications Dropdown */}
+              <NavDropdown 
+                title={
+                  <span className="text-white position-relative d-inline-flex align-items-center justify-content-center p-2 rounded-circle hover-bg-navy" style={{ cursor: 'pointer' }}>
+                    <IoNotificationsOutline size={20} />
+                    {unreadCount > 0 && (
+                      <Badge bg="danger" pill className="position-absolute" style={{ top: '0px', right: '0px', fontSize: '9px', padding: '3px 6px' }}>
+                        {unreadCount}
+                      </Badge>
+                    )}
+                  </span>
+                }
+                id="admin-notifications-dropdown"
+                align="end"
+                className="admin-notifications-dropdown-nav me-1"
+                onToggle={(isOpen) => { if (isOpen) setUnreadCount(0); }}
+              >
+                <div className="px-3 py-2 border-bottom d-flex justify-content-between align-items-center" style={{ minWidth: '300px' }}>
+                  <strong style={{ fontSize: '13px' }}>Notifications</strong>
+                  {notifications.length > 0 && (
+                    <Button variant="link" className="p-0 text-danger small fw-semibold text-decoration-none" style={{ fontSize: '11px' }} onClick={clearNotifications}>
+                      Clear All
+                    </Button>
+                  )}
+                </div>
+                
+                <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                  {notifications.length === 0 ? (
+                    <div className="text-center py-4 text-muted small">
+                      No new notifications
+                    </div>
+                  ) : (
+                    notifications.map((notif) => (
+                      <NavDropdown.Item key={notif.id} className="py-2.5 border-bottom text-wrap small" style={{ fontSize: '12.5px', whiteSpace: 'normal', maxWidth: '300px' }}>
+                        <div className="d-flex align-items-start gap-2">
+                          <span className="mt-0.5">🔔</span>
+                          <div>
+                            <div className="fw-medium text-dark">{notif.text}</div>
+                            <span className="text-muted" style={{ fontSize: '10px' }}>{notif.time}</span>
+                          </div>
+                        </div>
+                      </NavDropdown.Item>
+                    ))
+                  )}
+                </div>
+              </NavDropdown>
+
               <NavDropdown 
                 title={
                   <span className="text-white fw-bold d-inline-flex align-items-center gap-2">
