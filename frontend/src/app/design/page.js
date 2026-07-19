@@ -1718,7 +1718,7 @@ function DesignContent() {
   };
 
   return (
-    <Container className="py-5">
+    <Container className={`py-5${mobileDrawerOpen ? ' drawer-open' : ''}`}>
       <Row className="gy-4">
         
         {/* LEFT TOOL PANEL */}
@@ -3422,6 +3422,15 @@ function DesignContent() {
             position: relative !important;
             top: 0 !important;
             margin-top: 45px !important;
+            transition: margin-top 0.3s ease;
+          }
+
+          /* When drawer is open: push canvas up, slide top bar to top */
+          .drawer-open .sticky-tshirt-col {
+            margin-top: 0px !important;
+          }
+          .drawer-open .mobile-top-bar {
+            top: 5px !important;
           }
 
           /* Bottom Navigation */
@@ -3477,12 +3486,12 @@ function DesignContent() {
             bottom: -100%;
             left: 0;
             right: 0;
-            height: 48vh;
+            height: 36vh;
             background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            border-top-left-radius: 24px;
-            border-top-right-radius: 24px;
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
             box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.12);
             z-index: 1040;
             transition: bottom 0.35s cubic-bezier(0.16, 1, 0.3, 1), visibility 0s 0.35s;
@@ -3546,7 +3555,35 @@ function DesignContent() {
           .bottom-sheet-content {
             flex-grow: 1;
             overflow-y: auto;
-            padding: 12px 18px 24px 18px;
+            padding: 6px 14px 16px 14px;
+            font-size: 11px;
+          }
+
+          /* Shrink all text inside the drawer for compact mobile view */
+          .bottom-sheet-content .form-label,
+          .bottom-sheet-content label {
+            font-size: 10px !important;
+            margin-bottom: 2px !important;
+          }
+          .bottom-sheet-content .form-control,
+          .bottom-sheet-content .form-select,
+          .bottom-sheet-content input,
+          .bottom-sheet-content select {
+            font-size: 11px !important;
+            padding: 4px 8px !important;
+            height: auto !important;
+          }
+          .bottom-sheet-content .btn {
+            font-size: 10.5px !important;
+            padding: 3px 8px !important;
+          }
+          .bottom-sheet-content .small,
+          .bottom-sheet-content small {
+            font-size: 9.5px !important;
+          }
+          .bottom-sheet-content .fw-bold,
+          .bottom-sheet-content .fw-semibold {
+            font-size: 10px !important;
           }
         }
       `}</style>
