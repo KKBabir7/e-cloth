@@ -3279,9 +3279,20 @@ function DesignContent() {
 
       {/* Mobile Bottom Sheet Drawer */}
       <div className={`mobile-bottom-sheet d-lg-none ${mobileDrawerOpen ? 'open' : ''}`}>
-        <div className="bottom-sheet-handle" onClick={() => setMobileDrawerOpen(false)}></div>
+        {/* Drawer Header with handle pill and close button */}
+        <div className="bottom-sheet-header">
+          <div className="bottom-sheet-handle-pill" onClick={() => setMobileDrawerOpen(false)}></div>
+          <button
+            type="button"
+            className="bottom-sheet-close-btn"
+            onClick={() => setMobileDrawerOpen(false)}
+            aria-label="Close drawer"
+          >
+            ✕
+          </button>
+        </div>
         <div className="bottom-sheet-content">
-          {renderMobileDrawerContent()}
+          {mobileDrawerOpen && renderMobileDrawerContent()}
         </div>
       </div>
 
@@ -3474,25 +3485,62 @@ function DesignContent() {
             border-top-right-radius: 24px;
             box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.12);
             z-index: 1040;
-            transition: bottom 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: bottom 0.35s cubic-bezier(0.16, 1, 0.3, 1), visibility 0s 0.35s;
             border: 1px solid rgba(226, 232, 240, 0.8);
             border-bottom: none;
             display: flex;
             flex-direction: column;
+            visibility: hidden;
           }
           
           .mobile-bottom-sheet.open {
             bottom: 70px;
+            visibility: visible;
+            transition: bottom 0.35s cubic-bezier(0.16, 1, 0.3, 1), visibility 0s 0s;
+          }
+
+          /* Drawer header area */
+          .bottom-sheet-header {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 14px 16px 6px 16px;
+            flex-shrink: 0;
           }
           
-          .bottom-sheet-handle {
+          .bottom-sheet-handle-pill {
             width: 36px;
             height: 4.5px;
             background: #cbd5e1;
             border-radius: 10px;
-            margin: 12px auto 8px auto;
             cursor: pointer;
-            flex-shrink: 0;
+          }
+
+          .bottom-sheet-close-btn {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: none;
+            background: #f1f5f9;
+            color: #64748b;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s ease, color 0.2s ease;
+            line-height: 1;
+          }
+
+          .bottom-sheet-close-btn:hover {
+            background: #e53e3e;
+            color: #fff;
           }
           
           .bottom-sheet-content {
