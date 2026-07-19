@@ -3,6 +3,7 @@ const Cart = require('../models/Cart');
 const Product = require('../models/Product');
 const Coupon = require('../models/Coupon');
 const CustomOrder = require('../models/CustomOrder');
+const { broadcast } = require('../utils/sseManager');
 
 /**
  * Helper to calculate totals for a cart
@@ -149,6 +150,7 @@ exports.addToCart = async (req, res) => {
 
     recalculateTotals(cart);
     await cart.save();
+    broadcast('carts');
 
     res.status(200).json({ success: true, cart });
   } catch (error) {
@@ -185,6 +187,7 @@ exports.updateCartQty = async (req, res) => {
       item.quantity = Math.max(1, parseInt(quantity));
       recalculateTotals(cart);
       await cart.save();
+      broadcast('carts');
       res.status(200).json({ success: true, cart });
     } else {
       res.status(404).json({ success: false, message: 'Item not found in cart' });
@@ -241,6 +244,7 @@ exports.removeFromCart = async (req, res) => {
 
     recalculateTotals(cart);
     await cart.save();
+    broadcast('carts');
 
     res.status(200).json({ success: true, cart });
   } catch (error) {
@@ -360,6 +364,7 @@ exports.clearCart = async (req, res) => {
     cart.discount = 0;
     cart.total = 0;
     await cart.save();
+    broadcast('carts');
     res.status(200).json({ success: true, cart });
   } catch (error) {
     console.error('Clear cart error:', error);
@@ -374,12 +379,50 @@ exports.clearCart = async (req, res) => {
  */
 exports.getCartsAdmin = async (req, res) => {
   try {
-    const carts = await Cart.find()
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const query = {};
+    if (req.query.userType === 'registered') {
+      query.userId = { $ne: null };
+    } else if (req.query.userType === 'guest') {
+      query.userId = null;
+    }
+
+    if (req.query.search) {
+      const searchRegex = new RegExp(req.query.search, 'i');
+      const User = mongoose.model('User');
+      const matchingUsers = await User.find({
+        $or: [
+          { name: searchRegex },
+          { email: searchRegex },
+          { phone: searchRegex }
+        ]
+      }).select('_id');
+
+      const userIds = matchingUsers.map(u => u._id);
+      query.$or = [
+        { userId: { $in: userIds } },
+        { sessionId: searchRegex }
+      ];
+    }
+
+    const carts = await Cart.find(query)
       .populate('userId', 'name email phone')
       .populate('items.productId', 'name price')
-      .sort({ updatedAt: -1 });
+      .sort({ updatedAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
-    res.status(200).json({ success: true, carts });
+    const total = await Cart.countDocuments(query);
+
+    res.status(200).json({ 
+      success: true, 
+      carts,
+      total,
+      hasMore: total > page * limit
+    });
   } catch (error) {
     console.error('Get admin carts error:', error);
     res.status(500).json({ success: false, message: 'Server error retrieving carts: ' + error.message });
@@ -408,6 +451,7 @@ exports.deleteCartAdmin = async (req, res) => {
       }
     }
     await cart.deleteOne();
+    broadcast('carts');
     res.status(200).json({ success: true, message: 'Cart deleted successfully' });
   } catch (error) {
     console.error('Delete admin cart error:', error);
@@ -442,6 +486,7 @@ exports.deleteCartItemAdmin = async (req, res) => {
     
     recalculateTotals(cart);
     await cart.save();
+    broadcast('carts');
     
     res.status(200).json({ success: true, cart, message: 'Item deleted successfully' });
   } catch (error) {

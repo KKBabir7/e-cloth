@@ -1,4 +1,5 @@
 const Design = require('../models/Design');
+const { broadcast } = require('../utils/sseManager');
 
 /**
  * @desc    Save a custom T-shirt design
@@ -21,6 +22,8 @@ const saveDesign = async (req, res) => {
       garmentType: garmentType || 'tshirt',
       tshirtColor: tshirtColor || '#ffffff'
     });
+
+    broadcast('designs');
 
     res.status(201).json({
       success: true,
@@ -71,6 +74,7 @@ const deleteDesign = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Not authorized to delete this design' });
     }
     await design.deleteOne();
+    broadcast('designs');
     res.status(200).json({ success: true, message: 'Design deleted successfully' });
   } catch (error) {
     console.error('Delete design error:', error.message);
@@ -110,14 +114,44 @@ const getDesignById = async (req, res) => {
  */
 const getDesignsAdmin = async (req, res) => {
   try {
-    const designs = await Design.find()
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const query = {};
+    if (req.query.garmentType && req.query.garmentType !== 'all') {
+      query.garmentType = req.query.garmentType;
+    }
+
+    if (req.query.search) {
+      const searchRegex = new RegExp(req.query.search, 'i');
+      const User = require('../models/User');
+      const matchingUsers = await User.find({
+        $or: [
+          { name: searchRegex },
+          { email: searchRegex },
+          { phone: searchRegex }
+        ]
+      }).select('_id');
+
+      const userIds = matchingUsers.map(u => u._id);
+      query.userId = { $in: userIds };
+    }
+
+    const designs = await Design.find(query)
       .populate('userId', 'name email phone')
       .populate('productId', 'name')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Design.countDocuments(query);
 
     res.status(200).json({
       success: true,
-      designs
+      designs,
+      total,
+      hasMore: total > page * limit
     });
   } catch (error) {
     console.error('Get admin designs error:', error.message);
@@ -137,6 +171,7 @@ const deleteDesignAdmin = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Design not found' });
     }
     await design.deleteOne();
+    broadcast('designs');
     res.status(200).json({ success: true, message: 'Saved design deleted successfully' });
   } catch (error) {
     console.error('Delete admin design error:', error.message);
