@@ -8,7 +8,7 @@ import {
   IoText, IoImage, IoSquare, IoTrash, IoArrowDown, IoArrowUp, IoPushOutline,
   IoChevronDown, IoDownload, IoCart, IoReload, IoSave, IoSearch, IoMove,
   IoAdd, IoCopy, IoSunnyOutline, IoContrastOutline, IoEyeOutline, IoResizeOutline, IoColorPaletteOutline,
-  IoEllipse, IoTriangle, IoStar, IoHeart
+  IoEllipse, IoTriangle, IoStar, IoHeart, IoHappyOutline, IoShapesOutline, IoCloudUploadOutline, IoLayersOutline
 } from 'react-icons/io5';
 import { FiAlignLeft, FiAlignCenter, FiAlignRight, FiEye, FiEyeOff, FiLock, FiUnlock } from 'react-icons/fi';
 import { useDispatch, useSelector } from 'react-redux';
@@ -128,6 +128,8 @@ function DesignContent() {
   const [selectedSize, setSelectedSize] = useState('L');
   const [displayMode, setDisplayMode] = useState('2d'); // 2d or 3d
   const [garmentType, setGarmentType] = useState('tshirt'); // tshirt or polo
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [mobileActiveTab, setMobileActiveTab] = useState('text');
 
 
   // Derived active canvas instance
@@ -503,6 +505,8 @@ function DesignContent() {
       if (!obj) return;
       if (obj.type === 'i-text' || obj.type === 'text') {
         setActiveTab('text');
+        setMobileActiveTab('text');
+        setMobileDrawerOpen(true);
         activeObjectRef.current = obj;
         setTextInput(obj.text || '');
         setTextColor(obj.fill || '#000000');
@@ -520,6 +524,8 @@ function DesignContent() {
       } else if (obj.type === 'image') {
         if (obj.isSticker) {
           setActiveTab('sticker');
+          setMobileActiveTab('layers');
+          setMobileDrawerOpen(true);
           setStickerOpacity(obj.opacity !== undefined ? obj.opacity : 1);
           setStickerScale(obj.scaleX !== undefined ? obj.scaleX : 1);
           setStickerRotation(obj.angle !== undefined ? obj.angle : 0);
@@ -534,6 +540,8 @@ function DesignContent() {
           setStickerSaturation(saturationF ? saturationF.saturation : 0);
         } else {
           setActiveTab('image');
+          setMobileActiveTab('layers');
+          setMobileDrawerOpen(true);
           setImageOpacity(obj.opacity !== undefined ? obj.opacity : 1);
           setImageScale(obj.scaleX !== undefined ? obj.scaleX : 1);
           setImageRotation(obj.angle !== undefined ? obj.angle : 0);
@@ -549,6 +557,8 @@ function DesignContent() {
         }
       } else {
         setActiveTab('shape');
+        setMobileActiveTab('layers');
+        setMobileDrawerOpen(true);
         setShapeColor(obj.fill || '#ff8525');
         setShapeOpacity(obj.opacity !== undefined ? obj.opacity : 1);
         setShapeScale(obj.scaleX !== undefined ? obj.scaleX : 1);
@@ -753,6 +763,404 @@ function DesignContent() {
 
     loadSavedDesign();
   }, [frontCanvas, backCanvas, searchParams]);
+
+  // Mobile Bottom Sheet control functions
+  const toggleMobileTab = (tab) => {
+    if (mobileActiveTab === tab && mobileDrawerOpen) {
+      setMobileDrawerOpen(false);
+    } else {
+      setMobileActiveTab(tab);
+      setMobileDrawerOpen(true);
+    }
+  };
+
+  const deleteCanvasLayer = (idx) => {
+    if (canvas) {
+      const obj = canvas.item(idx);
+      if (obj) {
+        canvas.remove(obj);
+        canvas.discardActiveObject();
+        canvas.renderAll();
+        showToast('Layer deleted successfully', 'success');
+      }
+    }
+  };
+
+  const renderMobileDrawerContent = () => {
+    switch (mobileActiveTab) {
+      case 'color':
+        return (
+          <div className="d-flex flex-column gap-3 text-start">
+            {/* Garment Selector */}
+            <div>
+              <p className="small fw-bold text-secondary mb-2 uppercase" style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.5px' }}>👕 Garment Type</p>
+              <div className="d-flex gap-1 p-1 bg-light rounded-3">
+                <button
+                  type="button"
+                  className="flex-fill border-0 py-2 rounded-2 small fw-bold"
+                  style={{
+                    background: garmentType === 'tshirt' ? 'linear-gradient(135deg,#ff8525,#e53e3e)' : 'transparent',
+                    color: garmentType === 'tshirt' ? '#fff' : '#64748b',
+                    fontSize: '11px',
+                    transition: 'all 0.25s ease'
+                  }}
+                  onClick={() => setGarmentType('tshirt')}
+                >👕 T-Shirt</button>
+                <button
+                  type="button"
+                  className="flex-fill border-0 py-2 rounded-2 small fw-bold"
+                  style={{
+                    background: garmentType === 'polo' ? 'linear-gradient(135deg,#ff8525,#e53e3e)' : 'transparent',
+                    color: garmentType === 'polo' ? '#fff' : '#64748b',
+                    fontSize: '11px',
+                    transition: 'all 0.25s ease'
+                  }}
+                  onClick={() => setGarmentType('polo')}
+                >🎽 Polo</button>
+              </div>
+            </div>
+
+            {/* Fabric Color */}
+            <div>
+              <p className="small fw-bold text-secondary mb-2 uppercase" style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.5px' }}>🎨 Fabric Color</p>
+              <div className="d-flex flex-wrap gap-2">
+                {fabricColors.map((color) => {
+                  const isSelected = tshirtColor.toLowerCase() === color.hex.toLowerCase();
+                  const imageUrl = color.image ? (color.image.startsWith('http') ? color.image : `${getBackendUrl()}${color.image}`) : null;
+                  return (
+                    <button key={color.name} type="button" title={color.name}
+                      onClick={() => { setTshirtColor(color.hex); if (color.sizes && color.sizes.length > 0 && !color.sizes.includes(selectedSize)) setSelectedSize(color.sizes[0]); }}
+                      style={{ width:'36px', height:'36px', borderRadius:'8px', border: isSelected ? '2.5px solid #ff8525' : '2px solid #e2e8f0', backgroundColor: imageUrl ? '#f8fafc' : color.hex, cursor:'pointer', padding:0, overflow:'hidden', transition: 'all 0.2s' }}>
+                      {imageUrl ? <img src={imageUrl} alt={color.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : <div style={{ width:'100%', height:'100%', backgroundColor: color.hex }} />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Size Select */}
+            <div>
+              <p className="small fw-bold text-secondary mb-2 uppercase" style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.5px' }}>📐 Select Size</p>
+              <div className="d-flex flex-wrap gap-1.5">
+                {(() => {
+                  const currentColorObj = fabricColors.find(c => c.hex.toLowerCase() === tshirtColor.toLowerCase()) || fabricColors[0] || { sizes: ['S','M','L','XL','XXL'] };
+                  const availableSizes = currentColorObj.sizes || ['S','M','L','XL','XXL'];
+                  return availableSizes.map((s) => (
+                    <button key={s} onClick={() => setSelectedSize(s)} className={`btn btn-sm px-3 fw-bold ${selectedSize === s ? 'btn-danger text-white' : 'btn-outline-light text-secondary border'}`} style={{ borderRadius: '6px', fontSize: '11px' }}>{s}</button>
+                  ));
+                })()}
+              </div>
+            </div>
+
+            {/* Price breakdown */}
+            {(() => {
+              const currentColorObj = fabricColors.find(c => c.hex.toLowerCase() === tshirtColor.toLowerCase()) || fabricColors[0] || { price:1100, discountPrice:0 };
+              const hasDiscount = currentColorObj.discountPrice > 0 && currentColorObj.discountPrice < currentColorObj.price;
+              const basePrice = hasDiscount ? currentColorObj.discountPrice : (currentColorObj.price || 1100);
+              const textCharges = textLinesCount * textPrice;
+              const stickerCharges = stickersCount * stickerPrice;
+              const imageCharges = imagesCount * imagePrice;
+              const shapeCharges = shapesCount * shapePrice;
+              const totalCombinedPrice = basePrice + textCharges + stickerCharges + imageCharges + shapeCharges;
+              return (
+                <div className="mt-2 bg-light p-3 rounded-3 border">
+                  <div className="d-flex justify-content-between align-items-center mb-1">
+                    <span className="small text-muted" style={{ fontSize: '11.5px' }}>Base Fabric</span>
+                    <span className="small fw-bold" style={{ fontSize: '11.5px' }}>৳{basePrice}</span>
+                  </div>
+                  {(textCharges > 0 || stickerCharges > 0 || imageCharges > 0 || shapeCharges > 0) && (
+                    <div className="border-top pt-1 mt-1 small text-muted" style={{ fontSize: '11px' }}>
+                      {textCharges > 0 && <div className="d-flex justify-content-between"><span>Text Charges</span><span>+৳{textCharges}</span></div>}
+                      {stickerCharges > 0 && <div className="d-flex justify-content-between"><span>Sticker Charges</span><span>+৳{stickerCharges}</span></div>}
+                      {imageCharges > 0 && <div className="d-flex justify-content-between"><span>Image Charges</span><span>+৳{imageCharges}</span></div>}
+                      {shapeCharges > 0 && <div className="d-flex justify-content-between"><span>Shape Charges</span><span>+৳{shapeCharges}</span></div>}
+                    </div>
+                  )}
+                  <div className="d-flex justify-content-between align-items-center border-top pt-2 mt-2">
+                    <span className="fw-bold" style={{ fontSize: '12.5px' }}>Total Price</span>
+                    <span className="fw-extrabold text-danger" style={{ fontSize: '16px' }}>৳{totalCombinedPrice}</span>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        );
+      case 'text':
+        return (
+          <div className="text-start">
+            <Form className="d-flex flex-column gap-3">
+              <Form.Group>
+                <div className="d-flex align-items-center justify-content-between mb-2">
+                  <Form.Label className="small fw-semibold m-0">Text Content</Form.Label>
+                  <Button variant="danger" size="sm" className="py-0.5 px-2 bg-red-gradient border-0 text-white" onClick={handleAddText} style={{ fontSize: '11px', borderRadius: '4px' }}>
+                    + Add New
+                  </Button>
+                </div>
+                <Form.Control
+                  type="text"
+                  value={textInput}
+                  onChange={(e) => setTextInput(e.target.value)}
+                  className="form-control-premium"
+                />
+              </Form.Group>
+              
+              <Form.Group>
+                <Form.Label className="small fw-semibold">Font Family</Form.Label>
+                <CustomSelect
+                  value={fontFamily}
+                  options={POPULAR_FONTS.map(font => ({
+                    value: font,
+                    label: font,
+                    style: { fontFamily: `"${font}", sans-serif` }
+                  }))}
+                  onChange={async (newFont) => {
+                    showToast('Loading font style...', 'info');
+                    await loadFontDynamically(newFont);
+                    setFontFamily(newFont);
+                  }}
+                  hasSearch={true}
+                />
+              </Form.Group>
+
+              <Row className="g-2">
+                <Col xs={6}>
+                  <Form.Group>
+                    <Form.Label className="small fw-semibold" style={{ fontSize: '11px' }}>Font Size</Form.Label>
+                    <Form.Control
+                      type="number"
+                      value={fontSize}
+                      onChange={(e) => setFontSize(e.target.value)}
+                      className="form-control-premium"
+                    />
+                  </Form.Group>
+                </Col>
+                <Col xs={6}>
+                  <Form.Group>
+                    <Form.Label className="small fw-semibold" style={{ fontSize: '11px' }}>Weight</Form.Label>
+                    <CustomSelect
+                      value={fontWeight}
+                      options={[
+                        { value: 'normal', label: 'Normal' },
+                        { value: 'bold', label: 'Bold' }
+                      ]}
+                      onChange={(newWeight) => setFontWeight(newWeight)}
+                      hasSearch={false}
+                    />
+                  </Form.Group>
+                </Col>
+              </Row>
+
+              <Row className="g-2">
+                <Col xs={6}>
+                  <Form.Group>
+                    <div className="d-flex justify-content-between align-items-center mb-1">
+                      <Form.Label className="small fw-semibold text-secondary m-0" style={{ fontSize: '11px' }}>Opacity</Form.Label>
+                      <span className="text-dark fw-bold" style={{ fontSize: '10px' }}>{Math.round(textOpacity * 100)}%</span>
+                    </div>
+                    <Form.Range
+                      min={0.1}
+                      max={1.0}
+                      step={0.05}
+                      value={textOpacity}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value);
+                        setTextOpacity(val);
+                        if (canvas) {
+                          const activeObj = canvas.getActiveObject();
+                          if (activeObj && (activeObj.type === 'i-text' || activeObj.type === 'text')) {
+                            activeObj.set({ opacity: val });
+                            canvas.renderAll();
+                          }
+                        }
+                      }}
+                    />
+                  </Form.Group>
+                </Col>
+                <Col xs={6}>
+                  <Form.Group>
+                    <div className="d-flex justify-content-between align-items-center mb-1">
+                      <Form.Label className="small fw-semibold text-secondary m-0" style={{ fontSize: '11px' }}>Curve Text</Form.Label>
+                      <span className="text-dark fw-bold" style={{ fontSize: '10px' }}>{textBend}°</span>
+                    </div>
+                    <Form.Range
+                      min={-180}
+                      max={180}
+                      step={5}
+                      value={textBend}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value);
+                        setTextBend(val);
+                        if (canvas) {
+                          const activeObj = canvas.getActiveObject();
+                          if (activeObj && (activeObj.type === 'i-text' || activeObj.type === 'text')) {
+                            activeObj.set({ textBend: val });
+                            canvas.renderAll();
+                          }
+                        }
+                      }}
+                    />
+                  </Form.Group>
+                </Col>
+              </Row>
+
+              <Form.Group>
+                <Form.Label className="small fw-semibold" style={{ fontSize: '11px' }}>Text Color</Form.Label>
+                <div className="d-flex align-items-center gap-2">
+                  <Form.Control
+                    type="color"
+                    value={textColor}
+                    onChange={(e) => setTextColor(e.target.value)}
+                    style={{ width: '45px', height: '36px', padding: '2px', border: '1px solid #ccc', borderRadius: '6px', cursor: 'pointer' }}
+                  />
+                  <span className="small text-muted font-monospace uppercase">{textColor}</span>
+                </div>
+              </Form.Group>
+            </Form>
+          </div>
+        );
+      case 'sticker':
+        return (
+          <div className="text-start">
+            <span className="small fw-bold text-secondary d-block mb-3 uppercase" style={{ fontSize: '10px', letterSpacing: '0.5px' }}>Choose Sticker to Add</span>
+            <div className="d-grid animate-fade-in" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+              {stickersList.map((st, idx) => {
+                const stickerUrl = (st.image && (st.image.startsWith('http') ? st.image : `${getBackendUrl()}${st.image}`)) || st.url;
+                return (
+                  <div 
+                    key={st._id || idx}
+                    className="border rounded p-1.5 text-center bg-white"
+                    style={{ cursor: 'pointer', borderRadius: '8px' }}
+                    onClick={() => { handleAddSticker(stickerUrl); setMobileDrawerOpen(false); }}
+                  >
+                    <img src={stickerUrl} alt={st.name} style={{ width: '100%', height: '40px', objectFit: 'contain' }} />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      case 'shape':
+        return (
+          <div className="text-start">
+            <span className="small fw-bold text-secondary d-block mb-3 uppercase" style={{ fontSize: '10px', letterSpacing: '0.5px' }}>Tap Shape to Add</span>
+            <div className="d-flex flex-wrap gap-2 mb-4">
+              <Button variant="outline-dark" size="sm" className="px-3 py-1.5" style={{ borderRadius: '6px', fontSize: '12px' }} onClick={() => { handleAddShape('rect'); setMobileDrawerOpen(false); }}>⬜ Rectangle</Button>
+              <Button variant="outline-dark" size="sm" className="px-3 py-1.5" style={{ borderRadius: '6px', fontSize: '12px' }} onClick={() => { handleAddShape('circle'); setMobileDrawerOpen(false); }}>⚪ Circle</Button>
+              <Button variant="outline-dark" size="sm" className="px-3 py-1.5" style={{ borderRadius: '6px', fontSize: '12px' }} onClick={() => { handleAddShape('triangle'); setMobileDrawerOpen(false); }}>🔺 Triangle</Button>
+            </div>
+          </div>
+        );
+      case 'upload':
+        return (
+          <div className="text-start">
+            <span className="small fw-bold text-secondary d-block mb-3 uppercase" style={{ fontSize: '10px', letterSpacing: '0.5px' }}>Upload Custom Image</span>
+            
+            <Form.Group className="mb-3">
+              <Form.Control 
+                type="file" 
+                accept="image/*"
+                onChange={handleImageUpload}
+                style={{ fontSize: '12px', borderRadius: '8px' }}
+              />
+            </Form.Group>
+
+            {uploadedImages.length > 0 && (
+              <div>
+                <span className="small fw-semibold text-secondary d-block mb-2">Uploaded Images:</span>
+                <div className="d-grid animate-fade-in" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                  {uploadedImages.map((imgUrl, idx) => (
+                    <div 
+                      key={idx}
+                      className="border rounded p-1 bg-white position-relative"
+                      style={{ cursor: 'pointer', borderRadius: '8px' }}
+                      onClick={() => { handleAddUploadedImage(imgUrl); setMobileDrawerOpen(false); }}
+                    >
+                      <img src={imgUrl} alt="upload" style={{ width: '100%', height: '40px', objectFit: 'contain' }} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      case 'layers':
+        return (
+          <div className="text-start">
+            {/* Action Buttons */}
+            <div className="d-flex flex-column gap-2 mb-3">
+              <div className="d-flex gap-2">
+                <Button 
+                  variant="outline-secondary" 
+                  size="sm" 
+                  className="flex-fill py-2 fw-semibold"
+                  style={{ borderRadius: '8px', fontSize: '12px' }}
+                  onClick={handleSaveDesign}
+                  disabled={isSavingDesign}
+                >
+                  💾 {isSavingDesign ? 'Saving...' : 'Save Design'}
+                </Button>
+                <Button 
+                  variant="outline-secondary" 
+                  size="sm" 
+                  className="flex-fill py-2 fw-semibold"
+                  style={{ borderRadius: '8px', fontSize: '12px' }}
+                  onClick={handleOpenPreview}
+                >
+                  🔍 Preview 3D
+                </Button>
+              </div>
+              <Button 
+                variant="danger" 
+                className="w-100 py-2 fw-bold bg-red-gradient border-0 text-white" 
+                style={{ borderRadius: '8px', fontSize: '13px', boxShadow: '0 4px 12px rgba(229,62,62,0.2)' }}
+                onClick={handleAddToCartWithDesign}
+              >
+                🛒 Add to Cart
+              </Button>
+            </div>
+
+            <span className="small fw-bold text-secondary d-block mb-2 uppercase" style={{ fontSize: '10px', letterSpacing: '0.5px' }}>Layers & Assets</span>
+            
+            <div style={{ maxHeight: '180px', overflowY: 'auto' }} className="d-flex flex-column gap-1.5">
+              {layersList.length === 0 ? (
+                <div className="text-center py-3 text-muted small">No design layers created yet</div>
+              ) : (
+                layersList.map((layer, idx) => {
+                  const canvasIdx = layersList.length - 1 - idx;
+                  const isActive = canvas && canvas.getActiveObject() === canvas.item(canvasIdx);
+                  return (
+                    <div 
+                      key={layer.id || idx}
+                      onClick={() => selectCanvasLayer(canvasIdx)}
+                      className={`d-flex justify-content-between align-items-center p-2 border rounded-2 ${isActive ? 'bg-danger bg-opacity-10 border-danger text-danger' : 'bg-white'}`}
+                      style={{ cursor: 'pointer', fontSize: '12px', transition: 'all 0.2s' }}
+                    >
+                      <div className="d-flex align-items-center gap-2">
+                        {layer.type === 'text' ? '✏️' : '🖼️'}
+                        <span className="fw-semibold text-truncate" style={{ maxWidth: '140px' }}>{layer.name}</span>
+                      </div>
+                      <div className="d-flex align-items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                        <button className="btn btn-xs p-1 text-secondary" onClick={() => toggleLayerLock(canvasIdx)}>
+                          {layer.isLocked ? '🔒' : '🔓'}
+                        </button>
+                        <button className="btn btn-xs p-1 text-secondary" onClick={() => toggleLayerVisibility(canvasIdx)}>
+                          {layer.isVisible ? '👁️' : '🙈'}
+                        </button>
+                        <button className="btn btn-xs p-1 text-danger" onClick={() => deleteCanvasLayer(canvasIdx)}>
+                          🗑️
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
 
   // Add Layer: Text
   const handleAddText = async () => {
@@ -1312,7 +1720,7 @@ function DesignContent() {
       <Row className="gy-4">
         
         {/* LEFT TOOL PANEL */}
-        <Col lg={3}>
+        <Col lg={3} className="d-none d-lg-block">
           <div className="glass-panel p-3 bg-white h-100 d-flex flex-column gap-3">
             <h5 className="fw-bold mb-3 d-flex align-items-center gap-2" style={{ color: 'var(--primary-navy)' }}>
               <IoMove /> Tools Panel
@@ -2608,7 +3016,7 @@ function DesignContent() {
         </Col>
 
         {/* CENTER INTERACTIVE T-SHIRT CANVAS */}
-        <Col lg={6} className="text-center sticky-tshirt-col">
+        <Col lg={6} className="col-12 text-center sticky-tshirt-col">
           <div className="d-flex flex-column align-items-center justify-content-center relative" style={{ minHeight: '520px' }}>
             
 
@@ -2689,7 +3097,7 @@ function DesignContent() {
         </Col>
 
         {/* RIGHT CONTROL PANEL */}
-        <Col lg={3}>
+        <Col lg={3} className="d-none d-lg-block">
           <div className="d-flex flex-column gap-3 h-100" style={{ position: 'sticky', top: '80px' }}>
             <div style={{
               background: '#f1f5f9',
@@ -2819,6 +3227,114 @@ function DesignContent() {
 
       </Row>
 
+      {/* Mobile Top Floating Bar */}
+      <div className="mobile-top-bar d-lg-none">
+        <div className="d-flex align-items-center gap-1 bg-light p-1 rounded-3">
+          <button 
+            type="button"
+            className={`btn btn-xs py-1 px-2 fw-bold border-0 ${garmentType === 'tshirt' ? 'bg-danger text-white shadow-sm' : 'text-secondary bg-transparent'}`}
+            style={{ fontSize: '10.5px', borderRadius: '5px' }}
+            onClick={() => setGarmentType('tshirt')}
+          >👕 Tee</button>
+          <button 
+            type="button"
+            className={`btn btn-xs py-1 px-2 fw-bold border-0 ${garmentType === 'polo' ? 'bg-danger text-white shadow-sm' : 'text-secondary bg-transparent'}`}
+            style={{ fontSize: '10.5px', borderRadius: '5px' }}
+            onClick={() => setGarmentType('polo')}
+          >🎽 Polo</button>
+        </div>
+
+        <div className="d-flex align-items-center gap-1 bg-light p-1 rounded-3">
+          <button 
+            type="button"
+            className={`btn btn-xs py-1 px-2 fw-bold border-0 ${tshirtView === 'front' ? 'bg-white text-dark shadow-sm' : 'text-secondary bg-transparent'}`}
+            style={{ fontSize: '10.5px', borderRadius: '5px' }}
+            onClick={() => setTshirtView('front')}
+          >Front</button>
+          <button 
+            type="button"
+            className={`btn btn-xs py-1 px-2 fw-bold border-0 ${tshirtView === 'back' ? 'bg-white text-dark shadow-sm' : 'text-secondary bg-transparent'}`}
+            style={{ fontSize: '10.5px', borderRadius: '5px' }}
+            onClick={() => setTshirtView('back')}
+          >Back</button>
+        </div>
+
+        <div className="d-flex align-items-center gap-1 bg-light p-1 rounded-3">
+          <button 
+            type="button"
+            className={`btn btn-xs py-1 px-2 fw-bold border-0 ${displayMode === '2d' ? 'bg-white text-dark shadow-sm' : 'text-secondary bg-transparent'}`}
+            style={{ fontSize: '10.5px', borderRadius: '5px' }}
+            onClick={() => setDisplayMode('2d')}
+          >2D</button>
+          <button 
+            type="button"
+            className={`btn btn-xs py-1 px-2 fw-bold border-0 ${displayMode === '3d' ? 'bg-danger text-white shadow-sm' : 'text-secondary bg-transparent'}`}
+            style={{ fontSize: '10.5px', borderRadius: '5px' }}
+            onClick={() => setDisplayMode('3d')}
+          >3D</button>
+        </div>
+      </div>
+
+      {/* Mobile Bottom Sheet Drawer */}
+      <div className={`mobile-bottom-sheet d-lg-none ${mobileDrawerOpen ? 'open' : ''}`}>
+        <div className="bottom-sheet-handle" onClick={() => setMobileDrawerOpen(false)}></div>
+        <div className="bottom-sheet-content">
+          {renderMobileDrawerContent()}
+        </div>
+      </div>
+
+      {/* Mobile Bottom Navigation Bar */}
+      <div className="mobile-bottom-nav d-lg-none">
+        <button 
+          type="button"
+          className={`mobile-nav-item ${mobileActiveTab === 'color' && mobileDrawerOpen ? 'active' : ''}`}
+          onClick={() => toggleMobileTab('color')}
+        >
+          <IoColorPaletteOutline size={20} />
+          <span>Colors</span>
+        </button>
+        <button 
+          type="button"
+          className={`mobile-nav-item ${mobileActiveTab === 'text' && mobileDrawerOpen ? 'active' : ''}`}
+          onClick={() => toggleMobileTab('text')}
+        >
+          <IoText size={20} />
+          <span>Text</span>
+        </button>
+        <button 
+          type="button"
+          className={`mobile-nav-item ${mobileActiveTab === 'sticker' && mobileDrawerOpen ? 'active' : ''}`}
+          onClick={() => toggleMobileTab('sticker')}
+        >
+          <IoHappyOutline size={20} />
+          <span>Stickers</span>
+        </button>
+        <button 
+          type="button"
+          className={`mobile-nav-item ${mobileActiveTab === 'shape' && mobileDrawerOpen ? 'active' : ''}`}
+          onClick={() => toggleMobileTab('shape')}
+        >
+          <IoShapesOutline size={20} />
+          <span>Shapes</span>
+        </button>
+        <button 
+          type="button"
+          className={`mobile-nav-item ${mobileActiveTab === 'upload' && mobileDrawerOpen ? 'active' : ''}`}
+          onClick={() => toggleMobileTab('upload')}
+        >
+          <IoCloudUploadOutline size={20} />
+          <span>Uploads</span>
+        </button>
+        <button 
+          type="button"
+          className={`mobile-nav-item ${mobileActiveTab === 'layers' && mobileDrawerOpen ? 'active' : ''}`}
+          onClick={() => toggleMobileTab('layers')}
+        >
+          <IoLayersOutline size={20} />
+          <span>Layers & Buy</span>
+        </button>
+      </div>
+
       {/* FULLSCREEN PREVIEW MODAL */}
       <Modal show={showPreview} onHide={() => setShowPreview(false)} centered size="lg">
         <Modal.Header closeButton>
@@ -2837,7 +3353,7 @@ function DesignContent() {
           {/* Interactive hints watermark overlay */}
           <div className="position-absolute bottom-0 start-50 translate-middle-x pb-3 text-center pointer-events-none" style={{ zIndex: 10 }}>
             <span className="badge bg-dark bg-opacity-75 px-3 py-2 rounded-pill fw-semibold" style={{ fontSize: '11px' }}>
-              ðŸ–±ï¸ Drag to rotate T-Shirt â€¢ ðŸ” Scroll to zoom in/out
+              ðŸ–±ï¸  Drag to rotate T-Shirt â€¢ ðŸ”  Scroll to zoom in/out
             </span>
           </div>
         </Modal.Body>
@@ -2855,6 +3371,128 @@ function DesignContent() {
         }
         .pointer-events-none {
           pointer-events: none;
+        }
+        
+        @media (max-width: 991px) {
+          /* Add bottom padding to container to prevent nav overlay overlap */
+          .py-5.container {
+            padding-bottom: 120px !important;
+            padding-top: 10px !important;
+          }
+          
+          /* Mobile Top Float Controls */
+          .mobile-top-bar {
+            position: fixed;
+            top: 76px;
+            left: 16px;
+            right: 16px;
+            z-index: 999;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            border-radius: 14px;
+            padding: 8px 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+          }
+          
+          /* Canvas Adjustments */
+          .sticky-tshirt-col {
+            position: relative !important;
+            top: 0 !important;
+            margin-top: 45px !important;
+          }
+
+          /* Bottom Navigation */
+          .mobile-bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 70px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border-top: 1px solid rgba(226, 232, 240, 0.8);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 1050;
+            padding-bottom: env(safe-area-inset-bottom);
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
+          }
+          
+          .mobile-nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            background: transparent;
+            border: none;
+            color: #64748b;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 6px 10px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border-radius: 12px;
+            flex: 1;
+            text-align: center;
+          }
+          
+          .mobile-nav-item.active {
+            color: #e53e3e;
+            background: rgba(229, 62, 62, 0.06);
+          }
+          
+          .mobile-nav-item span {
+            font-size: 9px;
+            white-space: nowrap;
+          }
+
+          /* Bottom Sheet Drawer */
+          .mobile-bottom-sheet {
+            position: fixed;
+            bottom: -100%;
+            left: 0;
+            right: 0;
+            height: 48vh;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top-left-radius: 24px;
+            border-top-right-radius: 24px;
+            box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.12);
+            z-index: 1040;
+            transition: bottom 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            border-bottom: none;
+            display: flex;
+            flex-direction: column;
+          }
+          
+          .mobile-bottom-sheet.open {
+            bottom: 70px;
+          }
+          
+          .bottom-sheet-handle {
+            width: 36px;
+            height: 4.5px;
+            background: #cbd5e1;
+            border-radius: 10px;
+            margin: 12px auto 8px auto;
+            cursor: pointer;
+            flex-shrink: 0;
+          }
+          
+          .bottom-sheet-content {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 12px 18px 24px 18px;
+          }
         }
       `}</style>
     </Container>
