@@ -149,6 +149,7 @@ function DesignContent() {
   const [textBend, setTextBend] = useState(0);
   const [strokeColor, setStrokeColor] = useState('#ffffff');
   const [strokeWidth, setStrokeWidth] = useState(0);
+  const [textOpacity, setTextOpacity] = useState(1);
 
   // Layer Panel States & Hooks
   const [layersList, setLayersList] = useState([]);
@@ -521,6 +522,7 @@ function DesignContent() {
         setTextBend(obj.textBend || 0);
         setStrokeColor(obj.stroke || '#ffffff');
         setStrokeWidth(obj.strokeWidth || 0);
+        setTextOpacity(obj.opacity !== undefined ? obj.opacity : 1);
       } else if (obj.type === 'image') {
         if (obj.isSticker) {
           setActiveTab('sticker');
