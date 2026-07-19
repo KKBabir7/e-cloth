@@ -494,3 +494,43 @@ exports.deleteCartItemAdmin = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error deleting item: ' + error.message });
   }
 };
+
+/**
+ * @desc    Clear all carts of a specific type (Admin only)
+ * @route   DELETE /api/cart/admin/clear-all
+ * @access  Private (Admin)
+ */
+exports.clearCartsByTypeAdmin = async (req, res) => {
+  try {
+    const { type } = req.query; // 'guest' or 'registered'
+    const query = {};
+    if (type === 'registered') {
+      query.userId = { $ne: null };
+    } else if (type === 'guest') {
+      query.userId = null;
+    } else {
+      return res.status(400).json({ success: false, message: 'Invalid cart type parameter' });
+    }
+
+    const carts = await Cart.find(query);
+    for (const cart of carts) {
+      for (const item of cart.items) {
+        if (item.isCustom && item.customDesignId) {
+          try {
+            await CustomOrder.findByIdAndDelete(item.customDesignId);
+          } catch (err) {
+            console.error('Error deleting CustomOrder:', err);
+          }
+        }
+      }
+    }
+
+    await Cart.deleteMany(query);
+    broadcast('carts');
+
+    res.status(200).json({ success: true, message: `All ${type} carts cleared successfully` });
+  } catch (error) {
+    console.error('Clear admin carts error:', error);
+    res.status(500).json({ success: false, message: 'Server error clearing carts: ' + error.message });
+  }
+};

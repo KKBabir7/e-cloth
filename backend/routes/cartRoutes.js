@@ -13,11 +13,13 @@ const {
   clearCart,
   getCartsAdmin,
   deleteCartAdmin,
-  deleteCartItemAdmin
+  deleteCartItemAdmin,
+  clearCartsByTypeAdmin
 } = require('../controllers/cartController');
 
 // Admin cart management routes (Access: Admin/SuperAdmin)
 router.get('/admin', protect, authorizeRoles('admin', 'superAdmin'), getCartsAdmin);
+router.delete('/admin/clear-all', protect, authorizeRoles('admin', 'superAdmin'), clearCartsByTypeAdmin);
 router.delete('/admin/:cartId', protect, authorizeRoles('admin', 'superAdmin'), deleteCartAdmin);
 router.delete('/admin/:cartId/item/:itemId', protect, authorizeRoles('admin', 'superAdmin'), deleteCartItemAdmin);
 

@@ -113,13 +113,37 @@ export default function CartManagement() {
     }
   };
 
+  const handleClearCartsByType = async (type) => {
+    const confirmationText = type === 'guest' 
+      ? 'Are you sure you want to delete ALL GUEST carts from the database? This cannot be undone.' 
+      : 'Are you sure you want to delete ALL REGISTERED USER carts from the database? This cannot be undone.';
+    if (!window.confirm(confirmationText)) return;
+    try {
+      const res = await axios.delete(`${getBackendUrl()}/api/cart/admin/clear-all?type=${type}`, { withCredentials: true });
+      if (res.data.success) {
+        showToast(res.data.message || `All ${type} carts cleared successfully`, 'success');
+        fetchCarts(1, false);
+      }
+    } catch (err) {
+      showToast(`Failed to clear ${type} carts`, 'error');
+    }
+  };
+
   return (
     <div>
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <h4 className="fw-bold m-0"><IoCartOutline className="me-2 text-danger" /> Cart Management</h4>
-        <Button variant="outline-danger" size="sm" onClick={() => fetchCarts(1, false)} disabled={loading}>
-          Refresh
-        </Button>
+        <div className="d-flex align-items-center gap-2">
+          <Button variant="outline-secondary" size="sm" className="fw-semibold" onClick={() => handleClearCartsByType('guest')}>
+            🧹 Clear Guest Carts
+          </Button>
+          <Button variant="outline-danger" size="sm" className="fw-semibold" onClick={() => handleClearCartsByType('registered')}>
+            🗑️ Clear Registered Carts
+          </Button>
+          <Button variant="danger" size="sm" className="fw-bold bg-red-gradient border-0 px-3" onClick={() => fetchCarts(1, false)} disabled={loading}>
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* FILTER CONTROL BAR */}
