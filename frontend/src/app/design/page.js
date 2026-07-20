@@ -872,7 +872,7 @@ function DesignContent() {
                 <div className="mt-2 bg-light p-3 rounded-3 border">
                   <div className="d-flex justify-content-between align-items-center mb-1">
                     <span className="small text-muted" style={{ fontSize: '11.5px' }}>Base Fabric</span>
-                    <span className="small fw-bold" style={{ fontSize: '11.5px' }}>৳{basePrice}</span>
+                    <span suppressHydrationWarning className="small fw-bold" style={{ fontSize: '11.5px' }}>৳{basePrice}</span>
                   </div>
                   {(textCharges > 0 || stickerCharges > 0 || imageCharges > 0 || shapeCharges > 0) && (
                     <div className="border-top pt-1 mt-1 small text-muted" style={{ fontSize: '11px' }}>
@@ -884,7 +884,7 @@ function DesignContent() {
                   )}
                   <div className="d-flex justify-content-between align-items-center border-top pt-2 mt-2">
                     <span className="fw-bold" style={{ fontSize: '12.5px' }}>Total Price</span>
-                    <span className="fw-extrabold text-danger" style={{ fontSize: '16px' }}>৳{totalCombinedPrice}</span>
+                    <span suppressHydrationWarning className="fw-extrabold text-danger" style={{ fontSize: '16px' }}>৳{totalCombinedPrice}</span>
                   </div>
                 </div>
               );
@@ -1722,7 +1722,7 @@ function DesignContent() {
   };
 
   return (
-    <Container className={`py-5${isMounted && mobileDrawerOpen ? ' drawer-open' : ''}`}>
+    <Container suppressHydrationWarning className={`py-5${isMounted && mobileDrawerOpen ? ' drawer-open' : ''}`}>
       <Row className="gy-4">
         
         {/* LEFT TOOL PANEL */}
@@ -3196,7 +3196,7 @@ function DesignContent() {
                   const shapeCharges = shapesCount * shapePrice;
                   const totalCombinedPrice = basePrice + textCharges + stickerCharges + imageCharges + shapeCharges;
                   return (
-                    <div>
+                    <div suppressHydrationWarning>
                       <p style={{ fontSize:'10px', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'1px', marginBottom:'10px' }}>💰 Price Breakdown</p>
                       <div style={{ background:'#f8fafc', borderRadius:'12px', border:'1px solid #e2e8f0', overflow:'hidden' }}>
                         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 14px' }}>
