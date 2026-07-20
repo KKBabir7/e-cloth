@@ -3441,16 +3441,13 @@ function DesignContent() {
             min-height: auto !important;
           }
 
-          /* Scale the canvas frame proportionally on mobile (no height crop) */
+          /* Mobile canvas: full width, reduced height. 3D viewer auto-scales to container. */
           .sticky-tshirt-col .canvas-frame-box {
-            transform: scale(0.56);
-            transform-origin: top center;
-            margin-bottom: -220px !important; /* 500px * (1-0.56) = 220px compensation */
-            height: 500px !important; /* keep Fabric.js canvas natural size */
-            transition: transform 0.35s ease, margin-bottom 0.35s ease;
+            height: 310px !important;
+            transition: height 0.35s ease;
           }
 
-          /* When drawer is open: scale down more so full shirt is visible above drawer */
+          /* When drawer is open: shrink canvas height more */
           .drawer-open .sticky-tshirt-col {
             margin-top: 0px !important;
           }
@@ -3458,8 +3455,7 @@ function DesignContent() {
             top: 5px !important;
           }
           .drawer-open .sticky-tshirt-col .canvas-frame-box {
-            transform: scale(0.40) !important;
-            margin-bottom: -300px !important; /* 500px * (1-0.40) = 300px */
+            height: 215px !important;
           }
 
           /* Bottom Navigation */
