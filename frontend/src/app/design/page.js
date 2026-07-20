@@ -130,6 +130,10 @@ function DesignContent() {
   const [garmentType, setGarmentType] = useState('tshirt'); // tshirt or polo
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [mobileActiveTab, setMobileActiveTab] = useState('text');
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Mark as mounted after first client render to prevent hydration mismatch
+  useEffect(() => { setIsMounted(true); }, []);
 
 
   // Derived active canvas instance
@@ -1718,7 +1722,7 @@ function DesignContent() {
   };
 
   return (
-    <Container className={`py-5${mobileDrawerOpen ? ' drawer-open' : ''}`}>
+    <Container className={`py-5${isMounted && mobileDrawerOpen ? ' drawer-open' : ''}`}>
       <Row className="gy-4">
         
         {/* LEFT TOOL PANEL */}
@@ -3229,6 +3233,10 @@ function DesignContent() {
 
       </Row>
 
+      {/* Mobile UI — only rendered client-side to prevent SSR hydration mismatch */}
+      {isMounted && (
+      <>
+
       {/* Mobile Top Floating Bar */}
       <div className="mobile-top-bar d-lg-none">
         <div className="d-flex align-items-center gap-1 bg-light p-1 rounded-3">
@@ -3348,6 +3356,9 @@ function DesignContent() {
         </button>
       </div>
 
+      </> /* end isMounted mobile UI */
+      )}
+
       {/* FULLSCREEN PREVIEW MODAL */}
       <Modal show={showPreview} onHide={() => setShowPreview(false)} centered size="lg">
         <Modal.Header closeButton>
@@ -3430,7 +3441,7 @@ function DesignContent() {
             min-height: auto !important;
           }
           .sticky-tshirt-col .canvas-frame-box {
-            height: calc(100svh - 135px) !important;
+            height: 42vh !important;
             transition: height 0.35s ease;
           }
 
@@ -3442,7 +3453,7 @@ function DesignContent() {
             top: 5px !important;
           }
           .drawer-open .sticky-tshirt-col .canvas-frame-box {
-            height: calc(100svh - 36vh - 70px - 48px) !important;
+            height: 34vh !important;
           }
 
           /* Bottom Navigation */
