@@ -227,6 +227,9 @@ function DesignContent() {
     { name: 'Navy Gray', hex: '#475569', sizes: ['S', 'M', 'L', 'XL', 'XXL'] }
   ];
   const fabricColors = colorsData && colorsData.length > 0 ? colorsData : DEFAULT_COLORS;
+  // Use DEFAULT_COLORS during SSR/initial CSR to prevent hydration text mismatch.
+  // After isMounted is true (client-only), switch to actual fabricColors from API.
+  const displayColors = isMounted ? fabricColors : DEFAULT_COLORS;
 
   useEffect(() => {
     if (colorsData && colorsData.length > 0) {
@@ -830,7 +833,7 @@ function DesignContent() {
             <div>
               <p className="small fw-bold text-secondary mb-2 uppercase" style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.5px' }}>🎨 Fabric Color</p>
               <div className="d-flex flex-wrap gap-2">
-                {fabricColors.map((color) => {
+                {displayColors.map((color) => {
                   const isSelected = tshirtColor.toLowerCase() === color.hex.toLowerCase();
                   const imageUrl = color.image ? (color.image.startsWith('http') ? color.image : `${getBackendUrl()}${color.image}`) : null;
                   return (
@@ -849,7 +852,7 @@ function DesignContent() {
               <p className="small fw-bold text-secondary mb-2 uppercase" style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.5px' }}>📐 Select Size</p>
               <div className="d-flex flex-wrap gap-1.5">
                 {(() => {
-                  const currentColorObj = fabricColors.find(c => c.hex.toLowerCase() === tshirtColor.toLowerCase()) || fabricColors[0] || { sizes: ['S','M','L','XL','XXL'] };
+                  const currentColorObj = displayColors.find(c => c.hex.toLowerCase() === tshirtColor.toLowerCase()) || displayColors[0] || { sizes: ['S','M','L','XL','XXL'] };
                   const availableSizes = currentColorObj.sizes || ['S','M','L','XL','XXL'];
                   return availableSizes.map((s) => (
                     <button key={s} onClick={() => setSelectedSize(s)} className={`btn btn-sm px-3 fw-bold ${selectedSize === s ? 'btn-danger text-white' : 'btn-outline-light text-secondary border'}`} style={{ borderRadius: '6px', fontSize: '11px' }}>{s}</button>
@@ -860,7 +863,7 @@ function DesignContent() {
 
             {/* Price breakdown */}
             {(() => {
-              const currentColorObj = fabricColors.find(c => c.hex.toLowerCase() === tshirtColor.toLowerCase()) || fabricColors[0] || { price:1100, discountPrice:0 };
+              const currentColorObj = displayColors.find(c => c.hex.toLowerCase() === tshirtColor.toLowerCase()) || displayColors[0] || { price:1100, discountPrice:0 };
               const hasDiscount = currentColorObj.discountPrice > 0 && currentColorObj.discountPrice < currentColorObj.price;
               const basePrice = hasDiscount ? currentColorObj.discountPrice : (currentColorObj.price || 1100);
               const textCharges = textLinesCount * textPrice;
@@ -3159,7 +3162,7 @@ function DesignContent() {
                 <div>
                   <p style={{ fontSize:'10px', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'1px', marginBottom:'10px' }}>🎨 Fabric Color</p>
                   <div style={{ display:'flex', flexWrap:'wrap', gap:'8px' }}>
-                    {fabricColors.map((color) => {
+                    {displayColors.map((color) => {
                       const isSelected = tshirtColor.toLowerCase() === color.hex.toLowerCase();
                       const imageUrl = color.image ? (color.image.startsWith('http') ? color.image : `${getBackendUrl()}${color.image}`) : null;
                       return (
@@ -3177,7 +3180,7 @@ function DesignContent() {
                   <p style={{ fontSize:'10px', fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'1px', marginBottom:'10px' }}>📐 Select Size</p>
                   <div style={{ display:'flex', flexWrap:'wrap', gap:'6px' }}>
                     {(() => {
-                      const currentColorObj = fabricColors.find(c => c.hex.toLowerCase() === tshirtColor.toLowerCase()) || fabricColors[0] || { sizes: ['S','M','L','XL','XXL'] };
+                      const currentColorObj = displayColors.find(c => c.hex.toLowerCase() === tshirtColor.toLowerCase()) || displayColors[0] || { sizes: ['S','M','L','XL','XXL'] };
                       const availableSizes = currentColorObj.sizes || ['S','M','L','XL','XXL'];
                       return availableSizes.map((s) => (
                         <button key={s} onClick={() => setSelectedSize(s)} style={{ minWidth:'36px', height:'36px', borderRadius:'9px', border: selectedSize===s ? 'none' : '1.5px solid #e2e8f0', background: selectedSize===s ? 'linear-gradient(135deg,#ff8525,#e53e3e)' : '#f8fafc', color: selectedSize===s ? '#fff' : '#64748b', fontWeight:700, fontSize:'12px', cursor:'pointer', transition:'all 0.2s ease', padding:'0 8px', boxShadow: selectedSize===s ? '0 4px 12px rgba(229,62,62,0.3)' : 'none', transform: selectedSize===s ? 'scale(1.05)' : 'scale(1)' }}>{s}</button>
@@ -3187,7 +3190,7 @@ function DesignContent() {
                 </div>
                 <div style={{ height:'1px', background:'linear-gradient(90deg,transparent,#e2e8f0,transparent)' }} />
                 {(() => {
-                  const currentColorObj = fabricColors.find(c => c.hex.toLowerCase() === tshirtColor.toLowerCase()) || fabricColors[0] || { price:1100, discountPrice:0 };
+                  const currentColorObj = displayColors.find(c => c.hex.toLowerCase() === tshirtColor.toLowerCase()) || displayColors[0] || { price:1100, discountPrice:0 };
                   const hasDiscount = currentColorObj.discountPrice > 0 && currentColorObj.discountPrice < currentColorObj.price;
                   const basePrice = hasDiscount ? currentColorObj.discountPrice : (currentColorObj.price || 1100);
                   const textCharges = textLinesCount * textPrice;
