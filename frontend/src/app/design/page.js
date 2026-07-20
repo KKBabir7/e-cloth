@@ -3025,7 +3025,7 @@ function DesignContent() {
 
             {/* Unified T-Shirt 3D/2D Viewer Frame */}
             <div 
-              className="position-relative shadow rounded-4 overflow-hidden" 
+              className="position-relative shadow rounded-4 overflow-hidden canvas-frame-box" 
               style={{
                 width: '100%',
                 margin: '0 auto',
@@ -3425,12 +3425,24 @@ function DesignContent() {
             transition: margin-top 0.3s ease;
           }
 
-          /* When drawer is open: push canvas up, slide top bar to top */
+          /* Canvas wrapper & inner frame sizing on mobile */
+          .sticky-tshirt-col > div {
+            min-height: auto !important;
+          }
+          .sticky-tshirt-col .canvas-frame-box {
+            height: calc(100svh - 135px) !important;
+            transition: height 0.35s ease;
+          }
+
+          /* When drawer is open: slide top bar to top, shrink canvas height */
           .drawer-open .sticky-tshirt-col {
             margin-top: 0px !important;
           }
           .drawer-open .mobile-top-bar {
             top: 5px !important;
+          }
+          .drawer-open .sticky-tshirt-col .canvas-frame-box {
+            height: calc(100svh - 36vh - 70px - 48px) !important;
           }
 
           /* Bottom Navigation */
