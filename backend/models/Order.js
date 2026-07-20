@@ -30,7 +30,7 @@ const orderProductSchema = new mongoose.Schema({
   },
   customDesignId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Design'
+    ref: 'CustomOrder'
   }
 });
 

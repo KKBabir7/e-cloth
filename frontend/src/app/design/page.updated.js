@@ -2535,34 +2535,27 @@ if (isMounted && isMobileView) {
       <div className="mobile-editor-layout d-flex flex-column animate-fade-in" style={{ height: '100vh', width: '100vw', overflow: 'hidden', backgroundColor: '#F8FAFC' }}>
         
         {/* Top Navbar */}
-        <div className="editor-mobile-header d-flex align-items-center justify-content-between px-2 shadow-sm bg-white" style={{ height: '32px', flexShrink: 0, zIndex: 100 }}>
-          <div className="d-flex align-items-center bg-light rounded-pill border p-0" style={{ height: '22px' }}>
-             <button onClick={() => setTshirtView('front')} className={`btn btn-sm rounded-pill px-2 py-0 ${tshirtView === 'front' ? 'bg-dark text-white' : 'text-secondary border-0'}`} style={{ fontSize: '9px', fontWeight: 'bold', height: '100%', display: 'flex', alignItems: 'center' }}>Front</button>
-             <button onClick={() => setTshirtView('back')} className={`btn btn-sm rounded-pill px-2 py-0 ${tshirtView === 'back' ? 'bg-dark text-white' : 'text-secondary border-0'}`} style={{ fontSize: '9px', fontWeight: 'bold', height: '100%', display: 'flex', alignItems: 'center' }}>Back</button>
-             <div className="border-start mx-1" style={{ height: '10px' }}></div>
-             <button onClick={() => setDisplayMode(displayMode === '2d' ? '3d' : '2d')} className={`btn btn-sm rounded-pill px-2 py-0 ${displayMode === '3d' ? 'bg-primary text-white' : 'text-primary border-0'}`} style={{ fontSize: '9px', fontWeight: 'bold', height: '100%', display: 'flex', alignItems: 'center' }}>
-                {displayMode === '2d' ? '3D' : '2D'}
-             </button>
-          </div>
-          <div className="d-flex gap-1 align-items-center">
-             <button className="btn btn-sm btn-light border rounded-pill px-2 fw-bold shadow-sm d-flex align-items-center" style={{fontSize: '8.5px', height: '22px', padding: '0 8px'}} onClick={handleSaveDesign} disabled={isSavingDesign}>
+        <div className="editor-mobile-header d-flex align-items-center justify-content-between px-3 shadow-sm bg-white" style={{ height: '56px', flexShrink: 0, zIndex: 100 }}>
+          <div className="fw-bold text-slate-800" style={{ fontSize: '15px' }}>Design Studio</div>
+          <div className="d-flex gap-2">
+             <button className="btn btn-sm btn-light border rounded-pill px-3 fw-bold shadow-sm" style={{fontSize: '11px'}} onClick={handleSaveDesign} disabled={isSavingDesign}>
                 {isSavingDesign ? 'Saving...' : 'Save'}
              </button>
-             <button className="btn btn-sm text-white rounded-pill px-2 fw-bold shadow-sm d-flex align-items-center" style={{background: 'linear-gradient(135deg, #ff8525, #e53e3e)', fontSize: '8.5px', height: '22px', padding: '0 8px'}} onClick={handleAddToCartWithDesign}>
+             <button className="btn btn-sm text-white rounded-pill px-3 fw-bold shadow-sm" style={{background: 'linear-gradient(135deg, #ff8525, #e53e3e)', fontSize: '11px'}} onClick={handleAddToCartWithDesign}>
                 Add to Cart
              </button>
           </div>
         </div>
 
         {/* Canvas Area */}
-        <div className="editor-mobile-canvas position-relative flex-grow-1" style={{ overflow: 'hidden', paddingBottom: '52px' }}>
-            <div className="position-absolute start-50 top-50 translate-middle" style={{ zIndex: 1, marginTop: '-50px' }}>
-                <div style={{ transform: `scale(${Math.min(mobileScale * 1.65, 1.3)})`, transformOrigin: 'center center' }}>
+        <div className="editor-mobile-canvas d-flex flex-column align-items-center justify-content-center position-relative flex-grow-1" style={{ overflow: 'hidden' }}>
+            <div className="w-100 d-flex justify-content-center pt-2 pb-2">
+                <div style={{ transform: `scale(${Math.min(mobileScale * 1.25, 0.9)})`, transformOrigin: 'top center' }}>
                   <div 
                     className="position-relative shadow rounded-4 overflow-hidden canvas-frame-box" 
                     style={{
-                      width: '420px',
-                      height: '510px',
+                      width: '380px',
+                      height: '470px',
                       backgroundColor: '#F8FAFC',
                       border: '1px solid #E2E8F0'
                     }}
@@ -2618,11 +2611,25 @@ if (isMounted && isMobileView) {
                 </div>
             </div>
 
-
+            {/* Quick Canvas View Toggles Overlay */}
+            <div className="position-absolute" style={{ bottom: '15px', right: '15px', zIndex: 50 }}>
+                <div className="d-flex flex-column gap-2 bg-white p-1 rounded-pill shadow border">
+                    <button onClick={() => setTshirtView('front')} className={`btn btn-sm rounded-circle p-0 d-flex align-items-center justify-content-center ${tshirtView === 'front' ? 'bg-dark text-white' : 'bg-transparent text-secondary'}`} style={{ width: '32px', height: '32px' }} title="Front View">
+                        <span style={{ fontSize: '10px', fontWeight: 'bold' }}>F</span>
+                    </button>
+                    <button onClick={() => setTshirtView('back')} className={`btn btn-sm rounded-circle p-0 d-flex align-items-center justify-content-center ${tshirtView === 'back' ? 'bg-dark text-white' : 'bg-transparent text-secondary'}`} style={{ width: '32px', height: '32px' }} title="Back View">
+                        <span style={{ fontSize: '10px', fontWeight: 'bold' }}>B</span>
+                    </button>
+                    <div className="border-bottom mx-1"></div>
+                    <button onClick={() => setDisplayMode(displayMode === '2d' ? '3d' : '2d')} className="btn btn-sm rounded-circle p-0 d-flex align-items-center justify-content-center bg-transparent text-primary" style={{ width: '32px', height: '32px' }} title="Toggle 2D/3D">
+                        <span style={{ fontSize: '10px', fontWeight: 'bold' }}>{displayMode === '2d' ? '3D' : '2D'}</span>
+                    </button>
+                </div>
+            </div>
         </div>
 
         {/* Bottom Toolbar & Drawer Container */}
-        <div className="position-fixed w-100" style={{ bottom: 0, left: 0, zIndex: 1050 }}>
+        <div className="position-relative" style={{ zIndex: 200 }}>
             {/* Sliding Drawer */}
             <div 
                 className="bg-white border-top shadow-lg"
@@ -2728,26 +2735,26 @@ if (isMounted && isMobileView) {
             </div>
 
             {/* Fixed Bottom Navbar (Tool selector) */}
-            <div className="bg-white px-1 py-1 d-flex overflow-auto hide-scrollbar shadow-lg align-items-center" style={{ whiteSpace: 'nowrap', borderTop: '1px solid #E2E8F0', height: '48px' }}>
+            <div className="bg-white px-2 py-2 d-flex overflow-auto hide-scrollbar shadow-lg align-items-center" style={{ whiteSpace: 'nowrap', borderTop: '1px solid #E2E8F0' }}>
                 {[
-                  { id: 'color', icon: <IoColorPaletteOutline size={16} />, label: 'Garment' },
-                  { id: 'text', icon: <IoText size={16} />, label: 'Text' },
-                  { id: 'upload', icon: <IoImage size={16} />, label: 'Upload' },
-                  { id: 'shape', icon: <IoShapesOutline size={16} />, label: 'Shape' },
-                  { id: 'sticker', icon: <IoHappyOutline size={16} />, label: 'Sticker' },
-                  { id: 'layers', icon: <IoLayersOutline size={16} />, label: 'Layers' },
+                  { id: 'color', icon: <IoColorPaletteOutline size={20} />, label: 'Garment' },
+                  { id: 'text', icon: <IoText size={20} />, label: 'Text' },
+                  { id: 'upload', icon: <IoImage size={20} />, label: 'Upload' },
+                  { id: 'shape', icon: <IoShapesOutline size={20} />, label: 'Shape' },
+                  { id: 'sticker', icon: <IoHappyOutline size={20} />, label: 'Sticker' },
+                  { id: 'layers', icon: <IoLayersOutline size={20} />, label: 'Layers' },
                 ].map(tool => (
                     <button 
                         key={tool.id} 
                         onClick={() => setMobileActiveTab(mobileActiveTab === tool.id ? null : tool.id)} 
                         className="btn border-0 d-flex flex-column align-items-center justify-content-center position-relative flex-shrink-0"
-                        style={{ width: '56px', padding: '2px 0', color: mobileActiveTab === tool.id ? '#ff8525' : '#64748b' }}
+                        style={{ width: '65px', padding: '6px 0', color: mobileActiveTab === tool.id ? '#ff8525' : '#64748b' }}
                     >
-                        <div style={{ transform: mobileActiveTab === tool.id ? 'translateY(-1px)' : 'none', transition: 'transform 0.2s' }}>
+                        <div style={{ transform: mobileActiveTab === tool.id ? 'translateY(-2px)' : 'none', transition: 'transform 0.2s' }}>
                            {tool.icon}
                         </div>
-                        <span style={{ fontSize: '8.5px', fontWeight: mobileActiveTab === tool.id ? 'bold' : 'normal', marginTop: '2px' }}>{tool.label}</span>
-                        {mobileActiveTab === tool.id && <div className="position-absolute bottom-0 start-50 translate-middle-x" style={{ width: '16px', height: '2px', backgroundColor: '#ff8525', borderRadius: '2px' }} />}
+                        <span style={{ fontSize: '10px', fontWeight: mobileActiveTab === tool.id ? 'bold' : 'normal', marginTop: '4px' }}>{tool.label}</span>
+                        {mobileActiveTab === tool.id && <div className="position-absolute bottom-0 start-50 translate-middle-x" style={{ width: '20px', height: '3px', backgroundColor: '#ff8525', borderRadius: '3px' }} />}
                     </button>
                 ))}
             </div>

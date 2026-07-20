@@ -45,6 +45,7 @@ export default function AppNavbar() {
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showOffcanvas, setShowOffcanvas] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
  
   const handleMouseEnter = () => {
     if (typeof window !== 'undefined' && window.innerWidth >= 768) {
@@ -148,11 +149,18 @@ export default function AppNavbar() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const checkMobile = () => setIsMobile(window.innerWidth < 992);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   // Hide user navbar in administrative directories (must be AFTER all hooks)
   if (pathname && pathname.startsWith('/admincloth')) {
     return null;
   }
-
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     if (searchTerm.trim()) {

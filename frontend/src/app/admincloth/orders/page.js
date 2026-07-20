@@ -277,7 +277,25 @@ export default function AdminOrdersPage() {
                   <tbody>
                     {selectedOrder.products.map((item, idx) => (
                       <tr key={idx}>
-                        <td className="text-start fw-bold">{item.productId?.name || 'Apparel Product'}</td>
+                        <td className="text-start fw-bold">
+                          {item.isCustom ? (
+                            <div className="d-flex align-items-center gap-2">
+                              {item.customDesignId?.previewImage && (
+                                <img
+                                  src={item.customDesignId.previewImage}
+                                  alt="Custom Preview"
+                                  style={{ width: '32px', height: '40px', objectFit: 'cover', borderRadius: '4px' }}
+                                />
+                              )}
+                              <div>
+                                <span className="d-block">Custom Designed {item.customDesignId?.productType === 'polo' ? 'Polo Shirt' : 'T-Shirt'}</span>
+                                <span className="badge bg-primary" style={{ fontSize: '9px' }}>Custom Design</span>
+                              </div>
+                            </div>
+                          ) : (
+                            item.productId?.name || 'Apparel Product'
+                          )}
+                        </td>
                         <td><Badge bg="dark">{item.size}</Badge></td>
                         <td>
                           <div className="d-flex align-items-center justify-content-center gap-2">

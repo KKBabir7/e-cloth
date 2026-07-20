@@ -172,6 +172,7 @@ const getUserOrders = async (req, res) => {
   try {
     const orders = await Order.find({ userId: req.user._id })
       .populate('products.productId', 'name images category')
+      .populate('products.customDesignId')
       .sort({ createdAt: -1 });
     
     res.status(200).json({ success: true, count: orders.length, orders });
@@ -206,6 +207,7 @@ const getAdminOrders = async (req, res) => {
     const orders = await Order.find(filter)
       .populate('userId', 'name email phone')
       .populate('products.productId', 'name price images')
+      .populate('products.customDesignId')
       .sort({ createdAt: -1 });
 
     res.status(200).json({ success: true, count: orders.length, orders });

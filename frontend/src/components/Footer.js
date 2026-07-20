@@ -9,8 +9,8 @@ import { IoLogoFacebook, IoLogoInstagram, IoLogoYoutube, IoMail, IoPhonePortrait
 export default function Footer() {
   const pathname = usePathname();
 
-  // Hide corporate footer in administrative directories
-  if (pathname && pathname.startsWith('/admincloth')) {
+  // Hide corporate footer in administrative and design editor pages
+  if (pathname && (pathname.startsWith('/admincloth') || pathname.startsWith('/design'))) {
     return null;
   }
 

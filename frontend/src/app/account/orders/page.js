@@ -128,14 +128,15 @@ export default function AccountOrdersPage() {
                         <div className="d-flex align-items-center gap-3">
                           <div className="rounded border bg-light overflow-hidden shadow-sm" style={{ width: '44px', height: '56px', flexShrink: 0 }}>
                             <img
-                              src={getProductImageUrl(item.productId?.images?.[0])}
+                              src={item.isCustom && item.customDesignId?.previewImage ? getProductImageUrl(item.customDesignId.previewImage) : getProductImageUrl(item.productId?.images?.[0])}
                               alt="product"
                               className="w-100 h-100 object-fit-cover"
                             />
                           </div>
                           <div>
                             <span className="fw-bold d-block" style={{ fontSize: '13px', maxWidth: '240px' }}>
-                              {item.productId ? item.productId.name : 'Custom Designed T-Shirt'}
+                              {item.isCustom ? `Custom Designed ${item.customDesignId?.productType === 'polo' ? 'Polo Shirt' : 'T-Shirt'}` : (item.productId ? item.productId.name : 'Custom Designed T-Shirt')}
+                              {item.isCustom && <span className="badge bg-primary ms-1" style={{ fontSize: '9px', padding: '2px 5px' }}>Custom</span>}
                             </span>
                             <span className="text-muted" style={{ fontSize: '11px' }}>
                               Size: {item.size} | Color: {getColorName(item.color)} &times; {item.quantity}

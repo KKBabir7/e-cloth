@@ -201,6 +201,7 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
 
         // Model container group
         const modelGroup = new THREE.Group();
+        modelGroup.position.y = 0.028; // Shift up by 20px to prevent bottom cropping
         modelGroupRef.current = modelGroup;
         scene.add(modelGroup);
 

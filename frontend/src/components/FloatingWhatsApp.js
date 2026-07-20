@@ -14,8 +14,8 @@ export default function FloatingWhatsApp() {
 
   if (!mounted) return null;
 
-  // Do not show on administrative pages
-  if (pathname && pathname.startsWith('/admincloth')) {
+  // Do not show on administrative pages or the design page
+  if (pathname && (pathname.startsWith('/admincloth') || pathname === '/design')) {
     return null;
   }
 
