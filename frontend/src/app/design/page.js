@@ -3440,12 +3440,17 @@ function DesignContent() {
           .sticky-tshirt-col > div {
             min-height: auto !important;
           }
+
+          /* Scale the canvas frame proportionally on mobile (no height crop) */
           .sticky-tshirt-col .canvas-frame-box {
-            height: 42vh !important;
-            transition: height 0.35s ease;
+            transform: scale(0.56);
+            transform-origin: top center;
+            margin-bottom: -220px !important; /* 500px * (1-0.56) = 220px compensation */
+            height: 500px !important; /* keep Fabric.js canvas natural size */
+            transition: transform 0.35s ease, margin-bottom 0.35s ease;
           }
 
-          /* When drawer is open: slide top bar to top, shrink canvas height */
+          /* When drawer is open: scale down more so full shirt is visible above drawer */
           .drawer-open .sticky-tshirt-col {
             margin-top: 0px !important;
           }
@@ -3453,7 +3458,8 @@ function DesignContent() {
             top: 5px !important;
           }
           .drawer-open .sticky-tshirt-col .canvas-frame-box {
-            height: 34vh !important;
+            transform: scale(0.40) !important;
+            margin-bottom: -300px !important; /* 500px * (1-0.40) = 300px */
           }
 
           /* Bottom Navigation */
