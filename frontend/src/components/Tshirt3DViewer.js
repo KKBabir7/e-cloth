@@ -18,6 +18,7 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
   const shirtMeshRef = useRef(null);
   const decalMeshFrontRef = useRef(null);
   const decalMeshBackRef = useRef(null);
+  const decalMeshSetRef = useRef(new Set()); // tracks all decal meshes for color exclusion
   const isFallbackRef = useRef(false);
   const DecalGeometryClassRef = useRef(null);
   const ThreeModuleRef = useRef(null);
@@ -53,10 +54,12 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
     // Remove existing decals
     if (decalMeshFrontRef.current) {
       modelGroup.remove(decalMeshFrontRef.current);
+      decalMeshSetRef.current.delete(decalMeshFrontRef.current);
       decalMeshFrontRef.current = null;
     }
     if (decalMeshBackRef.current) {
       modelGroup.remove(decalMeshBackRef.current);
+      decalMeshSetRef.current.delete(decalMeshBackRef.current);
       decalMeshBackRef.current = null;
     }
 
@@ -92,17 +95,21 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
       const geoFront = new DecalGeometry(mesh, posFront, rotFront, size);
       const matFront = new THREE.MeshBasicMaterial({
         map: texFront,
+        color: 0xffffff,        // ← MUST stay white — never let shirt color tint the decal
         transparent: true,
-        depthTest: true,
+        alphaTest: 0.01,
+        depthTest: false,       // ← OFF: renderOrder=20 already ensures correct draw order
         depthWrite: false,
         polygonOffset: true,
-        polygonOffsetFactor: -50,
-        polygonOffsetUnits: -50
+        polygonOffsetFactor: -4,
+        polygonOffsetUnits: -4
       });
       const decalFront = new THREE.Mesh(geoFront, matFront);
       decalFront.position.z += 0.003;
-      decalFront.renderOrder = 10;
+      decalFront.renderOrder = 20;
+      decalFront.userData.isDecal = true;
       decalMeshFrontRef.current = decalFront;
+      decalMeshSetRef.current.add(decalFront);
       modelGroup.add(decalFront);
 
       // 2. Project Back Decal (using back texture)
@@ -111,17 +118,21 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
       const geoBack = new DecalGeometry(mesh, posBack, rotBack, size);
       const matBack = new THREE.MeshBasicMaterial({
         map: texBack,
+        color: 0xffffff,        // ← MUST stay white
         transparent: true,
-        depthTest: true,
+        alphaTest: 0.01,
+        depthTest: false,       // ← OFF
         depthWrite: false,
         polygonOffset: true,
-        polygonOffsetFactor: -50,
-        polygonOffsetUnits: -50
+        polygonOffsetFactor: -4,
+        polygonOffsetUnits: -4
       });
       const decalBack = new THREE.Mesh(geoBack, matBack);
       decalBack.position.z -= 0.003;
-      decalBack.renderOrder = 10;
+      decalBack.renderOrder = 20;
+      decalBack.userData.isDecal = true;
       decalMeshBackRef.current = decalBack;
+      decalMeshSetRef.current.add(decalBack);
       modelGroup.add(decalBack);
 
     } catch (e) {
@@ -695,8 +706,8 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
     if (!modelGroup) return;
 
     modelGroup.traverse((child) => {
-      // Exclude decal meshes from color overriding
-      if (child.isMesh && child !== decalMeshFrontRef.current && child !== decalMeshBackRef.current) {
+      // Exclude ALL decal meshes from color overriding using userData flag
+      if (child.isMesh && !child.userData.isDecal) {
         if (child.material) {
           const THREE = ThreeModuleRef.current;
           if (THREE) {
@@ -713,6 +724,14 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
         }
       }
     });
+
+    // Safety net: always reset decal material colors to pure white so they are never tinted
+    if (decalMeshFrontRef.current && decalMeshFrontRef.current.material) {
+      decalMeshFrontRef.current.material.color.set(0xffffff);
+    }
+    if (decalMeshBackRef.current && decalMeshBackRef.current.material) {
+      decalMeshBackRef.current.material.color.set(0xffffff);
+    }
   }, [tshirtColor]);
 
   // Helper to safely render Fabric canvas without crashing on unmounted/disposed canvas context
