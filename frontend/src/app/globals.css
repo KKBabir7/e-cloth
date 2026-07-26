@@ -253,6 +253,43 @@ h1, h2, h3, h4, h5, h6 {
   border-left: 4px solid var(--accent-red);
 }
 
+.custom-toast-message {
+  font-size: 14px;
+}
+
+/* Mobile-only Toast Styles (< 992px) */
+@media (max-width: 991px) {
+  .custom-toast-container {
+    top: 12px !important;
+    bottom: auto !important;
+    right: 12px !important;
+    left: auto !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+    z-index: 99999 !important;
+  }
+
+  .custom-toast {
+    padding: 6px 12px !important;
+    min-width: auto !important;
+    max-width: calc(100vw - 24px) !important;
+    border-radius: 8px !important;
+    gap: 6px !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
+  }
+
+  .custom-toast-message {
+    font-size: 12px !important;
+    line-height: 1.3 !important;
+  }
+
+  .custom-toast .toast-icon {
+    width: 15px !important;
+    height: 15px !important;
+    flex-shrink: 0 !important;
+  }
+}
+
 @keyframes slide-in-toast {
   from {
     transform: translateX(100%) scale(0.9);
@@ -4419,29 +4456,8 @@ font-size: 14.5px;
 select.form-control-premium,
 select.form-select {
   border: 1px solid #E2E8F0 !important;
-  border-radius: 8px !important;
-  padding: 10px 16px !important;
-  font-family: var(--font-outfit) !important;
-  font-size: 14px !important;
-  font-weight: 500 !important;
-  background-color: #ffffff !important;
-  color: #2a2c32 !important;
+  border-radius: 6px !important;
   cursor: pointer !important;
-  transition: all 0.2s ease-in-out !important;
-}
-
-select.form-control-premium:focus,
-select.form-select:focus {
-  border-color: #ff8525 !important;
-  box-shadow: 0 0 0 3px rgba(255, 133, 37, 0.15) !important;
-  outline: none !important;
-}
-
-/* Remove default focus shadow on custom select search inputs */
-.select-search-input:focus {
-  border-color: #CBD5E1 !important;
-  box-shadow: none !important;
-  outline: none !important;
 }
 
 /* Custom formatting buttons */
@@ -4453,12 +4469,32 @@ select.form-select:focus {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  width: 32px !important;
-  height: 32px !important;
-  padding: 0 !important;
-  font-size: 13px !important;
-  border-radius: 6px !important;
   cursor: pointer !important;
+}
+
+@media (max-width: 991.98px) {
+  .btn-format-tool,
+  .mobile-tab-content .btn-format-tool {
+    width: 20px !important;
+    min-width: 20px !important;
+    max-width: 20px !important;
+    height: 20px !important;
+    min-height: 20px !important;
+    max-height: 20px !important;
+    font-size: 10px !important;
+    padding: 0 !important;
+    border-radius: 4px !important;
+  }
+}
+
+@media (min-width: 992px) {
+  .btn-format-tool,
+  .editor-sidebar-panel .btn-format-tool {
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 14px !important;
+    border-radius: 6px !important;
+  }
 }
 
 .btn-format-tool:hover {

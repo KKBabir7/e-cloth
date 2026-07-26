@@ -72,13 +72,13 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
     let yOffset = -0.01;
 
     if (isFallback) {
-      zOffset = 0.042;
+      zOffset = 0.046;
     } else {
       // Find bounds of the mesh to project the decal precisely on the centered mesh surface
       const tempBox = new THREE.Box3().setFromObject(mesh);
       const tempSize = new THREE.Vector3();
       tempBox.getSize(tempSize);
-      zOffset = tempSize.z / 2 + 0.005; // slightly in front of the mesh surface
+      zOffset = tempSize.z / 2 + 0.008; // slightly in front of the mesh surface
     }
 
     const size = isFallback
@@ -96,9 +96,12 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
         depthTest: true,
         depthWrite: false,
         polygonOffset: true,
-        polygonOffsetFactor: -4
+        polygonOffsetFactor: -50,
+        polygonOffsetUnits: -50
       });
       const decalFront = new THREE.Mesh(geoFront, matFront);
+      decalFront.position.z += 0.003;
+      decalFront.renderOrder = 10;
       decalMeshFrontRef.current = decalFront;
       modelGroup.add(decalFront);
 
@@ -112,9 +115,12 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
         depthTest: true,
         depthWrite: false,
         polygonOffset: true,
-        polygonOffsetFactor: -4
+        polygonOffsetFactor: -50,
+        polygonOffsetUnits: -50
       });
       const decalBack = new THREE.Mesh(geoBack, matBack);
+      decalBack.position.z -= 0.003;
+      decalBack.renderOrder = 10;
       decalMeshBackRef.current = decalBack;
       modelGroup.add(decalBack);
 
@@ -709,7 +715,22 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
     });
   }, [tshirtColor]);
 
-  // 3. Sync View / Decal side projection and smooth camera rotation
+  // Helper to safely render Fabric canvas without crashing on unmounted/disposed canvas context
+  const safeRenderCanvas = (canvasObj) => {
+    if (!canvasObj || !canvasObj.contextContainer || !canvasObj.lowerCanvasEl) return;
+    try {
+      if (typeof canvasObj.discardActiveObject === 'function') {
+        canvasObj.discardActiveObject();
+      }
+      if (typeof canvasObj.renderAll === 'function') {
+        canvasObj.renderAll();
+      }
+    } catch (e) {
+      console.warn("Fabric canvas render suppressed:", e);
+    }
+  };
+
+  // 3. Camera glide animation when view changes
   useEffect(() => {
     const isFront = tshirtView === 'front';
 
@@ -723,19 +744,9 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
     targetCameraZRef.current = isFront ? cameraZOffset : -cameraZOffset;
     isAnimatingCameraRef.current = true;
     
-    // Force render Fabric.js and update textures (clear active selection borders FIRST)
-    if (frontFabricCanvas) {
-      if (typeof frontFabricCanvas.discardActiveObject === 'function') {
-        frontFabricCanvas.discardActiveObject();
-      }
-      frontFabricCanvas.renderAll();
-    }
-    if (backFabricCanvas) {
-      if (typeof backFabricCanvas.discardActiveObject === 'function') {
-        backFabricCanvas.discardActiveObject();
-      }
-      backFabricCanvas.renderAll();
-    }
+    // Force render Fabric.js and update textures safely
+    safeRenderCanvas(frontFabricCanvas);
+    safeRenderCanvas(backFabricCanvas);
 
     // Force update texture maps
     if (frontTextureRef.current) frontTextureRef.current.needsUpdate = true;
@@ -748,19 +759,9 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
   // 4. Force Resize WebGL Renderer when tab visibility changes (solves 0x0 size bug when hidden)
   useEffect(() => {
     if (visible) {
-      // Force render Fabric.js and update textures (clear active selection borders FIRST)
-      if (frontFabricCanvas) {
-        if (typeof frontFabricCanvas.discardActiveObject === 'function') {
-          frontFabricCanvas.discardActiveObject();
-        }
-        frontFabricCanvas.renderAll();
-      }
-      if (backFabricCanvas) {
-        if (typeof backFabricCanvas.discardActiveObject === 'function') {
-          backFabricCanvas.discardActiveObject();
-        }
-        backFabricCanvas.renderAll();
-      }
+      // Force render Fabric.js and update textures safely
+      safeRenderCanvas(frontFabricCanvas);
+      safeRenderCanvas(backFabricCanvas);
 
       const resizeAndRender = () => {
         const container = containerRef.current;

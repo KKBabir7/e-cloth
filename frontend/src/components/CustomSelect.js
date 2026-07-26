@@ -19,6 +19,14 @@ export default function CustomSelect({ value, options, onChange, placeholder = "
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 992);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const [dropdownDirection, setDropdownDirection] = useState('down');
 
   const checkDropdownDirection = () => {
@@ -56,17 +64,18 @@ export default function CustomSelect({ value, options, onChange, placeholder = "
         className="form-control-premium d-flex align-items-center justify-content-between"
         style={{
           cursor: disabled ? 'not-allowed' : 'pointer',
-          padding: '10px 16px',
-          borderRadius: '8px',
+          padding: isMobile ? '3px 10px' : '10px 16px',
+          borderRadius: isMobile ? '6px' : '8px',
           border: '1px solid #E2E8F0',
           backgroundColor: disabled ? '#F1F5F9' : '#ffffff',
           opacity: disabled ? 0.7 : 1,
           userSelect: 'none',
-          fontSize: '14px',
+          fontSize: isMobile ? '11px' : '14px',
           fontWeight: '500',
-          minHeight: '42px',
+          minHeight: isMobile ? '28px' : '42px',
+          height: isMobile ? '28px' : 'auto',
           transition: 'all 0.2s ease-in-out',
-          gap: '16px'
+          gap: isMobile ? '8px' : '16px'
         }}
         onClick={() => {
           if (!disabled) setIsOpen(!isOpen);

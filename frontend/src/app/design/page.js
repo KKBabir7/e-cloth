@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useEffect, useState, useRef, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import BrandLoader from '../../components/BrandLoader';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Container, Row, Col, Card, Button, Form, Tabs, Tab, Modal, InputGroup, Nav } from 'react-bootstrap';
 import {
   IoText, IoImage, IoSquare, IoTrash, IoArrowDown, IoArrowUp, IoPushOutline,
-  IoChevronDown, IoDownload, IoCart, IoReload, IoSave, IoSearch, IoMove,
+  IoChevronDown, IoChevronUp, IoDownload, IoCart, IoReload, IoSave, IoSearch, IoMove,
   IoAdd, IoCopy, IoSunnyOutline, IoContrastOutline, IoEyeOutline, IoResizeOutline, IoColorPaletteOutline,
   IoEllipse, IoTriangle, IoStar, IoHeart, IoHappyOutline, IoShapesOutline, IoCloudUploadOutline, IoLayersOutline
 } from 'react-icons/io5';
@@ -98,11 +99,14 @@ const getFontsPreviewStylesheetUrl = () => {
   return `${baseUrl}${familyParams}&display=swap`;
 };
 
-// Main exported design customizer with Suspense boundary
+// Disable SSR entirely for DesignContent to prevent hydration mismatches
+const NoSSRDesignContent = dynamic(() => Promise.resolve(DesignContent), { ssr: false });
+
+// Main exported design customizer
 export default function DesignStudio() {
   return (
     <Suspense fallback={<BrandLoader fullPage={true} transparent={false} />}>
-      <DesignContent />
+      <NoSSRDesignContent />
     </Suspense>
   );
 }
@@ -129,7 +133,7 @@ function DesignContent() {
   const [displayMode, setDisplayMode] = useState('2d'); // 2d or 3d
   const [garmentType, setGarmentType] = useState('tshirt'); // tshirt or polo
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
-  const [mobileActiveTab, setMobileActiveTab] = useState('text');
+  const [mobileActiveTab, setMobileActiveTab] = useState(null);
   const [isMounted, setIsMounted] = useState(false);
   const [mobileScale, setMobileScale] = useState(1);
   const [isMobileView, setIsMobileView] = useState(false);
@@ -262,8 +266,8 @@ function DesignContent() {
     { name: 'Navy Gray', hex: '#475569', sizes: ['S', 'M', 'L', 'XL', 'XXL'] }
   ];
   const fabricColors = colorsData && colorsData.length > 0 ? colorsData : DEFAULT_COLORS;
-  // Use DEFAULT_COLORS during SSR/initial CSR to prevent hydration text mismatch.
-  // After isMounted is true (client-only), switch to actual fabricColors from API.
+  // Use DEFAULT_COLORS during SSR/first paint to prevent hydration mismatch.
+  // Switch to fabricColors only after client is mounted.
   const displayColors = isMounted ? fabricColors : DEFAULT_COLORS;
 
   useEffect(() => {
@@ -441,8 +445,13 @@ function DesignContent() {
     const objects = canvas.getObjects();
     const obj = objects[canvasIdx];
     if (obj) {
-      canvas.setActiveObject(obj);
-      canvas.requestRenderAll();
+      isReorderingRef.current = true;
+      try {
+        canvas.setActiveObject(obj);
+        canvas.requestRenderAll();
+      } finally {
+        isReorderingRef.current = false;
+      }
     }
   };
 
@@ -482,35 +491,249 @@ function DesignContent() {
     }
   };
 
-  const handleDragStart = (e, canvasIdx) => {
-    e.dataTransfer.setData('text/plain', canvasIdx.toString());
+  // Mobile Touch Drag and Drop State & Handlers
+  const [touchDraggingIdx, setTouchDraggingIdx] = useState(null);
+  const touchStartIndexRef = useRef(null);
+  const touchCurrentIndexRef = useRef(null);
+
+  const handleTouchStart = (e, index) => {
+    touchStartIndexRef.current = index;
+    touchCurrentIndexRef.current = index;
+    setTouchDraggingIdx(index);
   };
 
-  const handleDragOver = (e) => {
+  const handleTouchMove = (e) => {
+    if (touchStartIndexRef.current === null) return;
+    if (e.cancelable) e.preventDefault();
+    const touch = e.touches[0];
+    if (!touch) return;
+    const targetElem = document.elementFromPoint(touch.clientX, touch.clientY);
+    const layerCard = targetElem ? targetElem.closest('[data-layer-item-index]') : null;
+    if (layerCard) {
+      const idxAttr = layerCard.getAttribute('data-layer-item-index');
+      if (idxAttr !== null) {
+        const targetItemIdx = parseInt(idxAttr, 10);
+        if (!isNaN(targetItemIdx) && targetItemIdx !== touchCurrentIndexRef.current) {
+          const fromCanvasIdx = layersList.length - 1 - touchCurrentIndexRef.current;
+          const toCanvasIdx = layersList.length - 1 - targetItemIdx;
+          touchCurrentIndexRef.current = targetItemIdx;
+          setTouchDraggingIdx(targetItemIdx);
+          
+          // Live real-time re-ordering on canvas & layers list as finger moves!
+          if (canvas) {
+            const objects = canvas.getObjects();
+            const draggedObj = objects[fromCanvasIdx];
+            if (draggedObj) {
+              isReorderingRef.current = true;
+              try {
+                canvas.discardActiveObject();
+                draggedObj.moveTo(toCanvasIdx);
+                canvas.setActiveObject(draggedObj);
+                canvas.renderAll();
+                canvas.fire('object:modified', { target: draggedObj });
+                updateLayersList();
+              } finally {
+                isReorderingRef.current = false;
+              }
+            }
+          }
+        }
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    touchStartIndexRef.current = null;
+    touchCurrentIndexRef.current = null;
+    setTouchDraggingIdx(null);
+  };
+
+  const moveLayerByDelta = (canvasIdx, delta) => {
+    if (!canvas) return;
+    const objects = canvas.getObjects();
+    const targetIdx = canvasIdx + delta;
+    if (targetIdx < 0 || targetIdx >= objects.length) return;
+    
+    const obj = objects[canvasIdx];
+    if (obj) {
+      isReorderingRef.current = true;
+      try {
+        canvas.discardActiveObject();
+        obj.moveTo(targetIdx);
+        canvas.setActiveObject(obj);
+        canvas.renderAll();
+        canvas.fire('object:modified', { target: obj });
+        updateLayersList();
+      } finally {
+        isReorderingRef.current = false;
+      }
+    }
+  };
+
+  // Desktop Mouse-Based Layer Drag Reorder (No HTML5 draggable - avoids cursor freeze bugs)
+  const desktopDragRef = useRef({ dragging: false, fromCanvasIdx: null, toCanvasIdx: null });
+  const isReorderingRef = useRef(false);
+
+  const handleLayerMouseDown = (e, canvasIdx) => {
+    if (e.button !== 0) return; // Left mouse only
     e.preventDefault();
+    e.stopPropagation();
+
+    desktopDragRef.current = { dragging: true, fromCanvasIdx: canvasIdx, toCanvasIdx: canvasIdx };
+
+    // Set grabbing cursor on body during drag
+    document.body.style.cursor = 'grabbing';
+    document.body.style.userSelect = 'none';
+
+    const cleanup = () => {
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      desktopDragRef.current = { dragging: false, fromCanvasIdx: null, toCanvasIdx: null };
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    const onMouseUp = () => cleanup();
+    document.addEventListener('mouseup', onMouseUp);
   };
 
+  const handleLayerMouseEnter = (canvasIdx) => {
+    if (!desktopDragRef.current.dragging) return;
+    const { fromCanvasIdx } = desktopDragRef.current;
+    if (fromCanvasIdx === null || fromCanvasIdx === canvasIdx) return;
+
+    if (canvas) {
+      const objects = canvas.getObjects();
+      const draggedObj = objects[desktopDragRef.current.fromCanvasIdx];
+      if (draggedObj) {
+        isReorderingRef.current = true;
+        try {
+          canvas.discardActiveObject();
+          draggedObj.moveTo(canvasIdx);
+          canvas.setActiveObject(draggedObj);
+          canvas.renderAll();
+          canvas.fire('object:modified', { target: draggedObj });
+          // Update the fromIdx so next enter is relative to new position
+          desktopDragRef.current.fromCanvasIdx = canvasIdx;
+          updateLayersList();
+        } finally {
+          isReorderingRef.current = false;
+        }
+      }
+    }
+  };
+
+  const handleLayerMouseUp = () => {
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    desktopDragRef.current = { dragging: false, fromCanvasIdx: null, toCanvasIdx: null };
+  };
+
+  // Legacy touch drag handlers (mobile)
+  const draggedCanvasIdxRef = useRef(null);
+  const handleDragStart = (e, canvasIdx) => { draggedCanvasIdxRef.current = canvasIdx; };
+  const handleDragOver = (e) => { e.preventDefault(); };
+  const handleDragEnd = () => { draggedCanvasIdxRef.current = null; };
   const handleDrop = (e, targetCanvasIdx) => {
     e.preventDefault();
-    const sourceStr = e.dataTransfer.getData('text/plain');
-    if (!sourceStr) return;
-    const sourceCanvasIdx = parseInt(sourceStr);
-    if (sourceCanvasIdx === targetCanvasIdx) return;
-
+    const sourceCanvasIdx = draggedCanvasIdxRef.current;
+    draggedCanvasIdxRef.current = null;
+    if (sourceCanvasIdx === null || sourceCanvasIdx === targetCanvasIdx || !canvas) return;
     const objects = canvas.getObjects();
     const draggedObj = objects[sourceCanvasIdx];
     if (draggedObj) {
-      // Discard selection first to avoid Fabric.js active group indexing bugs!
-      canvas.discardActiveObject();
-      
-      draggedObj.moveTo(targetCanvasIdx);
-      
-      // Re-select object
-      canvas.setActiveObject(draggedObj);
-      
-      canvas.renderAll();
-      canvas.fire('object:modified', { target: draggedObj });
-      updateLayersList();
+      isReorderingRef.current = true;
+      try {
+        canvas.discardActiveObject();
+        draggedObj.moveTo(targetCanvasIdx);
+        canvas.setActiveObject(draggedObj);
+        canvas.renderAll();
+        canvas.fire('object:modified', { target: draggedObj });
+        updateLayersList();
+      } finally {
+        isReorderingRef.current = false;
+      }
+    }
+  };
+
+  // Sync editor sidebar panels when selecting an object on canvas
+  const syncSidebarFromObject = (canvasInstance) => {
+    if (!canvasInstance) return;
+    const obj = canvasInstance.getActiveObject();
+    if (!obj) return;
+
+    const isReordering = isReorderingRef.current;
+
+    if (obj.type === 'i-text' || obj.type === 'text') {
+      if (!isReordering) {
+        setActiveTab('text');
+        setMobileActiveTab('text');
+        setMobileDrawerOpen(true);
+      }
+      activeObjectRef.current = obj;
+      setTextInput(obj.text || '');
+      setTextColor(obj.fill || '#000000');
+      setFontSize(obj.fontSize || 24);
+      setFontFamily(obj.fontFamily || 'Outfit');
+      setFontWeight(obj.fontWeight || 'normal');
+      setTextAlign(obj.textAlign || 'center');
+      setFontStyle(obj.fontStyle || 'normal');
+      setIsUnderline(!!obj.underline);
+      setIsLinethrough(!!obj.linethrough);
+      setLetterSpacing((obj.charSpacing || 0) / 10);
+      setTextBend(obj.textBend || 0);
+      setStrokeColor(obj.stroke || '#ffffff');
+      setStrokeWidth(obj.strokeWidth || 0);
+      setTextOpacity(obj.opacity !== undefined ? obj.opacity : 1);
+    } else if (obj.type === 'image') {
+      if (obj.isSticker) {
+        if (!isReordering) {
+          setActiveTab('sticker');
+          setMobileActiveTab('layers');
+          setMobileDrawerOpen(true);
+        }
+        setStickerOpacity(obj.opacity !== undefined ? obj.opacity : 1);
+        setStickerScale(obj.scaleX !== undefined ? obj.scaleX : 1);
+        setStickerRotation(obj.angle !== undefined ? obj.angle : 0);
+        
+        const brightF = obj.filters && obj.filters.find(f => f && (f.type === 'Brightness' || f.brightness !== undefined));
+        setStickerBrightness(brightF ? brightF.brightness : 0);
+        
+        const contrastF = obj.filters && obj.filters.find(f => f && (f.type === 'Contrast' || f.contrast !== undefined));
+        setStickerContrast(contrastF ? contrastF.contrast : 0);
+
+        const saturationF = obj.filters && obj.filters.find(f => f && (f.type === 'Saturation' || f.saturation !== undefined));
+        setStickerSaturation(saturationF ? saturationF.saturation : 0);
+      } else {
+        if (!isReordering) {
+          setActiveTab('image');
+          setMobileActiveTab('layers');
+          setMobileDrawerOpen(true);
+        }
+        setImageOpacity(obj.opacity !== undefined ? obj.opacity : 1);
+        setImageScale(obj.scaleX !== undefined ? obj.scaleX : 1);
+        setImageRotation(obj.angle !== undefined ? obj.angle : 0);
+        
+        const brightF = obj.filters && obj.filters.find(f => f && (f.type === 'Brightness' || f.brightness !== undefined));
+        setImageBrightness(brightF ? brightF.brightness : 0);
+        
+        const contrastF = obj.filters && obj.filters.find(f => f && (f.type === 'Contrast' || f.contrast !== undefined));
+        setImageContrast(contrastF ? contrastF.contrast : 0);
+
+        const saturationF = obj.filters && obj.filters.find(f => f && (f.type === 'Saturation' || f.saturation !== undefined));
+        setImageSaturation(saturationF ? saturationF.saturation : 0);
+      }
+    } else {
+      if (!isReordering) {
+        setActiveTab('shape');
+        setMobileActiveTab('layers');
+        setMobileDrawerOpen(true);
+      }
+      setShapeColor(obj.fill || '#ff8525');
+      setShapeOpacity(obj.opacity !== undefined ? obj.opacity : 1);
+      setShapeScale(obj.scaleX !== undefined ? obj.scaleX : 1);
+      setShapeRotation(obj.angle !== undefined ? obj.angle : 0);
+      setShapeStrokeColor(obj.stroke || '#ffffff');
+      setShapeStrokeWidth(obj.strokeWidth !== undefined ? obj.strokeWidth : 0);
     }
   };
 
@@ -524,7 +747,11 @@ function DesignContent() {
 
   // Initialize both Fabric.js Canvases
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || !isMounted) return;
+    if (!frontCanvasRef.current || !backCanvasRef.current) return;
+
+    const existingFrontJson = frontCanvasRef.current.__fabricJson || (frontCanvas ? frontCanvas.toJSON() : null);
+    const existingBackJson = backCanvasRef.current.__fabricJson || (backCanvas ? backCanvas.toJSON() : null);
 
     const fabric = require('fabric').fabric;
 
@@ -543,74 +770,7 @@ function DesignContent() {
       }
     };
 
-    const syncSidebarFromObject = (canvasInstance) => {
-      const obj = canvasInstance.getActiveObject();
-      if (!obj) return;
-      if (obj.type === 'i-text' || obj.type === 'text') {
-        setActiveTab('text');
-        setMobileActiveTab('text');
-        setMobileDrawerOpen(true);
-        activeObjectRef.current = obj;
-        setTextInput(obj.text || '');
-        setTextColor(obj.fill || '#000000');
-        setFontSize(obj.fontSize || 24);
-        setFontFamily(obj.fontFamily || 'Outfit');
-        setFontWeight(obj.fontWeight || 'normal');
-        setTextAlign(obj.textAlign || 'center');
-        setFontStyle(obj.fontStyle || 'normal');
-        setIsUnderline(!!obj.underline);
-        setIsLinethrough(!!obj.linethrough);
-        setLetterSpacing((obj.charSpacing || 0) / 10);
-        setTextBend(obj.textBend || 0);
-        setStrokeColor(obj.stroke || '#ffffff');
-        setStrokeWidth(obj.strokeWidth || 0);
-        setTextOpacity(obj.opacity !== undefined ? obj.opacity : 1);
-      } else if (obj.type === 'image') {
-        if (obj.isSticker) {
-          setActiveTab('sticker');
-          setMobileActiveTab('layers');
-          setMobileDrawerOpen(true);
-          setStickerOpacity(obj.opacity !== undefined ? obj.opacity : 1);
-          setStickerScale(obj.scaleX !== undefined ? obj.scaleX : 1);
-          setStickerRotation(obj.angle !== undefined ? obj.angle : 0);
-          
-          const brightF = obj.filters && obj.filters.find(f => f && (f.type === 'Brightness' || f.brightness !== undefined));
-          setStickerBrightness(brightF ? brightF.brightness : 0);
-          
-          const contrastF = obj.filters && obj.filters.find(f => f && (f.type === 'Contrast' || f.contrast !== undefined));
-          setStickerContrast(contrastF ? contrastF.contrast : 0);
- 
-          const saturationF = obj.filters && obj.filters.find(f => f && (f.type === 'Saturation' || f.saturation !== undefined));
-          setStickerSaturation(saturationF ? saturationF.saturation : 0);
-        } else {
-          setActiveTab('image');
-          setMobileActiveTab('layers');
-          setMobileDrawerOpen(true);
-          setImageOpacity(obj.opacity !== undefined ? obj.opacity : 1);
-          setImageScale(obj.scaleX !== undefined ? obj.scaleX : 1);
-          setImageRotation(obj.angle !== undefined ? obj.angle : 0);
-          
-          const brightF = obj.filters && obj.filters.find(f => f && (f.type === 'Brightness' || f.brightness !== undefined));
-          setImageBrightness(brightF ? brightF.brightness : 0);
-          
-          const contrastF = obj.filters && obj.filters.find(f => f && (f.type === 'Contrast' || f.contrast !== undefined));
-          setImageContrast(contrastF ? contrastF.contrast : 0);
- 
-          const saturationF = obj.filters && obj.filters.find(f => f && (f.type === 'Saturation' || f.saturation !== undefined));
-          setImageSaturation(saturationF ? saturationF.saturation : 0);
-        }
-      } else {
-        setActiveTab('shape');
-        setMobileActiveTab('layers');
-        setMobileDrawerOpen(true);
-        setShapeColor(obj.fill || '#ff8525');
-        setShapeOpacity(obj.opacity !== undefined ? obj.opacity : 1);
-        setShapeScale(obj.scaleX !== undefined ? obj.scaleX : 1);
-        setShapeRotation(obj.angle !== undefined ? obj.angle : 0);
-        setShapeStrokeColor(obj.stroke || '#ffffff');
-        setShapeStrokeWidth(obj.strokeWidth !== undefined ? obj.strokeWidth : 0);
-      }
-    };
+
 
     const handleObjectScaling = (canvasInstance) => (e) => {
       const obj = e.target;
@@ -657,18 +817,24 @@ function DesignContent() {
       setTextInput('CUSTOMWEAR');
     });
 
-    // Initial Welcome Text on Front
-    const text = new fabric.IText('Your Text', {
-      top: 130,
-      fontSize: 24,
-      fontFamily: 'Outfit',
-      fill: '#000000',
-      textAlign: 'center',
-      editable: true
-    });
-    text.set({ left: (240 - text.width * text.scaleX) / 2 });
-    fCanvas.add(text);
-    fCanvas.setActiveObject(text);
+    if (existingFrontJson && existingFrontJson.objects && existingFrontJson.objects.length > 0) {
+      fCanvas.loadFromJSON(existingFrontJson, () => {
+        fCanvas.renderAll();
+      });
+    } else {
+      // Initial Welcome Text on Front
+      const text = new fabric.IText('Your Text', {
+        top: 130,
+        fontSize: 24,
+        fontFamily: 'Outfit',
+        fill: '#000000',
+        textAlign: 'center',
+        editable: true
+      });
+      text.set({ left: (240 - text.width * text.scaleX) / 2 });
+      fCanvas.add(text);
+      fCanvas.setActiveObject(text);
+    }
 
     // 2. Initialize Back Canvas
     const bCanvas = new fabric.Canvas(backCanvasRef.current, {
@@ -690,11 +856,25 @@ function DesignContent() {
       setTextInput('CUSTOMWEAR');
     });
 
+    if (existingBackJson && existingBackJson.objects && existingBackJson.objects.length > 0) {
+      bCanvas.loadFromJSON(existingBackJson, () => {
+        bCanvas.renderAll();
+      });
+    }
+
     return () => {
-      fCanvas.dispose();
-      bCanvas.dispose();
+      try {
+        if (frontCanvasRef.current && fCanvas) {
+          frontCanvasRef.current.__fabricJson = fCanvas.toJSON();
+        }
+        if (backCanvasRef.current && bCanvas) {
+          backCanvasRef.current.__fabricJson = bCanvas.toJSON();
+        }
+        fCanvas.dispose();
+        bCanvas.dispose();
+      } catch (e) {}
     };
-  }, []);
+  }, [isMounted, isMobileView]);
 
   // Dynamically load default fonts & combined previews on mount
   useEffect(() => {
@@ -1395,16 +1575,16 @@ function DesignContent() {
       
                 <Form className="d-flex flex-column gap-3 pt-2">
                   <Form.Group>
-                    <div className="d-flex align-items-center justify-content-between mb-2">
-                      <Form.Label className="small fw-semibold m-0">Text Content</Form.Label>
+                    <div className="d-flex align-items-center justify-content-between mb-1">
+                      <label className="fw-bold mb-1 text-secondary text-capitalize m-0 d-block" style={{ letterSpacing: '0.4px', fontSize: '9px' }}>Text Content</label>
                       <button 
                         type="button" 
                         className="btn-format-tool active"
-                        style={{ width: '24px', height: '24px', borderRadius: '4px' }}
+                        style={{ width: '20px', height: '20px', borderRadius: '4px' }}
                         onClick={handleAddText}
                         title="Add Text Layer"
                       >
-                        <IoAdd size={16} />
+                        <IoAdd size={12} />
                       </button>
                     </div>
                     <Form.Control
@@ -1412,11 +1592,12 @@ function DesignContent() {
                       value={textInput}
                       onChange={(e) => setTextInput(e.target.value)}
                       className="form-control-premium"
+                      style={isMobileView ? { height: '28px', minHeight: '28px', fontSize: '11px', padding: '3px 10px', borderRadius: '6px' } : {}}
                     />
                   </Form.Group>
 
                   <Form.Group>
-                    <Form.Label className="small fw-semibold">Font Family</Form.Label>
+                    <label className="fw-bold mb-1 text-secondary text-capitalize d-block" style={{ letterSpacing: '0.4px', fontSize: '9px' }}>Font Family</label>
                     <CustomSelect
                       value={fontFamily}
                       options={POPULAR_FONTS.map(font => ({
@@ -1436,18 +1617,19 @@ function DesignContent() {
                   <Row>
                     <Col xs={6}>
                       <Form.Group>
-                        <Form.Label className="small fw-semibold">Font Size</Form.Label>
+                        <label className="fw-bold mb-1 text-secondary text-capitalize d-block" style={{ letterSpacing: '0.4px', fontSize: '9px' }}>Font Size</label>
                         <Form.Control
                           type="number"
                           value={fontSize}
                           onChange={(e) => setFontSize(e.target.value)}
                           className="form-control-premium"
+                          style={isMobileView ? { height: '28px', minHeight: '28px', fontSize: '11px', padding: '3px 10px', borderRadius: '6px' } : {}}
                         />
                       </Form.Group>
                     </Col>
                     <Col xs={6}>
                       <Form.Group>
-                        <Form.Label className="small fw-semibold">Weight</Form.Label>
+                        <label className="fw-bold mb-1 text-secondary text-capitalize d-block" style={{ letterSpacing: '0.4px', fontSize: '9px' }}>Weight</label>
                         <CustomSelect
                           value={fontWeight}
                           options={[
@@ -1463,7 +1645,7 @@ function DesignContent() {
 
                   {/* 6 Inline Formatting Buttons */}
                   <Form.Group>
-                    <Form.Label className="small fw-semibold text-secondary mb-2">Text Formatting</Form.Label>
+                    <label className="fw-bold mb-1 text-secondary text-capitalize d-block" style={{ letterSpacing: '0.4px', fontSize: '9px' }}>Text Formatting</label>
                     <div className="d-flex align-items-center gap-1">
                       {/* Alignment */}
                       <button 
@@ -1527,8 +1709,8 @@ function DesignContent() {
                     <Col xs={6}>
                       <Form.Group>
                         <div className="d-flex justify-content-between align-items-center mb-1">
-                          <Form.Label className="small fw-semibold text-secondary m-0">Spacing</Form.Label>
-                          <span className="small text-dark fw-bold">{letterSpacing}px</span>
+                          <label className="fw-bold mb-1 text-secondary text-capitalize m-0 d-block" style={{ letterSpacing: '0.4px', fontSize: '9px' }}>Spacing</label>
+                          <span className="range-value-label text-dark fw-bold" style={{ fontSize: isMobileView ? '10px' : '12px' }}>{letterSpacing}px</span>
                         </div>
                         <Form.Range 
                           min={-5} 
@@ -1541,8 +1723,8 @@ function DesignContent() {
                     <Col xs={6}>
                       <Form.Group>
                         <div className="d-flex justify-content-between align-items-center mb-1">
-                          <Form.Label className="small fw-semibold text-secondary m-0">Text Bend</Form.Label>
-                          <span className="small text-dark fw-bold">{textBend}</span>
+                          <label className="fw-bold mb-1 text-secondary text-capitalize m-0 d-block" style={{ letterSpacing: '0.4px', fontSize: '9px' }}>Text Bend</label>
+                          <span className="range-value-label text-dark fw-bold" style={{ fontSize: isMobileView ? '10px' : '12px' }}>{textBend}</span>
                         </div>
                         <Form.Range 
                           min={-100} 
@@ -1556,12 +1738,12 @@ function DesignContent() {
 
                   {/* Font Color */}
                   <Form.Group>
-                    <Form.Label className="small fw-semibold text-secondary mb-2">Font Color</Form.Label>
-                    <div className="d-flex align-items-center form-control-premium w-100" style={{ gap: '12px', minHeight: '42px', position: 'relative', backgroundColor: '#ffffff' }}>
+                    <label className="fw-bold mb-1 text-secondary text-capitalize d-block" style={{ letterSpacing: '0.4px', fontSize: '9px' }}>Font Color</label>
+                    <div className="d-flex align-items-center form-control-premium w-100" style={{ gap: '12px', minHeight: '28px', height: '28px', position: 'relative', backgroundColor: '#ffffff', padding: '3px 10px' }}>
                       <div 
                         style={{ 
-                          width: '24px', 
-                          height: '24px', 
+                          width: '18px', 
+                          height: '18px', 
                           borderRadius: '50%', 
                           backgroundColor: textColor, 
                           border: '1px solid #CBD5E1',
@@ -1591,7 +1773,7 @@ function DesignContent() {
                         value={textColor}
                         onChange={(e) => setTextColor(e.target.value)}
                         className="border-0 p-0 text-uppercase fw-semibold text-secondary w-100"
-                        style={{ fontSize: '13px', outline: 'none', background: 'transparent' }}
+                        style={{ fontSize: '11px', outline: 'none', background: 'transparent' }}
                         placeholder="#000000"
                       />
                     </div>
@@ -1600,8 +1782,8 @@ function DesignContent() {
                   {/* Stroke Outline Options */}
                   <Form.Group className="w-100">
                     <div className="d-flex justify-content-between align-items-center mb-1">
-                      <Form.Label className="small fw-semibold text-secondary m-0">Stroke Width</Form.Label>
-                      <span className="small text-dark fw-bold">{strokeWidth}px</span>
+                      <label className="fw-bold mb-1 text-secondary text-capitalize m-0 d-block" style={{ letterSpacing: '0.4px', fontSize: '9px' }}>Stroke Width</label>
+                      <span className="range-value-label text-dark fw-bold" style={{ fontSize: isMobileView ? '10px' : '12px' }}>{strokeWidth}px</span>
                     </div>
                     <Form.Range 
                       min={0} 
@@ -1612,15 +1794,17 @@ function DesignContent() {
                   </Form.Group>
 
                   <Form.Group className="w-100">
-                    <Form.Label className="small fw-semibold text-secondary mb-1">Stroke Color</Form.Label>
+                    <label className="fw-bold mb-1 text-secondary text-capitalize d-block" style={{ letterSpacing: '0.4px', fontSize: '9px' }}>Stroke Color</label>
                     <div 
                       className="d-flex align-items-center form-control-premium w-100" 
                       style={{ 
                         gap: '10px', 
-                        minHeight: '38px', 
+                        minHeight: '28px', 
+                        height: '28px',
                         position: 'relative',
                         backgroundColor: strokeWidth === 0 ? '#F1F5F9' : '#ffffff',
-                        opacity: strokeWidth === 0 ? 0.7 : 1
+                        opacity: strokeWidth === 0 ? 0.7 : 1,
+                        padding: '3px 10px'
                       }}
                     >
                       <div 
@@ -1674,16 +1858,16 @@ function DesignContent() {
       
                 <div className="d-flex flex-column gap-3 pt-2">
                   <Form.Group>
-                    <Form.Label className="small fw-semibold text-secondary mb-2">Upload Local Image</Form.Label>
+                    <Form.Label className="fw-bold mb-1 text-secondary text-capitalize" style={{ letterSpacing: '0.4px', fontSize: '9px' }}>Upload Local Image</Form.Label>
                     <div 
-                      className="border border-dashed rounded-3 p-3 text-center"
+                      className={`border border-dashed rounded-3 text-center ${isMobileView ? 'p-2' : 'p-3'}`}
                       style={{ 
                         borderColor: '#CBD5E1', 
                         backgroundColor: '#F8FAFC',
                         cursor: 'pointer',
                         transition: 'all 0.2s',
                         borderStyle: 'dashed',
-                        borderWidth: '2px'
+                        borderWidth: '1.5px'
                       }}
                       onMouseOver={(e) => {
                         e.currentTarget.style.borderColor = '#ff8525';
@@ -1695,9 +1879,9 @@ function DesignContent() {
                       }}
                       onClick={() => fileInputRef.current && fileInputRef.current.click()}
                     >
-                      <IoImage size={28} className="text-secondary mb-2" style={{ color: '#94A3B8' }} />
-                      <div className="small fw-bold text-dark mb-1">Click to upload image</div>
-                      <div className="text-muted" style={{ fontSize: '10px' }}>Supports PNG/JPG with transparent backdrop</div>
+                      <IoImage size={isMobileView ? 20 : 28} className={`text-secondary ${isMobileView ? 'mb-1' : 'mb-2'}`} style={{ color: '#94A3B8' }} />
+                      <div className="fw-bold text-dark mb-1" style={{ fontSize: isMobileView ? '10px' : '13px' }}>Click to upload image</div>
+                      <div className="text-muted" style={{ fontSize: isMobileView ? '8.5px' : '10px' }}>Supports PNG/JPG with transparent backdrop</div>
                       <input
                         type="file"
                         ref={fileInputRef}
@@ -1908,7 +2092,7 @@ function DesignContent() {
     <>
       
                 <div className="d-flex flex-column gap-3 pt-2">                  <div>
-                    <span className="small fw-semibold text-secondary d-block mb-2">Insert Geometric Shapes</span>
+                    <label className="fw-bold mb-1 text-secondary text-capitalize d-block" style={{ letterSpacing: '0.4px', fontSize: '9px' }}>Insert Geometric Shapes</label>
                     <div className="d-grid" style={{ gridTemplateColumns: 'repeat(6, 1fr)', gap: '4px' }}>
                       <button 
                         type="button"
@@ -2028,8 +2212,8 @@ function DesignContent() {
                     <Row className="g-2 mb-2">
                       <Col xs={6}>
                         <Form.Group>
-                          <Form.Label className="small fw-semibold text-secondary mb-1" style={{ fontSize: '11px' }}>Fill Color</Form.Label>
-                          <div className="d-flex align-items-center form-control-premium w-100" style={{ gap: '6px', minHeight: '38px', padding: '4px 8px', position: 'relative', backgroundColor: '#ffffff' }}>
+                          <label className="fw-bold mb-1 text-secondary text-capitalize d-block" style={{ letterSpacing: '0.4px', fontSize: '9px' }}>Fill Color</label>
+                          <div className="d-flex align-items-center form-control-premium w-100" style={{ gap: '6px', minHeight: '28px', height: '28px', padding: '3px 8px', position: 'relative', backgroundColor: '#ffffff' }}>
                             <div 
                               style={{ 
                                 width: '18px', 
@@ -2094,13 +2278,14 @@ function DesignContent() {
 
                       <Col xs={6}>
                         <Form.Group>
-                          <Form.Label className="small fw-semibold text-secondary mb-1" style={{ fontSize: '11px' }}>Stroke Color</Form.Label>
+                          <label className="fw-bold mb-1 text-secondary text-capitalize d-block" style={{ letterSpacing: '0.4px', fontSize: '9px' }}>Stroke Color</label>
                           <div 
                             className="d-flex align-items-center form-control-premium w-100" 
                             style={{ 
                               gap: '6px', 
-                              minHeight: '38px', 
-                              padding: '4px 8px',
+                              minHeight: '28px', 
+                              height: '28px',
+                              padding: '3px 8px',
                               position: 'relative', 
                               backgroundColor: shapeStrokeWidth === 0 ? '#F1F5F9' : '#ffffff',
                               opacity: shapeStrokeWidth === 0 ? 0.7 : 1
@@ -2262,10 +2447,10 @@ function DesignContent() {
                       <Col xs={6}>
                         <Form.Group>
                           <div className="d-flex justify-content-between align-items-center mb-1">
-                            <Form.Label className="small fw-semibold text-secondary m-0 d-flex align-items-center gap-1" style={{ fontSize: '11px' }}>
-                              <IoSquare size={10} className="text-secondary" /> Stroke
-                            </Form.Label>
-                            <span className="text-dark fw-bold" style={{ fontSize: '10px' }}>{shapeStrokeWidth}px</span>
+                            <label className="fw-bold mb-1 text-secondary text-capitalize m-0 d-block" style={{ letterSpacing: '0.4px', fontSize: '9px' }}>
+                              Stroke Width
+                            </label>
+                            <span className="range-value-label text-dark fw-bold" style={{ fontSize: isMobileView ? '10px' : '12px' }}>{shapeStrokeWidth}px</span>
                           </div>
                           <Form.Range 
                             min={0} 
@@ -2299,7 +2484,7 @@ function DesignContent() {
       
                 <div className="d-flex flex-column gap-3 pt-2">
                   <div>
-                    <span className="small fw-semibold text-secondary d-block mb-2">Choose Sticker</span>
+                    <label className="fw-bold mb-1 text-secondary text-capitalize d-block" style={{ letterSpacing: '0.4px', fontSize: '9px' }}>Choose Sticker</label>
                     <div className="d-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
                       {stickersList.map((st, idx) => {
                         const stickerUrl = (st.image && (st.image.startsWith('http') ? st.image : `${getBackendUrl()}${st.image}`)) || st.url;
@@ -2541,7 +2726,7 @@ if (isMounted && isMobileView) {
              <button onClick={() => setTshirtView('back')} className={`btn btn-sm rounded-pill px-2 py-0 ${tshirtView === 'back' ? 'bg-dark text-white' : 'text-secondary border-0'}`} style={{ fontSize: '9px', fontWeight: 'bold', height: '100%', display: 'flex', alignItems: 'center' }}>Back</button>
              <div className="border-start mx-1" style={{ height: '10px' }}></div>
              <button onClick={() => setDisplayMode(displayMode === '2d' ? '3d' : '2d')} className={`btn btn-sm rounded-pill px-2 py-0 ${displayMode === '3d' ? 'bg-primary text-white' : 'text-primary border-0'}`} style={{ fontSize: '9px', fontWeight: 'bold', height: '100%', display: 'flex', alignItems: 'center' }}>
-                {displayMode === '2d' ? '3D' : '2D'}
+                {displayMode === '2d' ? '3D' : 'Editor'}
              </button>
           </div>
           <div className="d-flex gap-1 align-items-center">
@@ -2556,13 +2741,13 @@ if (isMounted && isMobileView) {
 
         {/* Canvas Area */}
         <div className="editor-mobile-canvas position-relative flex-grow-1" style={{ overflow: 'hidden', paddingBottom: '52px' }}>
-            <div className="position-absolute start-50 top-50 translate-middle" style={{ zIndex: 1, marginTop: '-50px' }}>
+            <div className="position-absolute start-50 top-50 translate-middle" style={{ zIndex: 1, marginTop: '-45px' }}>
                 <div style={{ transform: `scale(${Math.min(mobileScale * 1.65, 1.3)})`, transformOrigin: 'center center' }}>
                   <div 
                     className="position-relative shadow rounded-4 overflow-hidden canvas-frame-box" 
                     style={{
                       width: '420px',
-                      height: '510px',
+                      height: '530px',
                       backgroundColor: '#F8FAFC',
                       border: '1px solid #E2E8F0'
                     }}
@@ -2631,21 +2816,21 @@ if (isMounted && isMobileView) {
                     bottom: '100%',
                     left: 0,
                     width: '100%',
-                    maxHeight: '40vh',
+                    maxHeight: '30vh',
                     overflowY: 'auto',
-                    borderTopLeftRadius: '20px',
-                    borderTopRightRadius: '20px',
+                    borderTopLeftRadius: '14px',
+                    borderTopRightRadius: '14px',
                     transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease',
                     transform: mobileActiveTab ? 'translateY(0)' : 'translateY(10px)',
                     opacity: mobileActiveTab ? 1 : 0,
                     pointerEvents: mobileActiveTab ? 'auto' : 'none',
-                    paddingBottom: '10px'
+                    paddingBottom: '4px'
                 }}
             >
                 {mobileActiveTab && (
-                    <div className="p-3 pb-4">
-                        <div className="d-flex justify-content-between align-items-center mb-3">
-                            <h6 className="m-0 fw-extrabold text-uppercase" style={{ letterSpacing: '0.5px', fontSize: '13px' }}>
+                    <div className="p-2 px-3 pb-2">
+                        <div className="d-flex justify-content-between align-items-center mb-1">
+                            <h6 className="m-0 fw-extrabold text-capitalize" style={{ letterSpacing: '0.5px', fontSize: '11px' }}>
                                 {mobileActiveTab === 'color' && 'Garment'}
                                 {mobileActiveTab === 'text' && 'Add Text'}
                                 {mobileActiveTab === 'sticker' && 'Stickers'}
@@ -2653,50 +2838,50 @@ if (isMounted && isMobileView) {
                                 {mobileActiveTab === 'upload' && 'Upload Image'}
                                 {mobileActiveTab === 'layers' && 'Layers'}
                             </h6>
-                            <button className="btn-close" style={{ fontSize: '10px' }} onClick={() => setMobileActiveTab(null)}></button>
+                            <button className="btn-close" style={{ fontSize: '8px' }} onClick={() => setMobileActiveTab(null)}></button>
                         </div>
-                        <div className="custom-drawer-content-scroll" style={{ overflowX: 'hidden' }}>
+                        <div className="custom-drawer-content-scroll mobile-tab-content" style={{ overflowX: 'hidden' }}>
                             {mobileActiveTab === 'color' && (
-                                <div className="d-flex flex-column gap-3">
+                                <div className="d-flex flex-column gap-2">
                                   <div>
-                                    <label className="fw-bold mb-2 small text-secondary text-uppercase" style={{ letterSpacing: '1px', fontSize: '10px' }}>Garment Type</label>
-                                    <div className="d-flex gap-2">
-                                      <button type="button" onClick={() => setGarmentType('tshirt')} className={`flex-fill border py-2 rounded-3 fw-bold ${garmentType === 'tshirt' ? 'bg-dark text-white shadow-sm' : 'bg-light text-secondary border-light'}`} style={{ fontSize: '12px' }}>T-Shirt</button>
-                                      <button type="button" onClick={() => setGarmentType('polo')} className={`flex-fill border py-2 rounded-3 fw-bold ${garmentType === 'polo' ? 'bg-dark text-white shadow-sm' : 'bg-light text-secondary border-light'}`} style={{ fontSize: '12px' }}>Polo</button>
+                                    <label className="fw-bold mb-1 text-secondary text-capitalize" style={{ letterSpacing: '0.4px', fontSize: '9px' }}>Garment Type</label>
+                                    <div className="d-flex gap-1">
+                                      <button type="button" onClick={() => setGarmentType('tshirt')} className={`flex-fill border py-1 rounded-2 fw-bold ${garmentType === 'tshirt' ? 'bg-dark text-white shadow-sm' : 'bg-light text-secondary border-light'}`} style={{ fontSize: '10px' }}>T-Shirt</button>
+                                      <button type="button" onClick={() => setGarmentType('polo')} className={`flex-fill border py-1 rounded-2 fw-bold ${garmentType === 'polo' ? 'bg-dark text-white shadow-sm' : 'bg-light text-secondary border-light'}`} style={{ fontSize: '10px' }}>Polo</button>
                                     </div>
                                   </div>
                                   <div>
-                                    <label className="fw-bold mb-2 small text-secondary text-uppercase" style={{ letterSpacing: '1px', fontSize: '10px' }}>Fabric Color</label>
-                                    <div className="d-flex flex-wrap gap-2">
+                                    <label className="fw-bold mb-1 text-secondary text-capitalize" style={{ letterSpacing: '0.4px', fontSize: '9px' }}>Fabric Color</label>
+                                    <div className="d-flex flex-wrap gap-1">
                                       {displayColors.map((color) => {
                                         const isSelected = tshirtColor.toLowerCase() === color.hex.toLowerCase();
                                         const imageUrl = color.image ? (color.image.startsWith('http') ? color.image : `${getBackendUrl()}${color.image}`) : null;
                                         return (
-                                          <button key={color.name} type="button" title={color.name} onClick={() => { setTshirtColor(color.hex); if (color.sizes && color.sizes.length > 0 && !color.sizes.includes(selectedSize)) setSelectedSize(color.sizes[0]); }} style={{ width:'40px', height:'40px', borderRadius:'10px', border: isSelected ? '2px solid #ff8525' : '1px solid #e2e8f0', backgroundColor: imageUrl ? '#f8fafc' : color.hex, cursor:'pointer', padding:0, overflow:'hidden', transform: isSelected ? 'scale(1.1)' : 'scale(1)', transition:'all 0.2s ease', boxShadow: isSelected ? '0 4px 8px rgba(0,0,0,0.15)' : 'none' }}>
-                                            {imageUrl ? <img src={imageUrl} alt={color.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : <div style={{ width:'100%', height:'100%', backgroundColor: color.hex }} />}
+                                          <button key={color.name} type="button" title={color.name} onClick={() => { setTshirtColor(color.hex); if (color.sizes && color.sizes.length > 0 && !color.sizes.includes(selectedSize)) setSelectedSize(color.sizes[0]); }} style={{ width:'25px', height:'25px', borderRadius:'5px', border: isSelected ? '2px solid #ff8525' : '1px solid #e2e8f0', backgroundColor: imageUrl ? '#f8fafc' : color.hex, cursor:'pointer', padding:'1px', overflow:'hidden', transform: isSelected ? 'scale(1.1)' : 'scale(1)', transition:'all 0.2s ease', boxShadow: isSelected ? '0 2px 4px rgba(0,0,0,0.15)' : 'none' }}>
+                                            {imageUrl ? <img src={imageUrl} alt={color.name} style={{ width:'100%', height:'100%', objectFit:'contain' }} /> : <div style={{ width:'100%', height:'100%', backgroundColor: color.hex }} />}
                                           </button>
                                         );
                                       })}
                                     </div>
                                   </div>
                                   <div>
-                                    <label className="fw-bold mb-2 small text-secondary text-uppercase" style={{ letterSpacing: '1px', fontSize: '10px' }}>Size</label>
-                                    <div className="d-flex flex-wrap gap-2">
+                                    <label className="fw-bold mb-1 text-secondary text-capitalize" style={{ letterSpacing: '0.4px', fontSize: '9px' }}>Size</label>
+                                    <div className="d-flex flex-wrap gap-1">
                                       {(() => {
                                         const currentColorObj = displayColors.find(c => c.hex.toLowerCase() === tshirtColor.toLowerCase()) || displayColors[0] || { sizes: ['S','M','L','XL','XXL'] };
                                         const availableSizes = currentColorObj.sizes || ['S','M','L','XL','XXL'];
                                         return availableSizes.map((s) => (
-                                          <button key={s} type="button" onClick={() => setSelectedSize(s)} className={`btn fw-bold px-3 py-1 ${selectedSize === s ? 'bg-dark text-white shadow-sm' : 'bg-light text-secondary'}`} style={{ borderRadius: '8px', fontSize: '12px' }}>{s}</button>
+                                          <button key={s} type="button" onClick={() => setSelectedSize(s)} className={`btn fw-bold px-2 py-0 ${selectedSize === s ? 'bg-dark text-white shadow-sm' : 'bg-light text-secondary'}`} style={{ borderRadius: '5px', fontSize: '10px', minWidth: '26px', height: '22px' }}>{s}</button>
                                         ));
                                       })()}
                                     </div>
                                   </div>
                                 </div>
                             )}
-                            {mobileActiveTab === 'text' && <TextTabContent />}
-                            {mobileActiveTab === 'sticker' && <StickerTabContent />}
-                            {mobileActiveTab === 'shape' && <ShapeTabContent />}
-                            {mobileActiveTab === 'upload' && <ImageTabContent />}
+                            {mobileActiveTab === 'text' && TextTabContent()}
+                            {mobileActiveTab === 'sticker' && StickerTabContent()}
+                            {mobileActiveTab === 'shape' && ShapeTabContent()}
+                            {mobileActiveTab === 'upload' && ImageTabContent()}
                             {mobileActiveTab === 'layers' && (
                                 <div className="d-flex flex-column gap-2">
                                     {layersList.length === 0 ? (
@@ -2706,12 +2891,41 @@ if (isMounted && isMobileView) {
                                           const canvasIdx = layersList.length - 1 - index;
                                           const isSelected = activeLayerId === layer.id;
                                           return (
-                                            <div key={index} onClick={() => selectCanvasLayer(canvasIdx)} className="d-flex align-items-center justify-content-between p-2 rounded-3 border mb-1" style={{ backgroundColor: isSelected ? 'rgba(255,133,37,0.05)' : '#fff', borderColor: isSelected ? '#ff8525' : '#e2e8f0' }}>
-                                                <div className="d-flex align-items-center gap-2">
-                                                    {layer.type === 'text' ? <IoText size={14} className="text-secondary" /> : layer.type === 'image' ? <IoImage size={14} className="text-secondary" /> : <IoSquare size={14} className="text-secondary" />}
-                                                    <span className="fw-semibold text-truncate" style={{ fontSize: '12px', maxWidth: '150px' }}>{layer.name}</span>
+                                            <div 
+                                              key={index} 
+                                              data-layer-item-index={index}
+                                              draggable
+                                              onDragStart={(e) => handleDragStart(e, canvasIdx)}
+                                              onDragOver={handleDragOver}
+                                              onDrop={(e) => handleDrop(e, canvasIdx)}
+                                              onTouchStart={(e) => handleTouchStart(e, index)}
+                                              onTouchMove={handleTouchMove}
+                                              onTouchEnd={handleTouchEnd}
+                                              onClick={() => selectCanvasLayer(canvasIdx)} 
+                                              className="d-flex align-items-center justify-content-between px-2 py-1 rounded-3 border mb-1" 
+                                              style={{ 
+                                                backgroundColor: touchDraggingIdx === index ? 'rgba(255,133,37,0.2)' : (isSelected ? 'rgba(255,133,37,0.08)' : '#fff'), 
+                                                borderColor: touchDraggingIdx === index || isSelected ? '#ff8525' : '#e2e8f0',
+                                                cursor: 'grab',
+                                                touchAction: 'none',
+                                                userSelect: 'none',
+                                                WebkitUserSelect: 'none',
+                                                transform: touchDraggingIdx === index ? 'scale(1.02)' : 'none',
+                                                transition: 'transform 0.1s ease, background-color 0.15s ease'
+                                              }}
+                                            >
+                                                <div className="d-flex align-items-center gap-2 overflow-hidden" style={{ flex: 1 }}>
+                                                    <span className="text-muted" style={{ fontSize: '11px', cursor: 'grab' }}>☰</span>
+                                                    {layer.type === 'text' ? <IoText size={13} className="text-secondary" /> : layer.type === 'image' ? <IoImage size={13} className="text-secondary" /> : <IoSquare size={13} className="text-secondary" />}
+                                                    <span className="fw-semibold text-truncate" style={{ fontSize: '11px', maxWidth: '110px' }}>{layer.name}</span>
                                                 </div>
-                                                <div className="d-flex gap-2">
+                                                <div className="d-flex align-items-center gap-1">
+                                                    <button type="button" className="btn btn-sm p-1 border-0" title="Move Up" disabled={index === 0} onClick={(e) => { e.stopPropagation(); moveLayerByDelta(canvasIdx, 1); }}>
+                                                      <IoChevronUp size={13} color={index === 0 ? '#CBD5E1' : '#475569'} />
+                                                    </button>
+                                                    <button type="button" className="btn btn-sm p-1 border-0" title="Move Down" disabled={index === layersList.length - 1} onClick={(e) => { e.stopPropagation(); moveLayerByDelta(canvasIdx, -1); }}>
+                                                      <IoChevronDown size={13} color={index === layersList.length - 1 ? '#CBD5E1' : '#475569'} />
+                                                    </button>
                                                     <button type="button" className="btn btn-sm p-1 border-0" onClick={(e) => { e.stopPropagation(); toggleLayerLock(canvasIdx); }}>{layer.locked ? <FiLock size={12} color="#ff8525" /> : <FiUnlock size={12} color="#94A3B8" />}</button>
                                                     <button type="button" className="btn btn-sm p-1 border-0" onClick={(e) => { e.stopPropagation(); toggleLayerVisibility(canvasIdx); }}>{layer.visible ? <FiEye size={13} color="#ff8525" /> : <FiEyeOff size={13} color="#94A3B8" />}</button>
                                                     <button type="button" className="btn btn-sm p-1 border-0" onClick={(e) => { e.stopPropagation(); handleLayerOrder('delete'); }}><IoTrash size={13} color="#dc2626" /></button>
@@ -2728,7 +2942,7 @@ if (isMounted && isMobileView) {
             </div>
 
             {/* Fixed Bottom Navbar (Tool selector) */}
-            <div className="bg-white px-1 py-1 d-flex overflow-auto hide-scrollbar shadow-lg align-items-center" style={{ whiteSpace: 'nowrap', borderTop: '1px solid #E2E8F0', height: '48px' }}>
+            <div className="bg-white px-2 py-1 d-flex justify-content-center align-items-center overflow-auto hide-scrollbar shadow-lg w-100" style={{ whiteSpace: 'nowrap', borderTop: '1px solid #E2E8F0', height: '48px', gap: '4px' }}>
                 {[
                   { id: 'color', icon: <IoColorPaletteOutline size={16} />, label: 'Garment' },
                   { id: 'text', icon: <IoText size={16} />, label: 'Text' },
@@ -2740,14 +2954,13 @@ if (isMounted && isMobileView) {
                     <button 
                         key={tool.id} 
                         onClick={() => setMobileActiveTab(mobileActiveTab === tool.id ? null : tool.id)} 
-                        className="btn border-0 d-flex flex-column align-items-center justify-content-center position-relative flex-shrink-0"
-                        style={{ width: '56px', padding: '2px 0', color: mobileActiveTab === tool.id ? '#ff8525' : '#64748b' }}
+                        className="btn border-0 d-flex flex-column align-items-center justify-content-center position-relative flex-fill"
+                        style={{ minWidth: '46px', maxWidth: '64px', padding: '2px 0', color: mobileActiveTab === tool.id ? '#ff8525' : '#64748b' }}
                     >
                         <div style={{ transform: mobileActiveTab === tool.id ? 'translateY(-1px)' : 'none', transition: 'transform 0.2s' }}>
                            {tool.icon}
                         </div>
                         <span style={{ fontSize: '8.5px', fontWeight: mobileActiveTab === tool.id ? 'bold' : 'normal', marginTop: '2px' }}>{tool.label}</span>
-                        {mobileActiveTab === tool.id && <div className="position-absolute bottom-0 start-50 translate-middle-x" style={{ width: '16px', height: '2px', backgroundColor: '#ff8525', borderRadius: '2px' }} />}
                     </button>
                 ))}
             </div>
@@ -2763,7 +2976,7 @@ if (isMounted && isMobileView) {
         
         {/* LEFT TOOL PANEL */}
         <Col lg={3} className="d-none d-lg-block">
-          <div className="glass-panel p-3 bg-white h-100 d-flex flex-column gap-3">
+          <div className="glass-panel p-3 bg-white h-100 d-flex flex-column gap-3 editor-sidebar-panel">
             <h5 className="fw-bold mb-3 d-flex align-items-center gap-2" style={{ color: 'var(--primary-navy)' }}>
               <IoMove /> Tools Panel
             </h5>
@@ -2772,10 +2985,10 @@ if (isMounted && isMobileView) {
               
               {/* Text Layer Tab */}
               
-                <Tab eventKey="text" title="Text"><TextTabContent /></Tab>
-                <Tab eventKey="image" title="Image"><ImageTabContent /></Tab>
-                <Tab eventKey="shape" title="Shape"><ShapeTabContent /></Tab>
-                <Tab eventKey="sticker" title="Sticker"><StickerTabContent /></Tab>
+                <Tab eventKey="text" title="Text">{TextTabContent()}</Tab>
+                <Tab eventKey="image" title="Image">{ImageTabContent()}</Tab>
+                <Tab eventKey="shape" title="Shape">{ShapeTabContent()}</Tab>
+                <Tab eventKey="sticker" title="Sticker">{StickerTabContent()}</Tab>
 
             </Tabs>
 
@@ -2850,25 +3063,30 @@ if (isMounted && isMobileView) {
                           return (
                             <div
                               key={index}
-                              draggable
-                              onDragStart={(e) => handleDragStart(e, canvasIdx)}
-                              onDragOver={handleDragOver}
-                              onDrop={(e) => handleDrop(e, canvasIdx)}
+                              onMouseEnter={() => handleLayerMouseEnter(canvasIdx)}
+                              onMouseUp={handleLayerMouseUp}
                               onClick={() => selectCanvasLayer(canvasIdx)}
-                              className="d-flex align-items-center justify-content-between p-2 rounded-2"
+                              className="d-flex align-items-center justify-content-between p-2 rounded-2 mb-1"
                               style={{
                                 backgroundColor: isSelected ? 'rgba(255, 133, 37, 0.1)' : 'transparent',
                                 border: isSelected ? '1px solid rgba(255, 133, 37, 0.3)' : '1px solid transparent',
                                 color: '#334155',
-                                cursor: 'grab',
-                                transition: 'all 0.15s ease',
+                                cursor: 'pointer',
+                                transition: 'background-color 0.15s ease',
                                 userSelect: 'none',
                                 WebkitUserSelect: 'none'
                               }}
                             >
                               <div className="d-flex align-items-center gap-2 overflow-hidden" style={{ flex: 1 }}>
-                                {/* Drag Indicator */}
-                                <span className="text-muted" style={{ fontSize: '10px', cursor: 'grab' }}>â˜°</span>
+                                {/* Drag Handle - mousedown initiates mouse-based drag */}
+                                <span 
+                                  onMouseDown={(e) => handleLayerMouseDown(e, canvasIdx)}
+                                  className="text-muted px-1" 
+                                  style={{ fontSize: '13px', cursor: 'grab', userSelect: 'none', flexShrink: 0 }}
+                                  title="Drag to reorder"
+                                >
+                                  ☰
+                                </span>
                                 
                                 {/* Layer Type Icon */}
                                 {layer.type === 'text' ? (
@@ -2888,8 +3106,35 @@ if (isMounted && isMobileView) {
                                 </span>
                               </div>
 
-                              {/* Toggle Visibility & Lock */}
+                              {/* Toggle Order, Visibility & Lock */}
                               <div className="d-flex align-items-center gap-1" style={{ flexShrink: 0 }}>
+                                <button
+                                  type="button"
+                                  disabled={index === 0}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    moveLayerByDelta(canvasIdx, 1);
+                                  }}
+                                  className="border-0 bg-transparent p-1 d-flex align-items-center justify-content-center"
+                                  style={{ color: index === 0 ? '#CBD5E1' : '#475569', cursor: index === 0 ? 'default' : 'pointer' }}
+                                  title="Move Up"
+                                >
+                                  <IoChevronUp size={13} />
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={index === layersList.length - 1}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    moveLayerByDelta(canvasIdx, -1);
+                                  }}
+                                  className="border-0 bg-transparent p-1 d-flex align-items-center justify-content-center"
+                                  style={{ color: index === layersList.length - 1 ? '#CBD5E1' : '#475569', cursor: index === layersList.length - 1 ? 'default' : 'pointer' }}
+                                  title="Move Down"
+                                >
+                                  <IoChevronDown size={13} />
+                                </button>
+
                                 {/* Lock Button */}
                                 <button
                                   type="button"
@@ -3099,7 +3344,7 @@ if (isMounted && isMobileView) {
                         <button key={color.name} type="button" title={`${color.name} (${color.hex})`}
                           onClick={() => { setTshirtColor(color.hex); if (color.sizes && color.sizes.length > 0 && !color.sizes.includes(selectedSize)) setSelectedSize(color.sizes[0]); }}
                           style={{ width:'38px', height:'38px', borderRadius:'10px', border: isSelected ? '2.5px solid #ff8525' : '2px solid #e2e8f0', outline: isSelected ? '3px solid rgba(255,133,37,0.2)' : 'none', outlineOffset:'1px', backgroundColor: imageUrl ? '#f8fafc' : color.hex, cursor:'pointer', padding:0, overflow:'hidden', transform: isSelected ? 'scale(1.12)' : 'scale(1)', transition:'all 0.2s ease', boxShadow: isSelected ? '0 4px 12px rgba(255,133,37,0.35)' : '0 1px 3px rgba(0,0,0,0.1)' }}>
-                          {imageUrl ? <img src={imageUrl} alt={color.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : <div style={{ width:'100%', height:'100%', backgroundColor: color.hex }} />}
+                          {imageUrl ? <img src={imageUrl} alt={color.name} style={{ width:'100%', height:'100%', objectFit:'contain' }} /> : <div style={{ width:'100%', height:'100%', backgroundColor: color.hex }} />}
                         </button>
                       );
                     })}
@@ -3355,35 +3600,154 @@ if (isMounted && isMobileView) {
             color: #ffffff !important;
           }
           
+          /* ========================================================= */
+          /* MOBILE-ONLY STYLES (< 992px)                              */
+          /* ========================================================= */
           .mobile-tab-content {
-            font-size: 11px;
+            font-size: 10px;
           }
 
-          /* Shrink all text inside mobile tabs for compact mobile view */
+          /* Force EXACT 9px Capitalize Labels for ALL Mobile Drawer Modals */
+          .mobile-tab-content label,
           .mobile-tab-content .form-label,
-          .mobile-tab-content label {
-            font-size: 10px !important;
+          .mobile-tab-content .small.form-label,
+          .mobile-tab-content span.small,
+          .mobile-tab-content label.small {
+            font-size: 9px !important;
+            font-weight: 700 !important;
+            text-transform: capitalize !important;
+            letter-spacing: 0.4px !important;
+            color: #64748b !important;
             margin-bottom: 2px !important;
+            display: block !important;
           }
           .mobile-tab-content .form-control,
           .mobile-tab-content .form-select,
+          .mobile-tab-content .form-control-premium,
           .mobile-tab-content input,
           .mobile-tab-content select {
-            font-size: 11px !important;
-            padding: 4px 8px !important;
-            height: auto !important;
+            font-size: 10px !important;
+            padding: 3px 8px !important;
+            height: 28px !important;
+            min-height: 28px !important;
+            max-height: 28px !important;
+            border-radius: 6px !important;
+            line-height: 20px !important;
+          }
+          .mobile-tab-content .form-control-premium span,
+          .mobile-tab-content .form-control-premium div {
+            font-size: 10.5px !important;
           }
           .mobile-tab-content .btn {
-            font-size: 10.5px !important;
-            padding: 4.5px 8px !important;
+            font-size: 10px !important;
+            padding: 2px 6px !important;
+            height: 28px !important;
+            min-height: 28px !important;
+            max-height: 28px !important;
+            border-radius: 6px !important;
+          }
+          .mobile-tab-content .btn-format-tool {
+            width: 20px !important;
+            min-width: 20px !important;
+            max-width: 20px !important;
+            height: 20px !important;
+            min-height: 20px !important;
+            max-height: 20px !important;
+            font-size: 10px !important;
+            padding: 0 !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            border-radius: 4px !important;
+          }
+          .mobile-tab-content .range-value-label,
+          .mobile-tab-content span.range-value-label,
+          .mobile-tab-content span.text-dark,
+          .mobile-tab-content .text-dark.fw-bold {
+            font-size: 10px !important;
+          }
+          .mobile-tab-content img {
+            max-height: 26px !important;
+            object-fit: contain !important;
+          }
+          .mobile-tab-content svg {
+            width: 13px !important;
+            height: 13px !important;
+          }
+          .mobile-tab-content .gap-3 {
+            gap: 0.5rem !important;
+          }
+          .mobile-tab-content .gap-2 {
+            gap: 0.35rem !important;
+          }
+          .mobile-tab-content .pt-2 {
+            padding-top: 0.25rem !important;
+          }
+          .mobile-tab-content .mb-2,
+          .mobile-tab-content .mb-3 {
+            margin-bottom: 0.3rem !important;
           }
           .mobile-tab-content .small,
           .mobile-tab-content small {
-            font-size: 9.5px !important;
+            font-size: 9px !important;
           }
-          .mobile-tab-content .fw-bold,
-          .mobile-tab-content .fw-semibold {
-            font-size: 10px !important;
+          .mobile-editor-layout input[type="text"],
+          .mobile-editor-layout input[type="number"],
+          .mobile-editor-layout select,
+          .mobile-editor-layout .form-control,
+          .mobile-editor-layout .form-control-premium {
+            height: 28px !important;
+            min-height: 28px !important;
+            max-height: 28px !important;
+            font-size: 11px !important;
+            padding: 3px 10px !important;
+            border-radius: 6px !important;
+          }
+        }
+
+        /* ========================================================= */
+        /* DESKTOP-ONLY STYLES (>= 992px) - RESTORES DESKTOP LOOK   */
+        /* ========================================================= */
+        @media (min-width: 992px) {
+          .editor-sidebar-panel label,
+          .editor-sidebar-panel .form-label,
+          .editor-sidebar-panel span.small,
+          .editor-sidebar-panel label.small {
+            font-size: 13px !important;
+            font-weight: 600 !important;
+            color: #475569 !important;
+            margin-bottom: 6px !important;
+            display: block !important;
+            text-transform: none !important;
+            letter-spacing: normal !important;
+          }
+
+          .editor-sidebar-panel .form-control,
+          .editor-sidebar-panel .form-select,
+          .editor-sidebar-panel .form-control-premium,
+          .editor-sidebar-panel input[type="text"],
+          .editor-sidebar-panel input[type="number"],
+          .editor-sidebar-panel select {
+            font-size: 14px !important;
+            padding: 10px 14px !important;
+            height: 42px !important;
+            min-height: 42px !important;
+            max-height: 42px !important;
+            border-radius: 8px !important;
+            line-height: 20px !important;
+          }
+
+          .editor-sidebar-panel .btn-format-tool {
+            width: 36px !important;
+            height: 36px !important;
+            min-height: 36px !important;
+            border-radius: 6px !important;
+            font-size: 14px !important;
+          }
+
+          .editor-sidebar-panel .form-control-premium span,
+          .editor-sidebar-panel .form-control-premium div {
+            font-size: 13px !important;
           }
         }
       `}</style>

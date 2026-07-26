@@ -74,19 +74,19 @@ const ToastItem = ({ toast, onClose }) => {
   const getIcon = () => {
     switch (toast.type) {
       case 'success':
-        return <IoCheckmarkCircle size={22} color="#10B981" />;
+        return <IoCheckmarkCircle size={22} className="toast-icon" color="#10B981" />;
       case 'error':
-        return <IoAlertCircle size={22} color="#EF4444" />;
+        return <IoAlertCircle size={22} className="toast-icon" color="#EF4444" />;
       case 'info':
       default:
-        return <IoInformationCircle size={22} color="#3B82F6" />;
+        return <IoInformationCircle size={22} className="toast-icon" color="#3B82F6" />;
     }
   };
 
   return (
     <div className="custom-toast" onClick={onClose}>
       {getIcon()}
-      <div style={{ fontSize: '14px', fontWeight: '500' }}>{toast.message}</div>
+      <div className="custom-toast-message" style={{ fontWeight: '500' }}>{toast.message}</div>
     </div>
   );
 };
