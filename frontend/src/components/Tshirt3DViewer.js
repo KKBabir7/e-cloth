@@ -16,12 +16,194 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
   // Refs for Three.js objects
   const modelGroupRef = useRef(null);
   const shirtMeshRef = useRef(null);
-  const decalMeshFrontRef = useRef(null);
-  const decalMeshBackRef = useRef(null);
-  const decalMeshSetRef = useRef(new Set()); // tracks all decal meshes for color exclusion
+  const designShellFrontRef = useRef(null);
+  const designShellBackRef = useRef(null);
+  const designShellSetRef = useRef(new Set());
   const isFallbackRef = useRef(false);
-  const DecalGeometryClassRef = useRef(null);
   const ThreeModuleRef = useRef(null);
+  const hideDecalsRef = useRef(hideDecals);
+
+  useEffect(() => {
+    hideDecalsRef.current = hideDecals;
+  }, [hideDecals]);
+
+  // Print area bounds — matches the 240×440 Fabric canvas / old DecalGeometry placement
+  const getPrintBounds = (mesh, isFallback) => {
+    const yOffset = -0.01;
+    if (isFallback) {
+      return {
+        minX: -0.12,
+        maxX: 0.12,
+        minY: yOffset - 0.22,
+        maxY: yOffset + 0.22
+      };
+    }
+
+    mesh.geometry?.computeBoundingBox?.();
+    const box = mesh.geometry?.boundingBox;
+    if (!box) {
+      return {
+        minX: -0.14,
+        maxX: 0.14,
+        minY: yOffset - 0.255,
+        maxY: yOffset + 0.255
+      };
+    }
+
+    const cx = (box.min.x + box.max.x) / 2;
+    const cy = (box.min.y + box.max.y) / 2 + yOffset;
+    return {
+      minX: cx - 0.14,
+      maxX: cx + 0.14,
+      minY: cy - 0.255,
+      maxY: cy + 0.255
+    };
+  };
+
+  // Extract front/back torso triangles and map Fabric canvas coords to UV space
+  const extractSurfaceGeometry = (sourceGeometry, THREE, side, printBounds) => {
+    if (!sourceGeometry?.attributes?.position) return null;
+
+    sourceGeometry.computeVertexNormals();
+
+    const posAttr = sourceGeometry.attributes.position;
+    const normAttr = sourceGeometry.attributes.normal;
+    const index = sourceGeometry.index;
+    const threshold = 0.25;
+    const isFront = side === 'front';
+    const { minX, maxX, minY, maxY } = printBounds;
+    const width = maxX - minX || 0.24;
+    const height = maxY - minY || 0.44;
+
+    const iterateTriangles = (callback) => {
+      if (index) {
+        for (let i = 0; i < index.count; i += 3) {
+          callback(index.getX(i), index.getX(i + 1), index.getX(i + 2));
+        }
+      } else {
+        for (let i = 0; i < posAttr.count; i += 3) {
+          callback(i, i + 1, i + 2);
+        }
+      }
+    };
+
+    const triangleMatches = (i0, i1, i2) => {
+      const nz = (normAttr.getZ(i0) + normAttr.getZ(i1) + normAttr.getZ(i2)) / 3;
+      if (isFront ? nz <= threshold : nz >= -threshold) return false;
+
+      const cx = (posAttr.getX(i0) + posAttr.getX(i1) + posAttr.getX(i2)) / 3;
+      const cy = (posAttr.getY(i0) + posAttr.getY(i1) + posAttr.getY(i2)) / 3;
+      return cx >= minX && cx <= maxX && cy >= minY && cy <= maxY;
+    };
+
+    const positions = [];
+    const normals = [];
+    const uvs = [];
+    const surfaceOffset = isFront ? 0.0015 : -0.0015;
+
+    iterateTriangles((i0, i1, i2) => {
+      if (!triangleMatches(i0, i1, i2)) return;
+
+      [i0, i1, i2].forEach((idx) => {
+        const nx = normAttr.getX(idx);
+        const ny = normAttr.getY(idx);
+        const nz = normAttr.getZ(idx);
+        const x = posAttr.getX(idx);
+        const y = posAttr.getY(idx);
+        const z = posAttr.getZ(idx);
+
+        positions.push(
+          x + nx * surfaceOffset,
+          y + ny * surfaceOffset,
+          z + nz * surfaceOffset
+        );
+        normals.push(nx, ny, nz);
+
+        // Map mesh print bounds → Fabric canvas (240×440): top-left origin
+        let u = (x - minX) / width;
+        const v = (y - minY) / height;
+        if (!isFront) u = 1 - u;
+        uvs.push(Math.max(0, Math.min(1, u)), Math.max(0, Math.min(1, v)));
+      });
+    });
+
+    if (positions.length === 0) return null;
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    return geo;
+  };
+
+  const createDesignShell = (mesh, side, texture, THREE, printBounds) => {
+    const geo = extractSurfaceGeometry(mesh.geometry, THREE, side, printBounds);
+    if (!geo) return null;
+
+    // MeshBasicMaterial keeps colors identical to the 2D editor (no lighting tint)
+    const mat = new THREE.MeshBasicMaterial({
+      map: texture,
+      color: 0xffffff,
+      transparent: true,
+      alphaTest: 0.02,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -3,
+      polygonOffsetUnits: -3
+    });
+
+    const shell = new THREE.Mesh(geo, mat);
+    shell.renderOrder = 2;
+    shell.userData.isDesignShell = true;
+    return shell;
+  };
+
+  const removeDesignShells = () => {
+    const mesh = shirtMeshRef.current;
+    [designShellFrontRef, designShellBackRef].forEach((shellRef) => {
+      if (shellRef.current && mesh) {
+        mesh.remove(shellRef.current);
+        shellRef.current.geometry?.dispose();
+        shellRef.current.material?.dispose();
+        designShellSetRef.current.delete(shellRef.current);
+        shellRef.current = null;
+      }
+    });
+  };
+
+  // Map Fabric canvas designs directly onto shirt surface geometry (wraps with mesh)
+  const applyDesignSurfaces = () => {
+    const THREE = ThreeModuleRef.current;
+    const mesh = shirtMeshRef.current;
+    const texFront = frontTextureRef.current;
+    const texBack = backTextureRef.current;
+
+    if (!THREE || !mesh || !texFront || !texBack) return;
+
+    removeDesignShells();
+
+    if (hideDecalsRef.current) return;
+
+    const printBounds = getPrintBounds(mesh, isFallbackRef.current);
+
+    try {
+      const frontShell = createDesignShell(mesh, 'front', texFront, THREE, printBounds);
+      if (frontShell) {
+        mesh.add(frontShell);
+        designShellFrontRef.current = frontShell;
+        designShellSetRef.current.add(frontShell);
+      }
+
+      const backShell = createDesignShell(mesh, 'back', texBack, THREE, printBounds);
+      if (backShell) {
+        mesh.add(backShell);
+        designShellBackRef.current = backShell;
+        designShellSetRef.current.add(backShell);
+      }
+    } catch (e) {
+      console.warn('Failed to apply design surfaces', e);
+    }
+  };
 
   // Camera targets for smooth transition
   const targetCameraXRef = useRef(0);
@@ -39,107 +221,6 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
   const frontTextureRef = useRef(null);
   const backTextureRef = useRef(null);
 
-  // Helper to project BOTH front and back design decals
-  const projectDecals = () => {
-    const THREE = ThreeModuleRef.current;
-    const DecalGeometry = DecalGeometryClassRef.current;
-    const mesh = shirtMeshRef.current;
-    const modelGroup = modelGroupRef.current;
-
-    const texFront = frontTextureRef.current;
-    const texBack = backTextureRef.current;
-
-    if (!THREE || !DecalGeometry || !mesh || !modelGroup || !texFront || !texBack) return;
-
-    // Remove existing decals
-    if (decalMeshFrontRef.current) {
-      modelGroup.remove(decalMeshFrontRef.current);
-      decalMeshSetRef.current.delete(decalMeshFrontRef.current);
-      decalMeshFrontRef.current = null;
-    }
-    if (decalMeshBackRef.current) {
-      modelGroup.remove(decalMeshBackRef.current);
-      decalMeshSetRef.current.delete(decalMeshBackRef.current);
-      decalMeshBackRef.current = null;
-    }
-
-    // Hide decals if explicitly requested (e.g., in 2D mode to prevent ghosting)
-    if (hideDecals) {
-      return;
-    }
-
-    const isFallback = isFallbackRef.current;
-    
-    // Front vs Back position coordinates
-    let zOffset = 0.08;
-    let yOffset = -0.01;
-
-    if (isFallback) {
-      zOffset = 0.046;
-    } else {
-      // Find bounds of the mesh to project the decal precisely on the centered mesh surface
-      const tempBox = new THREE.Box3().setFromObject(mesh);
-      const tempSize = new THREE.Vector3();
-      tempBox.getSize(tempSize);
-      zOffset = tempSize.z / 2 + 0.008; // slightly in front of the mesh surface
-    }
-
-    const size = isFallback
-      ? new THREE.Vector3(0.24, 0.44, 0.2)
-      : new THREE.Vector3(0.28, 0.51, 0.2); // Z depth 0.2 is enough now that matrixWorld is correct
-
-    try {
-      // 1. Project Front Decal (using front texture)
-      const posFront = new THREE.Vector3(0, yOffset, zOffset); 
-      const rotFront = new THREE.Euler(0, 0, 0);
-      const geoFront = new DecalGeometry(mesh, posFront, rotFront, size);
-      const matFront = new THREE.MeshBasicMaterial({
-        map: texFront,
-        color: 0xffffff,        // ← MUST stay white — never let shirt color tint the decal
-        transparent: true,
-        alphaTest: 0.01,
-        depthTest: false,       // ← OFF: renderOrder=20 already ensures correct draw order
-        depthWrite: false,
-        polygonOffset: true,
-        polygonOffsetFactor: -4,
-        polygonOffsetUnits: -4
-      });
-      const decalFront = new THREE.Mesh(geoFront, matFront);
-      decalFront.position.z += 0.003;
-      decalFront.renderOrder = 20;
-      decalFront.userData.isDecal = true;
-      decalMeshFrontRef.current = decalFront;
-      decalMeshSetRef.current.add(decalFront);
-      modelGroup.add(decalFront);
-
-      // 2. Project Back Decal (using back texture)
-      const posBack = new THREE.Vector3(0, yOffset, -zOffset); 
-      const rotBack = new THREE.Euler(0, Math.PI, 0);
-      const geoBack = new DecalGeometry(mesh, posBack, rotBack, size);
-      const matBack = new THREE.MeshBasicMaterial({
-        map: texBack,
-        color: 0xffffff,        // ← MUST stay white
-        transparent: true,
-        alphaTest: 0.01,
-        depthTest: false,       // ← OFF
-        depthWrite: false,
-        polygonOffset: true,
-        polygonOffsetFactor: -4,
-        polygonOffsetUnits: -4
-      });
-      const decalBack = new THREE.Mesh(geoBack, matBack);
-      decalBack.position.z -= 0.003;
-      decalBack.renderOrder = 20;
-      decalBack.userData.isDecal = true;
-      decalMeshBackRef.current = decalBack;
-      decalMeshSetRef.current.add(decalBack);
-      modelGroup.add(decalBack);
-
-    } catch (e) {
-      console.warn('Failed to project decals', e);
-    }
-  };
-
   // 1. Scene Initialization (runs once on mount / canvas bind)
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -153,13 +234,10 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
         const THREE = await import('three');
         const { OrbitControls } = await import('three/examples/jsm/controls/OrbitControls.js');
         const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
-        const { OBJLoader } = await import('three/examples/jsm/loaders/OBJLoader.js');
-        const { DecalGeometry } = await import('three/examples/jsm/geometries/DecalGeometry.js');
 
         if (!active) return;
 
         ThreeModuleRef.current = THREE;
-        DecalGeometryClassRef.current = DecalGeometry;
 
         const container = containerRef.current;
         if (!container) return;
@@ -227,6 +305,7 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
           const texFront = new THREE.CanvasTexture(frontFabricCanvas.getElement());
           texFront.anisotropy = 8;
           texFront.colorSpace = THREE.SRGBColorSpace;
+          texFront.flipY = true;
           frontTextureRef.current = texFront;
 
           frontFabricCanvas.on('after:render', () => {
@@ -238,6 +317,7 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
           const texBack = new THREE.CanvasTexture(backFabricCanvas.getElement());
           texBack.anisotropy = 8;
           texBack.colorSpace = THREE.SRGBColorSpace;
+          texBack.flipY = true;
           backTextureRef.current = texBack;
 
           backFabricCanvas.on('after:render', () => {
@@ -303,7 +383,7 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
           modelGroup.add(tag);
 
           shirtMeshRef.current = torso;
-          projectDecals();
+          applyDesignSurfaces();
           setLoading(false);
         };
 
@@ -419,7 +499,7 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
           modelGroup.add(tag);
 
           shirtMeshRef.current = torso;
-          projectDecals();
+          applyDesignSurfaces();
           setLoading(false);
         };
 
@@ -499,13 +579,13 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
 
 
         if (garmentType === 'polo') {
-          // Load polo.obj
-          const loader = new OBJLoader();
+          isFallbackRef.current = false;
+          const loader = new GLTFLoader();
           loader.load(
-            '/polo.obj',
-            (obj) => {
+            '/polov1.glb',
+            (gltf) => {
               if (!active) return;
-              const model = obj;
+              const model = gltf.scene;
 
               const box = new THREE.Box3().setFromObject(model);
               const center = new THREE.Vector3();
@@ -518,35 +598,45 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
               box.getSize(size);
               const maxDim = Math.max(size.x, size.y, size.z);
               const targetScale = 0.68 / maxDim;
-              // Make the polo model 15% wider (X-axis) to match a boxier fit
-              model.scale.set(targetScale * 1.1, targetScale, targetScale);
+              model.scale.set(targetScale, targetScale, targetScale);
 
               let mainMesh = null;
+              let mainMeshVolume = 0;
               model.traverse((child) => {
                 if (child.isMesh) {
-                  if (!mainMesh) mainMesh = child;
                   child.castShadow = true;
                   child.receiveShadow = true;
                   child.material = new THREE.MeshStandardMaterial({
                     color: new THREE.Color(currentColorRef.current),
-                    roughness: 0.8, metalness: 0.1
+                    roughness: 0.8,
+                    metalness: 0.1
                   });
+
+                  child.geometry.computeBoundingBox();
+                  const bb = child.geometry.boundingBox;
+                  if (bb) {
+                    const volume =
+                      (bb.max.x - bb.min.x) *
+                      (bb.max.y - bb.min.y) *
+                      (bb.max.z - bb.min.z);
+                    if (volume > mainMeshVolume) {
+                      mainMeshVolume = volume;
+                      mainMesh = child;
+                    }
+                  }
                 }
               });
 
               modelGroup.add(model);
               shirtMeshRef.current = mainMesh;
 
-              // Force update world matrix so DecalGeometry uses the scaled/positioned mesh
               model.updateMatrixWorld(true);
-
-              projectDecals();
+              applyDesignSurfaces();
               setLoading(false);
-
             },
             undefined,
             (err) => {
-              console.warn('OBJ load failed for polo, using procedural body + collar', err);
+              console.warn('GLB load failed for polo, using procedural body + collar', err);
               if (!active) return;
               // Fallback: procedural shirt body + collar
               isFallbackRef.current = true;
@@ -572,7 +662,7 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
               modelGroup.add(torso);
               shirtMeshRef.current = torso;
               addPoloCollar();
-              projectDecals();
+              applyDesignSurfaces();
               setLoading(false);
             }
           );
@@ -619,7 +709,7 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
 
               modelGroup.add(model);
               model.updateMatrixWorld(true);
-              projectDecals();
+              applyDesignSurfaces();
               setLoading(false);
             },
             undefined,
@@ -706,8 +796,8 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
     if (!modelGroup) return;
 
     modelGroup.traverse((child) => {
-      // Exclude ALL decal meshes from color overriding using userData flag
-      if (child.isMesh && !child.userData.isDecal) {
+      // Exclude design shell meshes from shirt color tinting
+      if (child.isMesh && !child.userData.isDesignShell) {
         if (child.material) {
           const THREE = ThreeModuleRef.current;
           if (THREE) {
@@ -725,14 +815,19 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
       }
     });
 
-    // Safety net: always reset decal material colors to pure white so they are never tinted
-    if (decalMeshFrontRef.current && decalMeshFrontRef.current.material) {
-      decalMeshFrontRef.current.material.color.set(0xffffff);
+    // Keep design shell textures untinted
+    if (designShellFrontRef.current?.material) {
+      designShellFrontRef.current.material.color.set(0xffffff);
     }
-    if (decalMeshBackRef.current && decalMeshBackRef.current.material) {
-      decalMeshBackRef.current.material.color.set(0xffffff);
+    if (designShellBackRef.current?.material) {
+      designShellBackRef.current.material.color.set(0xffffff);
     }
-  }, [tshirtColor]);
+  }, [tshirtColor, garmentType]);
+
+  // Toggle design shells when switching between 2D editor and 3D preview
+  useEffect(() => {
+    applyDesignSurfaces();
+  }, [hideDecals]);
 
   // Helper to safely render Fabric canvas without crashing on unmounted/disposed canvas context
   const safeRenderCanvas = (canvasObj) => {
@@ -771,8 +866,8 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
     if (frontTextureRef.current) frontTextureRef.current.needsUpdate = true;
     if (backTextureRef.current) backTextureRef.current.needsUpdate = true;
 
-    // Re-project BOTH decals to show up properly
-    projectDecals();
+    // Re-apply design surfaces for the active view
+    applyDesignSurfaces();
   }, [tshirtView, interactive]);
 
   // 4. Force Resize WebGL Renderer when tab visibility changes (solves 0x0 size bug when hidden)
@@ -794,7 +889,7 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
           renderer.setSize(width, height);
           
           // Re-project decals to align with updated scale
-          projectDecals();
+          applyDesignSurfaces();
 
           if (frontTextureRef.current) frontTextureRef.current.needsUpdate = true;
           if (backTextureRef.current) backTextureRef.current.needsUpdate = true;
