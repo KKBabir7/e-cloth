@@ -222,10 +222,20 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
         const THREE = await import('three');
         const { OrbitControls } = await import('three/examples/jsm/controls/OrbitControls.js');
         const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
+        const { DRACOLoader } = await import('three/examples/jsm/loaders/DRACOLoader.js');
 
         if (!active) return;
 
         ThreeModuleRef.current = THREE;
+
+        // Draco-compressed GLBs (optimized public/*.glb)
+        const dracoLoader = new DRACOLoader();
+        dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/');
+        const createGltfLoader = () => {
+          const loader = new GLTFLoader();
+          loader.setDRACOLoader(dracoLoader);
+          return loader;
+        };
 
         const container = containerRef.current;
         if (!container) return;
@@ -574,7 +584,7 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
 
         if (garmentType === 'polo') {
           isFallbackRef.current = false;
-          const loader = new GLTFLoader();
+          const loader = createGltfLoader();
           loader.load(
             '/polov1.glb',
             (gltf) => {
@@ -663,7 +673,7 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
 
         } else {
           // Regular t-shirt: Try loading GLB, fall back to procedural
-          const loader = new GLTFLoader();
+          const loader = createGltfLoader();
           const modelUrl = '/shirt_baked.glb';
 
           loader.load(
