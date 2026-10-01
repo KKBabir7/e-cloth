@@ -135,7 +135,7 @@ export default function AccountOrdersPage() {
                           </div>
                           <div>
                             <span className="fw-bold d-block" style={{ fontSize: '13px', maxWidth: '240px' }}>
-                              {item.isCustom ? `Custom Designed ${item.customDesignId?.productType === 'polo' ? 'Polo Shirt' : 'T-Shirt'}` : (item.productId ? item.productId.name : 'Custom Designed T-Shirt')}
+                              {item.isCustom ? `Custom Designed ${item.customDesignId?.productType === 'polo' ? 'Polo Shirt' : item.customDesignId?.productType === 'dropshoulder' ? 'Drop Shoulder T-Shirt' : 'T-Shirt'}` : (item.productId ? item.productId.name : 'Custom Designed T-Shirt')}
                               {item.isCustom && <span className="badge bg-primary ms-1" style={{ fontSize: '9px', padding: '2px 5px' }}>Custom</span>}
                             </span>
                             <span className="text-muted" style={{ fontSize: '11px' }}>

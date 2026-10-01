@@ -288,7 +288,7 @@ export default function AdminOrdersPage() {
                                 />
                               )}
                               <div>
-                                <span className="d-block">Custom Designed {item.customDesignId?.productType === 'polo' ? 'Polo Shirt' : 'T-Shirt'}</span>
+                                <span className="d-block">Custom Designed {item.customDesignId?.productType === 'polo' ? 'Polo Shirt' : item.customDesignId?.productType === 'dropshoulder' ? 'Drop Shoulder T-Shirt' : 'T-Shirt'}</span>
                                 <span className="badge bg-primary" style={{ fontSize: '9px' }}>Custom Design</span>
                               </div>
                             </div>

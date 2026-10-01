@@ -170,6 +170,7 @@ export default function SavedDesignsManagement() {
               <option value="all">👕 All Garment Types</option>
               <option value="tshirt">T-Shirt Only</option>
               <option value="polo">Polo Shirt Only</option>
+              <option value="dropshoulder">Drop Shoulder Only</option>
             </Form.Select>
           </Col>
         </Row>

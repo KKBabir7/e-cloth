@@ -131,7 +131,7 @@ function DesignContent() {
   const [activeTab, setActiveTab] = useState('text');
   const [selectedSize, setSelectedSize] = useState('L');
   const [displayMode, setDisplayMode] = useState('2d'); // 2d or 3d
-  const [garmentType, setGarmentType] = useState('tshirt'); // tshirt or polo
+  const [garmentType, setGarmentType] = useState('tshirt'); // tshirt | polo | dropshoulder
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [mobileActiveTab, setMobileActiveTab] = useState(null);
   const [isMounted, setIsMounted] = useState(false);
@@ -1296,6 +1296,8 @@ function DesignContent() {
     }
     
     if (shape) {
+      shape.set({ stroke: null, strokeWidth: 0 });
+      setShapeStrokeWidth(0);
       canvas.add(shape);
       canvas.setActiveObject(shape);
       canvas.renderAll();
@@ -1310,6 +1312,8 @@ function DesignContent() {
     
     fabric.Image.fromURL(url, (img) => {
       img.set({
+        stroke: null,
+        strokeWidth: 0,
         left: 80,
         top: 80,
         scaleX: 0.20,
@@ -1348,6 +1352,8 @@ function DesignContent() {
       
       fabric.Image.fromURL(data, (img) => {
         img.set({
+          stroke: null,
+          strokeWidth: 0,
           left: 40,
           top: 60,
           scaleX: 0.25,
@@ -1511,7 +1517,7 @@ function DesignContent() {
         // 2. Push Saved ID into global Redux Cart Slice
         dispatch(addToCart({
           productId: productId || 'custom-apparel-001',
-          name: `Custom Premium ${garmentType === 'polo' ? 'Polo' : 'T-Shirt'} (${tshirtColor === '#ffffff' ? 'White' : 'Colored'})`,
+          name: `Custom Premium ${garmentType === 'polo' ? 'Polo' : garmentType === 'dropshoulder' ? 'Drop Shoulder T-Shirt' : 'T-Shirt'} (${tshirtColor === '#ffffff' ? 'White' : 'Colored'})`,
           price: finalPrice, // Dynamic pricing per color + text charges!
           image: previewImg,
           size: selectedSize,
@@ -2463,7 +2469,10 @@ function DesignContent() {
                               if (canvas) {
                                 const activeObj = canvas.getActiveObject();
                                 if (activeObj && activeObj.type !== 'i-text' && activeObj.type !== 'text' && activeObj.type !== 'image') {
-                                  activeObj.set({ strokeWidth: val });
+                                  activeObj.set({
+                                    strokeWidth: val,
+                                    stroke: val > 0 ? (activeObj.stroke || shapeStrokeColor) : null
+                                  });
                                   canvas.renderAll();
                                   canvas.fire('object:modified', { target: activeObj });
                                 }
@@ -2848,6 +2857,7 @@ if (isMounted && isMobileView) {
                                     <div className="d-flex gap-1">
                                       <button type="button" onClick={() => setGarmentType('tshirt')} className={`flex-fill border py-1 rounded-2 fw-bold ${garmentType === 'tshirt' ? 'bg-dark text-white shadow-sm' : 'bg-light text-secondary border-light'}`} style={{ fontSize: '10px' }}>T-Shirt</button>
                                       <button type="button" onClick={() => setGarmentType('polo')} className={`flex-fill border py-1 rounded-2 fw-bold ${garmentType === 'polo' ? 'bg-dark text-white shadow-sm' : 'bg-light text-secondary border-light'}`} style={{ fontSize: '10px' }}>Polo</button>
+                                      <button type="button" onClick={() => setGarmentType('dropshoulder')} className={`flex-fill border py-1 rounded-2 fw-bold ${garmentType === 'dropshoulder' ? 'bg-dark text-white shadow-sm' : 'bg-light text-secondary border-light'}`} style={{ fontSize: '10px' }}>Drop Shoulder</button>
                                     </div>
                                   </div>
                                   <div>
@@ -3293,28 +3303,24 @@ if (isMounted && isMobileView) {
               {/* Garment Type Selector */}
               <p style={{ fontSize: '10px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>👕 Garment Type</p>
               <div className="d-flex gap-1 mb-3" style={{ background: '#e2e8f0', borderRadius: '10px', padding: '4px' }}>
-                <button
-                  onClick={() => setGarmentType('tshirt')}
-                  style={{
-                    flex: 1, border: 'none', borderRadius: '7px', padding: '7px 0',
-                    fontSize: '11px', fontWeight: 700, cursor: 'pointer',
-                    background: garmentType === 'tshirt' ? 'linear-gradient(135deg,#ff8525,#e53e3e)' : 'transparent',
-                    color: garmentType === 'tshirt' ? '#fff' : '#64748b',
-                    transition: 'all 0.25s ease',
-                    boxShadow: garmentType === 'tshirt' ? '0 2px 8px rgba(229,62,62,0.3)' : 'none'
-                  }}
-                >👕 T-Shirt</button>
-                <button
-                  onClick={() => setGarmentType('polo')}
-                  style={{
-                    flex: 1, border: 'none', borderRadius: '7px', padding: '7px 0',
-                    fontSize: '11px', fontWeight: 700, cursor: 'pointer',
-                    background: garmentType === 'polo' ? 'linear-gradient(135deg,#ff8525,#e53e3e)' : 'transparent',
-                    color: garmentType === 'polo' ? '#fff' : '#64748b',
-                    transition: 'all 0.25s ease',
-                    boxShadow: garmentType === 'polo' ? '0 2px 8px rgba(229,62,62,0.3)' : 'none'
-                  }}
-                >🎽 Polo</button>
+                {[
+                  { type: 'tshirt', label: '👕 T-Shirt' },
+                  { type: 'polo', label: '🎽 Polo' },
+                  { type: 'dropshoulder', label: '🧥 Drop Shoulder' }
+                ].map(({ type, label }) => (
+                  <button
+                    key={type}
+                    onClick={() => setGarmentType(type)}
+                    style={{
+                      flex: 1, border: 'none', borderRadius: '7px', padding: '7px 2px',
+                      fontSize: '11px', fontWeight: 700, cursor: 'pointer', lineHeight: 1.2,
+                      background: garmentType === type ? 'linear-gradient(135deg,#ff8525,#e53e3e)' : 'transparent',
+                      color: garmentType === type ? '#fff' : '#64748b',
+                      transition: 'all 0.25s ease',
+                      boxShadow: garmentType === type ? '0 2px 8px rgba(229,62,62,0.3)' : 'none'
+                    }}
+                  >{label}</button>
+                ))}
               </div>
 
               {/* 2D / 3D Toggle */}
@@ -3430,6 +3436,12 @@ if (isMounted && isMobileView) {
             style={{ fontSize: '10.5px', borderRadius: '5px' }}
             onClick={() => setGarmentType('polo')}
           >🎽 Polo</button>
+          <button 
+            type="button"
+            className={`btn btn-xs py-1 px-2 fw-bold border-0 ${garmentType === 'dropshoulder' ? 'bg-danger text-white shadow-sm' : 'text-secondary bg-transparent'}`}
+            style={{ fontSize: '10.5px', borderRadius: '5px' }}
+            onClick={() => setGarmentType('dropshoulder')}
+          >🧥 Drop</button>
         </div>
 
         <div className="d-flex align-items-center gap-1 bg-light p-1 rounded-3">

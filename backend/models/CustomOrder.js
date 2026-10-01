@@ -14,7 +14,7 @@ const customOrderSchema = new mongoose.Schema({
   productType: {
     type: String,
     required: true,
-    enum: ['tshirt', 'polo']
+    enum: ['tshirt', 'polo', 'dropshoulder']
   },
   productId: {
     type: mongoose.Schema.Types.ObjectId,
