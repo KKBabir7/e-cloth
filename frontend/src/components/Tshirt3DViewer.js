@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Spinner } from 'react-bootstrap';
 
-export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCanvas, backFabricCanvas, visible = true, interactive = true, hideDecals = false, cameraZOffset = 0.95, enableZoom = true, garmentType = 'tshirt' }) {
+export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCanvas, backFabricCanvas, visible = true, interactive = true, hideDecals = false, cameraZOffset = 0.95, enableZoom = true, garmentType = 'tshirt', viewPadding = 0 }) {
   const containerRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
@@ -25,6 +25,21 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
   const targetCameraZRef = useRef(tshirtView === 'front' ? cameraZOffset : -cameraZOffset);
   const isAnimatingCameraRef = useRef(false);
 
+  // viewPadding = extra container height above AND below the calibrated area, as a
+  // fraction of it. Widening the FOV by the same ratio keeps the shirt's on-screen size.
+  const BASE_FOV = 40;
+  const getFov = (padding) =>
+    (2 * Math.atan(Math.tan((BASE_FOV * Math.PI) / 360) * (1 + 2 * padding)) * 180) / Math.PI;
+  const viewPaddingRef = useRef(viewPadding);
+
+  useEffect(() => {
+    viewPaddingRef.current = viewPadding;
+    const camera = cameraRef.current;
+    if (!camera) return;
+    camera.fov = getFov(viewPadding);
+    camera.updateProjectionMatrix();
+  }, [viewPadding]);
+
   const hideDecalsRef = useRef(hideDecals);
 
   useEffect(() => {
@@ -39,6 +54,19 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
   const getFabricCanvasEl = (fabricCanvas) => {
     if (!fabricCanvas) return null;
     return fabricCanvas.lowerCanvasEl || fabricCanvas.getElement?.() || null;
+  };
+
+  // GPU texture storage is fixed-size: when the Fabric canvas is resized
+  // (stage zoom), drop the old storage so it is re-allocated at the new size.
+  const refreshCanvasTexture = (texture) => {
+    if (!texture || !texture.image) return;
+    const { width, height } = texture.image;
+    if (texture.userData.width !== width || texture.userData.height !== height) {
+      if (texture.userData.width !== undefined) texture.dispose();
+      texture.userData.width = width;
+      texture.userData.height = height;
+    }
+    texture.needsUpdate = true;
   };
 
   // The print is drawn by the shirt's own shader: one surface, so it can't
@@ -160,6 +188,7 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
     let renderer, scene, camera, controls;
     let animationFrameId;
     let dracoLoader;
+    let resizeObserver;
 
     const initThree = async () => {
       try {
@@ -188,7 +217,7 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
         scene.background = null;
 
         // ── Camera ──
-        camera = new THREE.PerspectiveCamera(40, container.clientWidth / container.clientHeight, 0.1, 100);
+        camera = new THREE.PerspectiveCamera(getFov(viewPaddingRef.current), container.clientWidth / container.clientHeight, 0.1, 100);
         cameraRef.current = camera;
         camera.position.set(targetCameraXRef.current, targetCameraYRef.current, targetCameraZRef.current);
 
@@ -252,9 +281,7 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
             texFront.premultiplyAlpha = true;
             frontTextureRef.current = texFront;
 
-            frontFabricCanvas.on('after:render', () => {
-              if (frontTextureRef.current) frontTextureRef.current.needsUpdate = true;
-            });
+            frontFabricCanvas.on('after:render', () => refreshCanvasTexture(frontTextureRef.current));
           }
         }
 
@@ -268,9 +295,7 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
             texBack.premultiplyAlpha = true;
             backTextureRef.current = texBack;
 
-            backFabricCanvas.on('after:render', () => {
-              if (backTextureRef.current) backTextureRef.current.needsUpdate = true;
-            });
+            backFabricCanvas.on('after:render', () => refreshCanvasTexture(backTextureRef.current));
           }
         }
 
@@ -705,12 +730,16 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
         // ── Handle Resize ──
         const handleResize = () => {
           if (!container || !camera || !renderer) return;
+          if (!container.clientWidth || !container.clientHeight) return;
           camera.aspect = container.clientWidth / container.clientHeight;
           camera.updateProjectionMatrix();
           renderer.setSize(container.clientWidth, container.clientHeight);
         };
 
         window.addEventListener('resize', handleResize);
+        // Parent stage can resize without a window resize (desktop stage scaling)
+        resizeObserver = new ResizeObserver(handleResize);
+        resizeObserver.observe(container);
 
         // Cleanup
         return () => {
@@ -731,6 +760,7 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
     return () => {
       active = false;
       cancelAnimationFrame(animationFrameId);
+      resizeObserver?.disconnect();
       try {
         dracoLoader?.dispose?.();
       } catch (e) {}
@@ -788,8 +818,8 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
     if (!hideDecals) {
       safeRenderCanvas(frontFabricCanvas);
       safeRenderCanvas(backFabricCanvas);
-      if (frontTextureRef.current) frontTextureRef.current.needsUpdate = true;
-      if (backTextureRef.current) backTextureRef.current.needsUpdate = true;
+      refreshCanvasTexture(frontTextureRef.current);
+      refreshCanvasTexture(backTextureRef.current);
     }
     applyShirtPrint();
   }, [hideDecals]);
@@ -813,8 +843,8 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
     safeRenderCanvas(backFabricCanvas);
 
     // Force update texture maps
-    if (frontTextureRef.current) frontTextureRef.current.needsUpdate = true;
-    if (backTextureRef.current) backTextureRef.current.needsUpdate = true;
+    refreshCanvasTexture(frontTextureRef.current);
+    refreshCanvasTexture(backTextureRef.current);
 
     // Re-apply design surfaces for the active view
     applyShirtPrint();
@@ -840,8 +870,8 @@ export default function Tshirt3DViewer({ tshirtColor, tshirtView, frontFabricCan
           
           applyShirtPrint();
 
-          if (frontTextureRef.current) frontTextureRef.current.needsUpdate = true;
-          if (backTextureRef.current) backTextureRef.current.needsUpdate = true;
+          refreshCanvasTexture(frontTextureRef.current);
+          refreshCanvasTexture(backTextureRef.current);
         }
       };
 

@@ -175,6 +175,80 @@ function DesignContent() {
   }, [mobileDrawerOpen]);
 
 
+  // Desktop stage: 3D view + 240×440 print canvas are calibrated at 500px tall.
+  // The stage scales as one unit to fill the window; designs keep 240×440 coordinates.
+  const STAGE_BASE_HEIGHT = 500;
+  const STAGE_BASE_WIDTH = 540; // widest garment (drop shoulder) fits without clipping sleeves
+  const STAGE_FILL = 0.9; // leave headroom so the collar isn't clipped by the frame edge
+  const desktopFrameRef = useRef(null);
+  const [stageScale, setStageScale] = useState(1);
+  const [frameHeight, setFrameHeight] = useState(STAGE_BASE_HEIGHT);
+
+  useEffect(() => {
+    if (!isMounted || isMobileView) {
+      setStageScale(1);
+      setFrameHeight(STAGE_BASE_HEIGHT);
+      return;
+    }
+    const frame = desktopFrameRef.current;
+    if (!frame) return;
+    const update = () => {
+      const fit = Math.min(
+        (frame.clientHeight * STAGE_FILL) / STAGE_BASE_HEIGHT,
+        frame.clientWidth / STAGE_BASE_WIDTH
+      );
+      setStageScale(Math.max(1, Math.round(fit * 1000) / 1000));
+      setFrameHeight(frame.clientHeight);
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(frame);
+    return () => observer.disconnect();
+  }, [isMounted, isMobileView]);
+
+  // Mobile: fixed-size frame (whole shirt + collar headroom around the 500px stage),
+  // scaled with CSS to fit the visible area above the bottom toolbar / open drawer.
+  const MOBILE_FRAME_W = 560;
+  const MOBILE_FRAME_H = 600;
+  const MOBILE_STAGE_TOP = (MOBILE_FRAME_H - STAGE_BASE_HEIGHT) / 2;
+  const mobileCanvasAreaRef = useRef(null);
+  const [mobileFit, setMobileFit] = useState({ scale: 0.6, centerY: 0 });
+
+  useEffect(() => {
+    if (!isMounted || !isMobileView) return;
+    const area = mobileCanvasAreaRef.current;
+    if (!area) return;
+    const TOOLBAR_HEIGHT = 52;
+    const GAP = 8;
+    const update = () => {
+      const rect = area.getBoundingClientRect();
+      const visibleTop = Math.max(rect.top, 0);
+      const drawerHeight = mobileActiveTab ? window.innerHeight * 0.3 : 0;
+      const visibleBottom = window.innerHeight - TOOLBAR_HEIGHT - drawerHeight;
+      const availH = Math.max(visibleBottom - visibleTop - GAP * 2, 100);
+      const availW = Math.max(rect.width - GAP * 2, 100);
+      const scale = Math.min(availW / MOBILE_FRAME_W, availH / MOBILE_FRAME_H, 1.3);
+      setMobileFit({ scale, centerY: visibleTop - rect.top + GAP + availH / 2 });
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(area);
+    window.addEventListener('resize', update);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', update);
+    };
+  }, [isMounted, isMobileView, mobileActiveTab]);
+
+  useEffect(() => {
+    [frontCanvas, backCanvas].forEach((c) => {
+      if (!c || !c.lowerCanvasEl) return;
+      c.setDimensions({ width: 240 * stageScale, height: 440 * stageScale });
+      c.setZoom(stageScale);
+      c.requestRenderAll();
+    });
+  }, [frontCanvas, backCanvas, stageScale]);
+
   // Derived active canvas instance
   const canvas = tshirtView === 'front' ? frontCanvas : backCanvas;
 
@@ -757,7 +831,7 @@ function DesignContent() {
 
     const clampObject = (obj, maxHeight) => {
       if (!obj) return;
-      const bounds = obj.getBoundingRect();
+      const bounds = obj.getBoundingRect(true);
       if (obj.left < 0) {
         obj.left = 0;
       } else if (obj.left + bounds.width > 240) {
@@ -2749,18 +2823,26 @@ if (isMounted && isMobileView) {
         </div>
 
         {/* Canvas Area */}
-        <div className="editor-mobile-canvas position-relative flex-grow-1" style={{ overflow: 'hidden', paddingBottom: '52px' }}>
-            <div className="position-absolute start-50 top-50 translate-middle" style={{ zIndex: 1, marginTop: '-45px' }}>
-                <div style={{ transform: `scale(${Math.min(mobileScale * 1.65, 1.3)})`, transformOrigin: 'center center' }}>
+        <div ref={mobileCanvasAreaRef} className="editor-mobile-canvas position-relative flex-grow-1" style={{ overflow: 'hidden', paddingBottom: '52px' }}>
+            <div
+              className="position-absolute start-50"
+              style={{
+                zIndex: 1,
+                top: `${mobileFit.centerY}px`,
+                transform: `translate(-50%, -50%) scale(${mobileFit.scale})`,
+                transformOrigin: 'center center'
+              }}
+            >
                   <div 
                     className="position-relative shadow rounded-4 overflow-hidden canvas-frame-box" 
                     style={{
-                      width: '420px',
-                      height: '530px',
+                      width: `${MOBILE_FRAME_W}px`,
+                      height: `${MOBILE_FRAME_H}px`,
                       backgroundColor: '#F8FAFC',
                       border: '1px solid #E2E8F0'
                     }}
                   >
+                    {/* 3D fills the frame; viewPadding keeps the shirt calibrated to the centered 500px stage */}
                     <div className="position-absolute w-100 h-100 top-0 start-0" style={{ zIndex: 1 }}>
                       <Tshirt3DViewer 
                         tshirtColor={tshirtColor}
@@ -2771,12 +2853,15 @@ if (isMounted && isMobileView) {
                         interactive={displayMode === '3d'}
                         hideDecals={displayMode === '2d'}
                         garmentType={garmentType}
+                        viewPadding={MOBILE_STAGE_TOP / STAGE_BASE_HEIGHT}
                       />
                     </div>
                     <div 
-                      className="position-absolute w-100 h-100 top-0 start-0" 
+                      className="position-absolute w-100 start-0" 
                       style={{ 
                         zIndex: 2,
+                        top: `${MOBILE_STAGE_TOP}px`,
+                        height: `${STAGE_BASE_HEIGHT}px`,
                         display: displayMode === '2d' ? 'block' : 'none',
                         pointerEvents: 'auto'
                       }}
@@ -2809,7 +2894,6 @@ if (isMounted && isMobileView) {
                       </div>
                     </div>
                   </div>
-                </div>
             </div>
 
 
@@ -3198,44 +3282,58 @@ if (isMounted && isMobileView) {
             
 
 
-            {/* Unified T-Shirt 3D/2D Viewer Frame */}
+            {/* Unified T-Shirt 3D/2D Viewer Frame — fills the window height on desktop */}
             <div 
-              className="position-relative shadow rounded-4 overflow-hidden canvas-frame-box" 
+              ref={desktopFrameRef}
+              className="position-relative shadow rounded-4 overflow-hidden canvas-frame-box d-flex align-items-center justify-content-center" 
               style={{
                 width: '100%',
                 margin: '0 auto',
-                height: isMobileView ? '100vh' : '500px',
+                height: isMobileView ? '100vh' : 'calc(100vh - 160px)',
+                minHeight: isMobileView ? undefined : `${Math.ceil(STAGE_BASE_HEIGHT / STAGE_FILL)}px`,
                 backgroundColor: '#F8FAFC',
                 border: '1px solid #E2E8F0',
                 transition: 'all 0.3s ease'
               }}
             >
               
-              {/* Scale Fitting Wrapper for mobile */}
+              {/* Scale Fitting Wrapper for mobile / scaled stage centered on desktop */}
               <div 
-                className={isMobileView ? "position-absolute start-50 top-50 translate-middle" : "position-absolute w-100 h-100 top-0 start-0"}
+                className={isMobileView ? "position-absolute start-50 top-50 translate-middle" : "position-relative w-100"}
                 style={isMobileView ? {
                   width: '380px',
                   height: '500px',
                   transform: `scale(${mobileScale})`,
                   transformOrigin: 'center center',
                   pointerEvents: 'auto'
-                } : {}}
+                } : { height: `${STAGE_BASE_HEIGHT * stageScale}px`, flexShrink: 0 }}
               >
                 
-                {/* 3D Model Base Layer (Always visible, rotates only in 3D mode) */}
-                <div className="position-absolute w-100 h-100 top-0 start-0" style={{ zIndex: 1 }}>
-                  <Tshirt3DViewer 
-                    tshirtColor={tshirtColor}
-                    tshirtView={tshirtView}
-                    frontFabricCanvas={frontCanvas}
-                    backFabricCanvas={backCanvas}
-                    visible={true}
-                    interactive={displayMode === '3d'}
-                    hideDecals={displayMode === '2d'}
-                    garmentType={garmentType}
-                  />
-                </div>
+                {/* 3D Model Base Layer (Always visible, rotates only in 3D mode).
+                    On desktop it bleeds past the stage to fill the frame; viewPadding widens
+                    the camera FOV by the same ratio so the shirt stays aligned with the print area. */}
+                {(() => {
+                  const stageHeight = STAGE_BASE_HEIGHT * stageScale;
+                  const bleed = isMobileView ? 0 : Math.max(0, (frameHeight - stageHeight) / 2);
+                  return (
+                    <div
+                      className="position-absolute w-100 start-0"
+                      style={{ zIndex: 1, top: `${-bleed}px`, height: `${stageHeight + bleed * 2}px` }}
+                    >
+                      <Tshirt3DViewer 
+                        tshirtColor={tshirtColor}
+                        tshirtView={tshirtView}
+                        frontFabricCanvas={frontCanvas}
+                        backFabricCanvas={backCanvas}
+                        visible={true}
+                        interactive={displayMode === '3d'}
+                        hideDecals={displayMode === '2d'}
+                        garmentType={garmentType}
+                        viewPadding={bleed / stageHeight}
+                      />
+                    </div>
+                  );
+                })()}
 
                 {/* 2D Interactive Design Layer (Only overlays in 2D mode, transparent background) */}
                 <div 
@@ -3248,10 +3346,10 @@ if (isMounted && isMobileView) {
                 >
                   {/* Printable chest grid bounds marker */}
                   <div className="position-absolute border border-dashed border-danger border-opacity-50" style={{
-                    width: '242px',
-                    height: '442px',
-                    top: '25px',
-                    left: 'calc(50% - 121px)',
+                    width: `${242 * stageScale}px`,
+                    height: `${442 * stageScale}px`,
+                    top: `${25 * stageScale}px`,
+                    left: `calc(50% - ${121 * stageScale}px)`,
                     zIndex: 3,
                     pointerEvents: 'none'
                   }}>
@@ -3260,8 +3358,8 @@ if (isMounted && isMobileView) {
 
                   {/* Absolute Canvas overlay wrapper for Front */}
                   <div className="position-absolute" style={{
-                    top: '25px',
-                    left: 'calc(50% - 121px)',
+                    top: `${25 * stageScale}px`,
+                    left: `calc(50% - ${121 * stageScale}px)`,
                     zIndex: 4,
                     display: tshirtView === 'front' ? 'block' : 'none'
                   }}>
@@ -3270,8 +3368,8 @@ if (isMounted && isMobileView) {
 
                   {/* Absolute Canvas overlay wrapper for Back */}
                   <div className="position-absolute" style={{
-                    top: '25px',
-                    left: 'calc(50% - 121px)',
+                    top: `${25 * stageScale}px`,
+                    left: `calc(50% - ${121 * stageScale}px)`,
                     zIndex: 4,
                     display: tshirtView === 'back' ? 'block' : 'none'
                   }}>
