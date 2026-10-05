@@ -20,6 +20,18 @@ import { useQuery } from '@tanstack/react-query';
 import { getBackendUrl } from '@/utils/api';
 import Tshirt3DViewer from '../../components/Tshirt3DViewer';
 import CustomSelect from '../../components/CustomSelect';
+import { avroParse } from '@/utils/avroPhonetic';
+
+// Google Fonts with Bengali glyphs, listed first in the font picker
+const BANGLA_FONTS = [
+  "Hind Siliguri", "Noto Sans Bengali", "Noto Serif Bengali", "Baloo Da 2",
+  "Anek Bangla", "Tiro Bangla", "Galada", "Atma", "Mina",
+];
+const DEFAULT_BANGLA_FONT = "Hind Siliguri";
+const BANGLA_CHAR_REGEX = /[\u0980-\u09FF]/;
+const PHONETIC_WORD_REGEX = /^[A-Za-z0-9`^:]+$/;
+
+const getFontLabel = (font) => (BANGLA_FONTS.includes(font) ? `${font} (বাংলা)` : font);
 
 // 100+ Premium Google Fonts for T-Shirt customization
 const POPULAR_FONTS = [
@@ -56,45 +68,43 @@ const DEMO_STICKERS = [
   { name: "Pizza Slice", url: "https://fonts.gstatic.com/s/e/notoemoji/latest/1f355/512.png" }
 ];
 
-// Helper to dynamically load font link from Google Fonts on-demand
-const loadFontDynamically = (fontName) => {
-  if (typeof window === 'undefined') return Promise.resolve();
-  
-  const webSafe = ['Impact', 'Courier New', 'Times New Roman', 'Arial', 'Georgia', 'Verdana'];
-  if (webSafe.includes(fontName)) {
-    return Promise.resolve();
-  }
+const WEB_SAFE_FONTS = ['Impact', 'Courier New', 'Times New Roman', 'Arial', 'Georgia', 'Verdana'];
+const fontStylesheetPromises = new Map();
 
-  const linkId = `gfont-${fontName.replace(/\s+/g, '-').toLowerCase()}`;
-  if (document.getElementById(linkId)) {
-    return Promise.resolve();
+const ensureFontStylesheet = (fontName) => {
+  if (!fontStylesheetPromises.has(fontName)) {
+    fontStylesheetPromises.set(fontName, new Promise((resolve) => {
+      const link = document.createElement('link');
+      link.id = `gfont-${fontName.replace(/\s+/g, '-').toLowerCase()}`;
+      link.rel = 'stylesheet';
+      link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontName)}:wght@400;700&display=swap`;
+      link.onload = () => resolve();
+      link.onerror = () => resolve();
+      document.head.appendChild(link);
+    }));
   }
+  return fontStylesheetPromises.get(fontName);
+};
 
-  return new Promise((resolve) => {
-    const link = document.createElement('link');
-    link.id = linkId;
-    link.rel = 'stylesheet';
-    link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontName)}:wght@400;700&display=swap`;
-    link.onload = () => {
-      if (document.fonts) {
-        document.fonts.load(`1em "${fontName}"`)
-          .then(() => resolve())
-          .catch(() => resolve());
-      } else {
-        resolve();
-      }
-    };
-    link.onerror = () => resolve();
-    document.head.appendChild(link);
-  });
+// Google Fonts splits each family into per-script files (latin, bengali, ...) that the browser
+// only downloads for characters it is asked to render, so the actual text must be passed in —
+// otherwise canvas draws Bangla with a system fallback font.
+const loadFontDynamically = async (fontName, sampleText = 'Aa', variant = 'normal normal') => {
+  if (typeof window === 'undefined' || !fontName) return;
+  if (WEB_SAFE_FONTS.includes(fontName)) return;
+
+  await ensureFontStylesheet(fontName);
+  if (document.fonts) {
+    await document.fonts.load(`${variant} 1em "${fontName}"`, sampleText || 'Aa').catch(() => {});
+  }
 };
 
 // Helper to construct a single combined lightweight stylesheet for select dropdown previews (subsetted to font name)
 const getFontsPreviewStylesheetUrl = () => {
   const baseUrl = "https://fonts.googleapis.com/css2?";
-  const familyParams = POPULAR_FONTS.map(font => {
-    if (['Impact', 'Courier New', 'Times New Roman', 'Arial', 'Georgia', 'Verdana'].includes(font)) return '';
-    return `family=${encodeURIComponent(font)}&text=${encodeURIComponent(font)}`;
+  const familyParams = [...BANGLA_FONTS, ...POPULAR_FONTS].map(font => {
+    if (WEB_SAFE_FONTS.includes(font)) return '';
+    return `family=${encodeURIComponent(font)}&text=${encodeURIComponent(getFontLabel(font))}`;
   }).filter(Boolean).join('&');
   return `${baseUrl}${familyParams}&display=swap`;
 };
@@ -267,6 +277,9 @@ function DesignContent() {
   const [strokeColor, setStrokeColor] = useState('#ffffff');
   const [strokeWidth, setStrokeWidth] = useState(0);
   const [textOpacity, setTextOpacity] = useState(1);
+  const [banglaTyping, setBanglaTyping] = useState(false);
+  // Avro phonetic: `raw` is the English being typed for the current word, `prefix` the text before it
+  const phoneticRef = useRef({ prefix: '', raw: '' });
 
   // Layer Panel States & Hooks
   const [layersList, setLayersList] = useState([]);
@@ -829,6 +842,13 @@ function DesignContent() {
 
     const fabric = require('fabric').fabric;
 
+    // Fabric's default splitter treats each UTF-16 unit as a character, which detaches Bangla
+    // vowel signs and conjuncts when text is drawn per character (curved text, letter spacing).
+    if (typeof Intl !== 'undefined' && Intl.Segmenter) {
+      const graphemeSegmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+      fabric.util.string.graphemeSplit = (text) => Array.from(graphemeSegmenter.segment(text), (s) => s.segment);
+    }
+
     const clampObject = (obj, maxHeight) => {
       if (!obj) return;
       const bounds = obj.getBoundingRect(true);
@@ -956,6 +976,7 @@ function DesignContent() {
     loadFontDynamically('Outfit');
     loadFontDynamically('Pacifico');
     loadFontDynamically('Lobster');
+    loadFontDynamically(DEFAULT_BANGLA_FONT, 'Aa বাংলা');
 
     // 2. Load lightweight combined preview stylesheet
     if (typeof window !== 'undefined') {
@@ -995,7 +1016,16 @@ function DesignContent() {
             });
           };
 
-          // 2. Load canvas JSON in parallel
+          // 2. Load the fonts used by text layers first so they don't render with a fallback font
+          const savedTextObjects = [design.canvasJson?.front, design.canvasJson?.back]
+            .map((json) => (typeof json === 'string' ? JSON.parse(json) : json))
+            .flatMap((json) => json?.objects || [])
+            .filter((obj) => obj.type === 'i-text' || obj.type === 'text');
+          await Promise.all(savedTextObjects.map((obj) =>
+            loadFontDynamically(obj.fontFamily, obj.text, `${obj.fontStyle || 'normal'} ${obj.fontWeight || 'normal'}`)
+          ));
+
+          // 3. Load canvas JSON in parallel
           await Promise.all([
             loadCanvasPromise(frontCanvas, design.canvasJson?.front),
             loadCanvasPromise(backCanvas, design.canvasJson?.back)
@@ -1027,7 +1057,7 @@ function DesignContent() {
             });
           });
           
-          // 3. Auto-select first loaded layer to sync editor sidebar panels
+          // 4. Auto-select first loaded layer to sync editor sidebar panels
           const frontObjects = frontCanvas.getObjects();
           const backObjects = backCanvas.getObjects();
           
@@ -1086,13 +1116,71 @@ function DesignContent() {
 
   
 
+  const handleTextInputChange = (e) => {
+    const next = e.target.value;
+    const prev = textInput;
+
+    const commit = (value) => {
+      setTextInput(value);
+      // Latin-only fonts can't draw Bangla, so switch once when Bangla first appears
+      if (BANGLA_CHAR_REGEX.test(value) && !BANGLA_CHAR_REGEX.test(prev) && !BANGLA_FONTS.includes(fontFamily)) {
+        loadFontDynamically(DEFAULT_BANGLA_FONT, value).then(() => setFontFamily(DEFAULT_BANGLA_FONT));
+      }
+    };
+
+    if (!banglaTyping) {
+      commit(next);
+      return;
+    }
+
+    const phonetic = phoneticRef.current;
+    if (prev !== phonetic.prefix + avroParse(phonetic.raw)) {
+      phonetic.prefix = prev;
+      phonetic.raw = '';
+    }
+
+    if (next.length > prev.length && next.startsWith(prev)) {
+      const added = next.slice(prev.length);
+      if (PHONETIC_WORD_REGEX.test(added)) {
+        phonetic.raw += added;
+        commit(phonetic.prefix + avroParse(phonetic.raw));
+      } else {
+        const converted = phonetic.prefix + avroParse(phonetic.raw + added);
+        phonetic.prefix = converted;
+        phonetic.raw = '';
+        commit(converted);
+      }
+      return;
+    }
+
+    if (phonetic.raw && next.length === prev.length - 1 && prev.startsWith(next)) {
+      phonetic.raw = phonetic.raw.slice(0, -1);
+      commit(phonetic.prefix + avroParse(phonetic.raw));
+      return;
+    }
+
+    phonetic.prefix = next;
+    phonetic.raw = '';
+    commit(next);
+  };
+
+  const handleToggleBanglaTyping = async () => {
+    const enabling = !banglaTyping;
+    phoneticRef.current = { prefix: textInput, raw: '' };
+    setBanglaTyping(enabling);
+    if (enabling && !BANGLA_FONTS.includes(fontFamily)) {
+      await loadFontDynamically(DEFAULT_BANGLA_FONT, 'Aa বাংলা');
+      setFontFamily(DEFAULT_BANGLA_FONT);
+    }
+  };
+
   // Add Layer: Text
   const handleAddText = async () => {
     if (!canvas) return;
     const fabric = require('fabric').fabric;
     
     showToast('Loading font style...', 'info');
-    await loadFontDynamically(fontFamily);
+    await loadFontDynamically(fontFamily, textInput || 'Your Text', `${fontStyle} ${fontWeight}`);
 
     const text = new fabric.IText(textInput || 'Your Text', {
       left: 50,
@@ -1124,21 +1212,8 @@ function DesignContent() {
     canvas.setActiveObject(text);
     canvas.renderAll();
     showToast('Text layer added!', 'success');
-
-    // RESET formatting states so that the next added text doesn't inherit previous styles
-    setTextInput('CUSTOMWEAR');
-    setTextColor('#000000');
-    setFontSize(24);
-    setFontFamily('Outfit');
-    setFontWeight('normal');
-    setTextAlign('center');
-    setFontStyle('normal');
-    setIsUnderline(false);
-    setIsLinethrough(false);
-    setLetterSpacing(0);
-    setTextBend(0);
-    setStrokeColor('#ffffff');
-    setStrokeWidth(0);
+    // No form reset here: setActiveObject fires selection:created, which syncs the sidebar to the
+    // new layer, and the live-update effect would copy any reset values onto that layer.
   };
 
   // Update Active Layer Text Styles (loads Google Fonts dynamically)
@@ -1151,7 +1226,9 @@ function DesignContent() {
         return;
       }
       if (document.fonts) {
-        document.fonts.load(`1em "${fontFamily}"`).then(() => {
+        loadFontDynamically(fontFamily, textInput, `${fontStyle} ${fontWeight}`).then(() => {
+          // Drop glyph widths fabric measured before the font (or its Bengali subset) arrived
+          require('fabric').fabric.util.clearFabricFontCache(fontFamily);
           const updatedProps = {
             text: textInput,
             fill: textColor,
@@ -1175,6 +1252,7 @@ function DesignContent() {
           }
 
           activeObj.set(updatedProps);
+          activeObj.initDimensions();
 
           // Apply text bending (curved text)
           if (textBend === 0) {
@@ -1657,37 +1735,69 @@ function DesignContent() {
                   <Form.Group>
                     <div className="d-flex align-items-center justify-content-between mb-1">
                       <label className="fw-bold mb-1 text-secondary text-capitalize m-0 d-block" style={{ letterSpacing: '0.4px', fontSize: '9px' }}>Text Content</label>
-                      <button 
-                        type="button" 
-                        className="btn-format-tool active"
-                        style={{ width: '20px', height: '20px', borderRadius: '4px' }}
-                        onClick={handleAddText}
-                        title="Add Text Layer"
-                      >
-                        <IoAdd size={12} />
-                      </button>
+                      <div className="d-flex align-items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={handleToggleBanglaTyping}
+                          title={banglaTyping ? 'Bangla phonetic typing on (ami → আমি). Click to type English.' : 'Type Bangla with an English keyboard (ami → আমি)'}
+                          aria-pressed={banglaTyping}
+                          className="border fw-bold"
+                          style={{
+                            height: '20px',
+                            padding: '0 8px',
+                            borderRadius: '10px',
+                            fontSize: '10px',
+                            lineHeight: '18px',
+                            fontFamily: `"${DEFAULT_BANGLA_FONT}", sans-serif`,
+                            backgroundColor: banglaTyping ? '#ff8525' : '#ffffff',
+                            borderColor: banglaTyping ? '#ff8525' : '#E2E8F0',
+                            color: banglaTyping ? '#ffffff' : '#475569'
+                          }}
+                        >
+                          বাংলা
+                        </button>
+                        <button 
+                          type="button" 
+                          className="btn-format-tool active"
+                          style={{ width: '20px', height: '20px', borderRadius: '4px' }}
+                          onClick={handleAddText}
+                          title="Add Text Layer"
+                        >
+                          <IoAdd size={12} />
+                        </button>
+                      </div>
                     </div>
                     <Form.Control
                       type="text"
                       value={textInput}
-                      onChange={(e) => setTextInput(e.target.value)}
+                      onChange={handleTextInputChange}
+                      placeholder={banglaTyping ? 'ami → আমি' : ''}
+                      lang={banglaTyping ? 'bn' : undefined}
                       className="form-control-premium"
-                      style={isMobileView ? { height: '28px', minHeight: '28px', fontSize: '11px', padding: '3px 10px', borderRadius: '6px' } : {}}
+                      style={{
+                        fontFamily: `'Outfit', "${DEFAULT_BANGLA_FONT}", sans-serif`,
+                        ...(isMobileView ? { height: '28px', minHeight: '28px', fontSize: '11px', padding: '3px 10px', borderRadius: '6px' } : {})
+                      }}
                     />
+                    {banglaTyping && !isMobileView && (
+                      <small className="text-muted d-block mt-1" style={{ fontSize: '10px' }}>
+                        ইংরেজি অক্ষরে লিখুন: ami → আমি, bangladesh → বাংলাদেশ
+                      </small>
+                    )}
                   </Form.Group>
 
                   <Form.Group>
                     <label className="fw-bold mb-1 text-secondary text-capitalize d-block" style={{ letterSpacing: '0.4px', fontSize: '9px' }}>Font Family</label>
                     <CustomSelect
                       value={fontFamily}
-                      options={POPULAR_FONTS.map(font => ({
+                      options={[...BANGLA_FONTS, ...POPULAR_FONTS].map(font => ({
                         value: font,
-                        label: font,
+                        label: getFontLabel(font),
                         style: { fontFamily: `"${font}", sans-serif` }
                       }))}
                       onChange={async (newFont) => {
                         showToast('Loading font style...', 'info');
-                        await loadFontDynamically(newFont);
+                        await loadFontDynamically(newFont, textInput, `${fontStyle} ${fontWeight}`);
                         setFontFamily(newFont);
                       }}
                       hasSearch={true}

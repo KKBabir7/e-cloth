@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -29,6 +29,11 @@ export default function HomeClient({ initialProducts = [], initialNewArrivals = 
   const cartItems = useSelector((state) => state.cart.items);
 
   const [zoomImage, setZoomImage] = useState(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // React Query with initialData for instant SSR & live invalidation updates
   const { data: productsData } = useQuery({
@@ -230,40 +235,56 @@ export default function HomeClient({ initialProducts = [], initialNewArrivals = 
 
   return (
     <div>
-      {/* 1. HERO SLIDER */}
+      {/* 1. HERO SLIDER — mount Swiper after hydration (it rewrites DOM / loop clones) */}
       {slides.length > 0 && (
         <section className="hero-swiper-section mb-0">
-          <Swiper
-            modules={[Navigation, Autoplay, A11y]}
-            navigation
-            autoplay={{ delay: 4500, disableOnInteraction: false, pauseOnMouseEnter: true }}
-            loop={slides.length > 1}
-            grabCursor={true}
-            speed={650}
-            a11y={{ prevSlideMessage: 'Previous banner', nextSlideMessage: 'Next banner' }}
-            preventClicks={true}
-            preventClicksPropagation={true}
-            threshold={8}
-            className="hero-swiper"
-          >
-            {slides.map((slide) => (
-              <SwiperSlide key={slide._id}>
-                <Link href={slide.link || '/shop'} className="d-block">
-                  <Image
-                    src={slide.image && (slide.image.startsWith('http') ? slide.image : `${getBackendUrl()}${slide.image}`)}
-                    alt={slide.title || 'Promotional Banner'}
-                    className="hero-swiper-img"
-                    width={1920}
-                    height={700}
-                    sizes="100vw"
-                    priority
-                    unoptimized
-                    draggable={false}
-                  />
-                </Link>
-              </SwiperSlide>
-            ))}
-          </Swiper>
+          {mounted ? (
+            <Swiper
+              modules={[Navigation, Autoplay, A11y]}
+              navigation
+              autoplay={{ delay: 4500, disableOnInteraction: false, pauseOnMouseEnter: true }}
+              loop={slides.length > 1}
+              grabCursor={true}
+              speed={650}
+              a11y={{ prevSlideMessage: 'Previous banner', nextSlideMessage: 'Next banner' }}
+              preventClicks={true}
+              preventClicksPropagation={true}
+              threshold={8}
+              className="hero-swiper"
+            >
+              {slides.map((slide) => (
+                <SwiperSlide key={slide._id}>
+                  <Link href={slide.link || '/shop'} className="d-block">
+                    <Image
+                      src={slide.image && (slide.image.startsWith('http') ? slide.image : `${getBackendUrl()}${slide.image}`)}
+                      alt={slide.title || 'Promotional Banner'}
+                      className="hero-swiper-img"
+                      width={1920}
+                      height={700}
+                      sizes="100vw"
+                      priority
+                      unoptimized
+                      draggable={false}
+                    />
+                  </Link>
+                </SwiperSlide>
+              ))}
+            </Swiper>
+          ) : (
+            <Link href={slides[0].link || '/shop'} className="d-block">
+              <Image
+                src={slides[0].image && (slides[0].image.startsWith('http') ? slides[0].image : `${getBackendUrl()}${slides[0].image}`)}
+                alt={slides[0].title || 'Promotional Banner'}
+                className="hero-swiper-img"
+                width={1920}
+                height={700}
+                sizes="100vw"
+                priority
+                unoptimized
+                draggable={false}
+              />
+            </Link>
+          )}
         </section>
       )}
 

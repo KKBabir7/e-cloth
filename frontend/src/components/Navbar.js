@@ -493,7 +493,11 @@ export default function AppNavbar() {
         </Container>
       </Navbar>
 
-      {/* ── MOBILE OFFCANVAS SIDEBAR ─────────────────────────────────────── */}
+      {/* ── MOBILE OFFCANVAS SIDEBAR ───────────────────────────────────────
+          Only mount after hydration: Offcanvas portals to document.body on the
+          client (null on SSR), and Accordion.Header renders an <h2>, which
+          otherwise causes a hydration mismatch. */}
+      {mounted && (
       <Offcanvas 
         show={showOffcanvas} 
         onHide={() => setShowOffcanvas(false)} 
@@ -645,6 +649,7 @@ export default function AppNavbar() {
           </nav>
         </Offcanvas.Body>
       </Offcanvas>
+      )}
     </>
   );
 }
